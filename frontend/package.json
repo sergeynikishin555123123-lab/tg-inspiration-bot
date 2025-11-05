@@ -1,0 +1,14 @@
+{
+  "name": "tg-mini-app",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "react-scripts build",
+    "start": "react-scripts start"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "@tma.js/sdk": "^0.0.13"
+  }
+}
