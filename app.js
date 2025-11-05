@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(express.json());
 app.use(cors());
-app.use(express.static(path.join(__dirname, 'build')));
+app.use(express.static('public'));
 
 // Подключение к БД
 const pool = new Pool({
@@ -63,6 +63,44 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// API для Mini App - получение данных пользователя
+app.get('/api/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const result = await pool.query(
+      'SELECT * FROM users WHERE user_id = $1',
+      [userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.json({ exists: false });
+    }
+    
+    res.json({ exists: true, user: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API для Mini App - регистрация пользователя
+app.post('/api/user/register', async (req, res) => {
+  try {
+    const { userId, username, name, userClass, character } = req.body;
+    
+    await pool.query(
+      `INSERT INTO users (user_id, tg_username, tg_name, class, character, stars, level) 
+       VALUES ($1, $2, $3, $4, $5, 0, 'Ученик')
+       ON CONFLICT (user_id) DO UPDATE SET 
+       tg_username = $2, tg_name = $3, class = $4, character = $5`,
+      [userId, username, name, userClass, character]
+    );
+    
+    res.json({ success: true, message: 'Пользователь зарегистрирован' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Webhook для Telegram
 app.post('/webhook', (req, res) => {
   bot.processUpdate(req.body);
@@ -71,7 +109,7 @@ app.post('/webhook', (req, res) => {
 
 // Serve Mini App
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Обработчик команды /start
@@ -84,18 +122,14 @@ bot.onText(/\/start/, async (msg) => {
   try {
     await pool.query(
       `INSERT INTO users (user_id, tg_username, tg_name, stars, level) 
-       VALUES ($1, $2, $3, 0, 'Учениk')
+       VALUES ($1, $2, $3, 0, 'Ученик')
        ON CONFLICT (user_id) DO NOTHING`,
       [userId, username, name]
     );
     
     const welcomeText = `🎨 Добро пожаловать в Мастерскую Вдохновения, ${name}!
 
-Система успешно запущена! Скоро здесь появятся:
-• Обучающие видео и задания
-• Система уровней и звёзд
-• Интерактивные квизы
-• Сообщество единомышленников
+Система успешно запущена! 
 
 Нажмите "Открыть Личный Кабинет" чтобы начать!`;
     
