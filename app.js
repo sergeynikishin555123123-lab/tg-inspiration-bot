@@ -36,16 +36,7 @@ async function initializeDatabase() {
         last_active_date DATE,
         daily_commented BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-      
-      CREATE TABLE IF NOT EXISTS activities (
-        activity_id SERIAL PRIMARY KEY,
-        type VARCHAR(50),
-        title VARCHAR(255),
-        description TEXT,
-        reward_rules JSONB,
-        related_video_id VARCHAR(100)
-      );
+      )
     `);
     console.log('✅ Database tables initialized');
   } catch (error) {
@@ -78,44 +69,6 @@ app.post('/webhook', (req, res) => {
   res.send('OK');
 });
 
-// API для Mini App - получение данных пользователя
-app.get('/api/user/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const result = await pool.query(
-      'SELECT * FROM users WHERE user_id = $1',
-      [userId]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.json({ exists: false });
-    }
-    
-    res.json({ exists: true, user: result.rows[0] });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// API для Mini App - регистрация пользователя
-app.post('/api/user/register', async (req, res) => {
-  try {
-    const { userId, username, name, userClass, character } = req.body;
-    
-    await pool.query(
-      `INSERT INTO users (user_id, tg_username, tg_name, class, character, stars, level) 
-       VALUES ($1, $2, $3, $4, $5, 0, 'Ученик')
-       ON CONFLICT (user_id) DO UPDATE SET 
-       tg_username = $2, tg_name = $3, class = $4, character = $5`,
-      [userId, username, name, userClass, character]
-    );
-    
-    res.json({ success: true, message: 'Пользователь зарегистрирован' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // Serve Mini App
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
@@ -131,18 +84,18 @@ bot.onText(/\/start/, async (msg) => {
   try {
     await pool.query(
       `INSERT INTO users (user_id, tg_username, tg_name, stars, level) 
-       VALUES ($1, $2, $3, 0, 'Ученик')
+       VALUES ($1, $2, $3, 0, 'Учениk')
        ON CONFLICT (user_id) DO NOTHING`,
       [userId, username, name]
     );
     
     const welcomeText = `🎨 Добро пожаловать в Мастерскую Вдохновения, ${name}!
 
-Здесь вы сможете:
-• Смотреть обучающие видео
-• Выполнять задания и получать звёзды
-• Открывать новые уровни и бонусы
-• Общаться с единомышленниками
+Система успешно запущена! Скоро здесь появятся:
+• Обучающие видео и задания
+• Система уровней и звёзд
+• Интерактивные квизы
+• Сообщество единомышленников
 
 Нажмите "Открыть Личный Кабинет" чтобы начать!`;
     
@@ -172,5 +125,5 @@ app.listen(PORT, async () => {
     
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🌐 Health check: ${process.env.APP_URL}/health`);
-  console.log(`🤖 Bot is waiting for messages...`);
+  console.log(`🤖 Bot is ready!`);
 });
