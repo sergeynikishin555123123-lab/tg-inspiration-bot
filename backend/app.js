@@ -10,13 +10,10 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../frontend/build')));
 
-// Подключение к БД
+// Подключение к БД - БЕЗ SSL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: true,
-    ca: process.env.PGSSLROOTCERT
-  }
+  // SSL отключен для упрощения
 });
 
 // Проверка работы
@@ -50,5 +47,5 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Health check: https://sergeynikishin555123123-lab-tg-inspiration-bot-303d.twc1.net/health`);
+  console.log(`Health check: ${process.env.APP_URL}/health`);
 });
