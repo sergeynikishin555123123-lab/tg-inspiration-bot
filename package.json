@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "Telegram bot with Mini App for inspiration workshop",
   "main": "app.js",
-  "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "npm run build:frontend",
+    "build:frontend": "cd frontend && npm install && npm run build",
     "start": "node app.js",
-    "dev": "concurrently \"node app.js\" \"vite\""
+    "install:all": "npm install && cd frontend && npm install"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -15,16 +15,12 @@
     "pg": "^8.11.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "axios": "^1.5.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "@tma.js/sdk": "^0.0.13"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4.0.0",
-    "vite": "^4.4.0"
+    "axios": "^1.5.0"
   },
   "engines": {
     "node": "18.x"
-  }
+  },
+  "keywords": ["telegram", "bot", "mini-app"],
+  "author": "Master",
+  "license": "ISC"
 }
