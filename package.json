@@ -1,0 +1,9 @@
+{
+  "name": "tg-inspiration-bot",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "start": "cd backend && node app.js",
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+  }
+}
