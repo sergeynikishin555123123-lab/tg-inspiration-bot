@@ -1,10 +1,10 @@
 {
   "build": {
-    "command": "bash .twc.build",
-    "output": "frontend/build"
+    "command": "npm install && npm run build",
+    "output": "build"
   },
   "run": {
-    "command": "cd backend && npm install && node app.js",
+    "command": "node app.js",
     "port": 3000
   }
 }
