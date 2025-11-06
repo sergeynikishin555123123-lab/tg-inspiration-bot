@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ панель - Мастерская Вдохновения</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f6fa;
+            color: #2d3748;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .nav-tabs {
+            display: flex;
+            background: white;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .nav-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-right: 10px;
+            transition: all 0.3s ease;
+        }
+        .nav-tab.active {
+            background: #667eea;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .form-control:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: #5a67d8;
+        }
+        .btn-success {
+            background: #48bb78;
+        }
+        .btn-success:hover {
+            background: #38a169;
+        }
+        .btn-danger {
+            background: #f56565;
+        }
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .table th,
+        .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .table th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        .table tr:hover {
+            background: #f7fafc;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            color: #718096;
+            font-size: 0.9em;
+        }
+        .button-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .button-item {
+            background: #edf2f7;
+            padding: 8px 12px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+        .button-text {
+            flex: 1;
+        }
+        .button-remove {
+            background: #f56565;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 2px 6px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .message {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .message.success {
+            background: #c6f6d5;
+            color: #276749;
+            border: 1px solid #9ae6b4;
+        }
+        .message.error {
+            background: #fed7d7;
+            color: #c53030;
+            border: 1px solid #feb2b2;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #718096;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Админ панель - Мастерская Вдохновения</h1>
+            <p>Управление контентом и пользователями</p>
+        </div>
+
+        <div class="nav-tabs">
+            <div class="nav-tab active" data-tab="dashboard">📊 Дашборд</div>
+            <div class="nav-tab" data-tab="posts">📝 Публикации</div>
+            <div class="nav-tab" data-tab="users">👥 Пользователи</div>
+            <div class="nav-tab" data-tab="moderation">🛡️ Модерация</div>
+            <div class="nav-tab" data-tab="admins">🔧 Админы</div>
+        </div>
+
+        <!-- Дашборд -->
+        <div id="dashboard" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalUsers">0</div>
+                    <div class="stat-label">Всего пользователей</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="activeToday">0</div>
+                    <div class="stat-label">Активных сегодня</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalPosts">0</div>
+                    <div class="stat-label">Публикаций</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="pendingModeration">0</div>
+                    <div class="stat-label">На модерации</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>📈 Быстрая статистика</h3>
+                <div id="quickStats">
+                    <div class="loading">Загрузка статистики...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Публикации -->
+        <div id="posts" class="tab-content">
+            <div class="card">
+                <h3>➕ Создать новую публикацию</h3>
+                <form id="createPostForm">
+                    <div class="form-group">
+                        <label for="postTitle">Заголовок поста</label>
+                        <input type="text" id="postTitle" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="postContent">Текст поста</label>
+                        <textarea id="postContent" class="form-control" rows="4"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="videoUrl">Ссылка на видео (YouTube/Vimeo)</label>
+                        <input type="url" id="videoUrl" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Кнопки действия</label>
+                        <div id="buttonsContainer">
+                            <!-- Кнопки будут добавляться здесь -->
+                        </div>
+                        <button type="button" class="btn" onclick="addButton()" style="margin-top: 10px;">
+                            ➕ Добавить кнопку
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="requiresAction" onchange="toggleActionType()">
+                            Требует действия (квиз/опрос)
+                        </label>
+                    </div>
+                    <div class="form-group" id="actionTypeGroup" style="display: none;">
+                        <label for="actionType">Тип действия</label>
+                        <select id="actionType" class="form-control">
+                            <option value="quiz">Квиз</option>
+                            <option value="survey">Опрос</option>
+                            <option value="photo_work">Фото работа</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-success">📤 Опубликовать в канал</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>📋 Список публикаций</h3>
+                <div id="postsList">
+                    <div class="loading">Загрузка публикаций...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Пользователи -->
+        <div id="users" class="tab-content">
+            <div class="card">
+                <h3>🔍 Поиск пользователей</h3>
+                <div class="form-group">
+                    <input type="text" id="userSearch" class="form-control" placeholder="Поиск по ID, имени или username...">
+                </div>
+            </div>
+            <div class="card">
+                <h3>👥 Все пользователи</h3>
+                <div id="usersList">
+                    <div class="loading">Загрузка пользователей...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модерация -->
+        <div id="moderation" class="tab-content">
+            <div class="card">
+                <h3>📸 Фото работы на модерации</h3>
+                <div id="photoModeration">
+                    <div class="loading">Загрузка фото...</div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>💬 Комментарии на модерации</h3>
+                <div id="commentModeration">
+                    <div class="loading">Загрузка комментариев...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Админы -->
+        <div id="admins" class="tab-content">
+            <div class="card">
+                <h3>➕ Добавить администратора</h3>
+                <form id="addAdminForm">
+                    <div class="form-group">
+                        <label for="adminUserId">Telegram User ID</label>
+                        <input type="number" id="adminUserId" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="adminUsername">Username (опционально)</label>
+                        <input type="text" id="adminUsername" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="adminRole">Роль</label>
+                        <select id="adminRole" class="form-control">
+                            <option value="moderator">Модератор</option>
+                            <option value="admin">Администратор</option>
+                            <option value="superadmin">Супер админ</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn">➕ Добавить админа</button>
+                </form>
+            </div>
+            <div class="card">
+                <h3>🔧 Список администраторов</h3>
+                <div id="adminsList">
+                    <div class="loading">Загрузка админов...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageArea"></div>
+
+    <script>
+        const API_BASE = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000' 
+            : '';
+
+        let currentButtons = [];
+
+        // Навигация
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+                
+                // Загружаем данные для вкладки
+                loadTabData(tab.dataset.tab);
+            });
+        });
+
+        // Загрузка данных вкладки
+        function loadTabData(tabName) {
+            switch(tabName) {
+                case 'dashboard':
+                    loadDashboard();
+                    break;
+                case 'posts':
+                    loadPosts();
+                    break;
+                case 'users':
+                    loadUsers();
+                    break;
+                case 'moderation':
+                    loadModeration();
+                    break;
+                case 'admins':
+                    loadAdmins();
+                    break;
+            }
+        }
+
+        // Дашборд
+        async function loadDashboard() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/stats`);
+                const data = await response.json();
+                
+                document.getElementById('totalUsers').textContent = data.totalUsers;
+                document.getElementById('activeToday').textContent = data.activeToday;
+                document.getElementById('totalPosts').textContent = data.totalPosts;
+                document.getElementById('pendingModeration').textContent = data.pendingModeration;
+                
+                // Быстрая статистика
+                const statsHtml = `
+                    <p>📊 Зарегистрировано сегодня: ${data.registeredToday}</p>
+                    <p>⭐ Всего звезд выдано: ${data.totalStars}</p>
+                    <p>🎯 Активных квизов: ${data.activeQuizzes}</p>
+                    <p>👥 Лидер по приглашениям: ${data.topInviter || 'Нет данных'}</p>
+                `;
+                document.getElementById('quickStats').innerHTML = statsHtml;
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                showMessage('Ошибка загрузки дашборда', 'error');
+            }
+        }
+
+        // Управление кнопками в форме
+        function addButton() {
+            const buttonId = Date.now();
+            currentButtons.push({ id: buttonId, text: '', url: '' });
+            renderButtons();
+        }
+
+        function removeButton(buttonId) {
+            currentButtons = currentButtons.filter(btn => btn.id !== buttonId);
+            renderButtons();
+        }
+
+        function updateButton(buttonId, field, value) {
+            const button = currentButtons.find(btn => btn.id === buttonId);
+            if (button) {
+                button[field] = value;
+            }
+        }
+
+        function renderButtons() {
+            const container = document.getElementById('buttonsContainer');
+            container.innerHTML = currentButtons.map(button => `
+                <div class="button-item">
+                    <div class="button-text">
+                        <input type="text" 
+                               placeholder="Текст кнопки" 
+                               value="${button.text}"
+                               onchange="updateButton(${button.id}, 'text', this.value)"
+                               style="margin-bottom: 5px; width: 100%; padding: 5px;">
+                        <input type="url" 
+                               placeholder="URL ссылки" 
+                               value="${button.url}"
+                               onchange="updateButton(${button.id}, 'url', this.value)"
+                               style="width: 100%; padding: 5px;">
+                    </div>
+                    <button type="button" class="button-remove" onclick="removeButton(${button.id})">×</button>
+                </div>
+            `).join('');
+        }
+
+        function toggleActionType() {
+            const actionGroup = document.getElementById('actionTypeGroup');
+            actionGroup.style.display = document.getElementById('requiresAction').checked ? 'block' : 'none';
+        }
+
+        // Создание поста
+        document.getElementById('createPostForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const postData = {
+                title: document.getElementById('postTitle').value,
+                content: document.getElementById('postContent').value,
+                video_url: document.getElementById('videoUrl').value,
+                buttons: currentButtons,
+                requires_action: document.getElementById('requiresAction').checked,
+                action_type: document.getElementById('actionType').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/posts`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(postData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('✅ Пост успешно создан и опубликован!', 'success');
+                    document.getElementById('createPostForm').reset();
+                    currentButtons = [];
+                    renderButtons();
+                    loadPosts();
+                } else {
+                    showMessage(`❌ Ошибка: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error creating post:', error);
+                showMessage('Ошибка при создании поста', 'error');
+            }
+        });
+
+        // Загрузка постов
+        async function loadPosts() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/posts`);
+                const posts = await response.json();
+                
+                const postsHtml = posts.map(post => `
+                    <div style="border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 10px; border-radius: 5px;">
+                        <h4>${post.title}</h4>
+                        <p>${post.content || 'Без текста'}</p>
+                        ${post.video_url ? `<p>🎥 Видео: ${post.video_url}</p>` : ''}
+                        ${post.requires_action ? `<p>🎯 Действие: ${post.action_type}</p>` : ''}
+                        <p><small>Опубликован: ${new Date(post.published_at).toLocaleString('ru-RU')}</small></p>
+                        <div class="button-row">
+                            <button class="btn btn-danger" onclick="deletePost('${post.post_id}')">Удалить</button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                document.getElementById('postsList').innerHTML = postsHtml || '<p>Нет публикаций</p>';
+            } catch (error) {
+                console.error('Error loading posts:', error);
+                document.getElementById('postsList').innerHTML = '<p>Ошибка загрузки</p>';
+            }
+        }
+
+        // Удаление поста
+        async function deletePost(postId) {
+            if (!confirm('Удалить этот пост?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/posts/${postId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ Пост удален', 'success');
+                    loadPosts();
+                } else {
+                    showMessage('❌ Ошибка удаления', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting post:', error);
+                showMessage('Ошибка при удалении', 'error');
+            }
+        }
+
+        // Загрузка пользователей
+        async function loadUsers() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/users`);
+                const users = await response.json();
+                
+                const usersHtml = users.map(user => `
+                    <tr>
+                        <td>${user.user_id}</td>
+                        <td>${user.tg_first_name} ${user.tg_last_name || ''}</td>
+                        <td>@${user.tg_username || 'нет'}</td>
+                        <td>${user.class || 'Не выбран'}</td>
+                        <td>${user.stars} ⭐</td>
+                        <td>${user.level}</td>
+                        <td>${new Date(user.last_active).toLocaleDateString('ru-RU')}</td>
+                        <td>
+                            <button class="btn" onclick="viewUserDetails(${user.user_id})">👁️</button>
+                        </td>
+                    </tr>
+                `).join('');
+                
+                document.getElementById('usersList').innerHTML = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Имя</th>
+                                <th>Username</th>
+                                <th>Класс</th>
+                                <th>Звезды</th>
+                                <th>Уровень</th>
+                                <th>Активность</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>${usersHtml}</tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('usersList').innerHTML = '<p>Ошибка загрузки пользователей</p>';
+            }
+        }
+
+        // Поиск пользователей
+        document.getElementById('userSearch').addEventListener('input', async (e) => {
+            const query = e.target.value.trim();
+            if (query.length < 2) {
+                loadUsers();
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/users/search?q=${encodeURIComponent(query)}`);
+                const users = await response.json();
+                
+                // Аналогично loadUsers() но с результатами поиска
+                const usersHtml = users.map(user => `
+                    <tr>
+                        <td>${user.user_id}</td>
+                        <td>${user.tg_first_name} ${user.tg_last_name || ''}</td>
+                        <td>@${user.tg_username || 'нет'}</td>
+                        <td>${user.class || 'Не выбран'}</td>
+                        <td>${user.stars} ⭐</td>
+                        <td>${user.level}</td>
+                        <td>${new Date(user.last_active).toLocaleDateString('ru-RU')}</td>
+                        <td>
+                            <button class="btn" onclick="viewUserDetails(${user.user_id})">👁️</button>
+                        </td>
+                    </tr>
+                `).join('');
+                
+                document.getElementById('usersList').innerHTML = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Имя</th>
+                                <th>Username</th>
+                                <th>Класс</th>
+                                <th>Звезды</th>
+                                <th>Уровень</th>
+                                <th>Активность</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>${usersHtml}</tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Error searching users:', error);
+            }
+        });
+
+        // Просмотр деталей пользователя
+        async function viewUserDetails(userId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/users/${userId}`);
+                const user = await response.json();
+                
+                const detailsHtml = `
+                    <h3>Детали пользователя #${user.user_id}</h3>
+                    <p><strong>Имя:</strong> ${user.tg_first_name} ${user.tg_last_name || ''}</p>
+                    <p><strong>Username:</strong> @${user.tg_username || 'нет'}</p>
+                    <p><strong>Класс:</strong> ${user.class || 'Не выбран'}</p>
+                    <p><strong>Персонаж:</strong> ${user.character_name || 'Не выбран'}</p>
+                    <p><strong>Звезды:</strong> ${user.stars} ⭐</p>
+                    <p><strong>Уровень:</strong> ${user.level}</p>
+                    <p><strong>Зарегистрирован:</strong> ${new Date(user.registration_date).toLocaleString('ru-RU')}</p>
+                    <p><strong>Последняя активность:</strong> ${new Date(user.last_active).toLocaleString('ru-RU')}</p>
+                    <p><strong>Приглашено друзей:</strong> ${user.invite_count || 0}</p>
+                    
+                    <h4>Действия:</h4>
+                    <button class="btn" onclick="adjustStars(${user.user_id})">📊 Изменить звезды</button>
+                    <button class="btn btn-danger" onclick="resetUser(${user.user_id})">🔄 Сбросить прогресс</button>
+                `;
+                
+                // Показываем модальное окно или заменяем содержимое
+                document.getElementById('usersList').innerHTML = detailsHtml + 
+                    '<button class="btn" onclick="loadUsers()">← Назад к списку</button>';
+            } catch (error) {
+                console.error('Error loading user details:', error);
+                showMessage('Ошибка загрузки деталей пользователя', 'error');
+            }
+        }
+
+        // Модерация
+        async function loadModeration() {
+            await loadPhotoModeration();
+            await loadCommentModeration();
+        }
+
+        async function loadPhotoModeration() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/moderation/photos`);
+                const photos = await response.json();
+                
+                const photosHtml = photos.map(photo => `
+                    <div style="border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 10px; border-radius: 5px;">
+                        <p><strong>Пользователь:</strong> ${photo.user_id} - ${photo.tg_first_name}</p>
+                        <p><strong>Описание:</strong> ${photo.description || 'Нет описания'}</p>
+                        <p><strong>Тема:</strong> ${photo.theme || 'Не указана'}</p>
+                        <img src="${photo.photo_url}" style="max-width: 200px; max-height: 200px; display: block; margin: 10px 0;">
+                        <div class="button-row">
+                            <button class="btn btn-success" onclick="approvePhoto(${photo.id})">✅ Одобрить (+3⭐)</button>
+                            <button class="btn btn-danger" onclick="rejectPhoto(${photo.id})">❌ Отклонить</button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                document.getElementById('photoModeration').innerHTML = photosHtml || '<p>Нет фото на модерации</p>';
+            } catch (error) {
+                console.error('Error loading photos:', error);
+                document.getElementById('photoModeration').innerHTML = '<p>Ошибка загрузки</p>';
+            }
+        }
+
+        async function loadCommentModeration() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/moderation/comments`);
+                const comments = await response.json();
+                
+                const commentsHtml = comments.map(comment => `
+                    <div style="border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 10px; border-radius: 5px;">
+                        <p><strong>Пользователь:</strong> ${comment.user_id} - ${comment.tg_first_name}</p>
+                        <p><strong>Пост:</strong> ${comment.post_id}</p>
+                        <p><strong>Комментарий:</strong> ${comment.comment_text}</p>
+                        <div class="button-row">
+                            <button class="btn btn-success" onclick="approveComment(${comment.id})">✅ Одобрить (+0.5⭐)</button>
+                            <button class="btn btn-danger" onclick="rejectComment(${comment.id})">❌ Отклонить</button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                document.getElementById('commentModeration').innerHTML = commentsHtml || '<p>Нет комментариев на модерации</p>';
+            } catch (error) {
+                console.error('Error loading comments:', error);
+                document.getElementById('commentModeration').innerHTML = '<p>Ошибка загрузки</p>';
+            }
+        }
+
+        // Одобрение фото
+        async function approvePhoto(photoId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/moderation/photos/${photoId}/approve`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ Фото одобрено! Пользователь получил +3⭐', 'success');
+                    loadModeration();
+                } else {
+                    showMessage('❌ Ошибка одобрения', 'error');
+                }
+            } catch (error) {
+                console.error('Error approving photo:', error);
+                showMessage('Ошибка при одобрении фото', 'error');
+            }
+        }
+
+        // Отклонение фото
+        async function rejectPhoto(photoId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/moderation/photos/${photoId}/reject`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ Фото отклонено', 'success');
+                    loadModeration();
+                } else {
+                    showMessage('❌ Ошибка отклонения', 'error');
+                }
+            } catch (error) {
+                console.error('Error rejecting photo:', error);
+                showMessage('Ошибка при отклонении фото', 'error');
+            }
+        }
+
+        // Аналогичные функции для комментариев...
+        async function approveComment(commentId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/moderation/comments/${commentId}/approve`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ Комментарий одобрен! Пользователь получил +0.5⭐', 'success');
+                    loadModeration();
+                } else {
+                    showMessage('❌ Ошибка одобрения', 'error');
+                }
+            } catch (error) {
+                console.error('Error approving comment:', error);
+                showMessage('Ошибка при одобрении комментария', 'error');
+            }
+        }
+
+        async function rejectComment(commentId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/moderation/comments/${commentId}/reject`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ Комментарий отклонен', 'success');
+                    loadModeration();
+                } else {
+                    showMessage('❌ Ошибка отклонения', 'error');
+                }
+            } catch (error) {
+                console.error('Error rejecting comment:', error);
+                showMessage('Ошибка при отклонении комментария', 'error');
+            }
+        }
+
+        // Админы
+        async function loadAdmins() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/admins`);
+                const admins = await response.json();
+                
+                const adminsHtml = admins.map(admin => `
+                    <tr>
+                        <td>${admin.user_id}</td>
+                        <td>@${admin.username || 'нет'}</td>
+                        <td>${admin.role}</td>
+                        <td>${new Date(admin.created_at).toLocaleDateString('ru-RU')}</td>
+                        <td>
+                            ${admin.role !== 'superadmin' ? 
+                                `<button class="btn btn-danger" onclick="removeAdmin(${admin.user_id})">Удалить</button>` : 
+                                '<em>Нельзя удалить</em>'
+                            }
+                        </td>
+                    </tr>
+                `).join('');
+                
+                document.getElementById('adminsList').innerHTML = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Username</th>
+                                <th>Роль</th>
+                                <th>Добавлен</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>${adminsHtml}</tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Error loading admins:', error);
+                document.getElementById('adminsList').innerHTML = '<p>Ошибка загрузки админов</p>';
+            }
+        }
+
+        // Добавление админа
+        document.getElementById('addAdminForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const adminData = {
+                user_id: parseInt(document.getElementById('adminUserId').value),
+                username: document.getElementById('adminUsername').value,
+                role: document.getElementById('adminRole').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/admins`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(adminData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('✅ Админ успешно добавлен!', 'success');
+                    document.getElementById('addAdminForm').reset();
+                    loadAdmins();
+                } else {
+                    showMessage(`❌ Ошибка: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error adding admin:', error);
+                showMessage('Ошибка при добавлении админа', 'error');
+            }
+        });
+
+        // Удаление админа
+        async function removeAdmin(userId) {
+            if (!confirm('Удалить этого администратора?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/admins/${userId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ Админ удален', 'success');
+                    loadAdmins();
+                } else {
+                    showMessage('❌ Ошибка удаления', 'error');
+                }
+            } catch (error) {
+                console.error('Error removing admin:', error);
+                showMessage('Ошибка при удалении админа', 'error');
+            }
+        }
+
+        // Вспомогательные функции
+        function showMessage(message, type) {
+            const messageArea = document.getElementById('messageArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = message;
+            messageArea.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // Загружаем дашборд при старте
+        loadDashboard();
+    </script>
+</body>
+</html>
