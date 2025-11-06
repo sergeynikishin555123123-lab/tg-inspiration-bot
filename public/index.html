@@ -259,6 +259,49 @@
             border-radius: 4px;
             transition: width 0.3s ease;
         }
+        .quiz-question {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            border: 2px solid #e2e8f0;
+        }
+        .quiz-option {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .quiz-option:hover {
+            border-color: #667eea;
+            background: rgba(102,126,234,0.05);
+        }
+        .quiz-option.selected {
+            border-color: #667eea;
+            background: rgba(102,126,234,0.1);
+        }
+        .activity-item {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            border-left: 4px solid #667eea;
+        }
+        .activity-type {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .activity-desc {
+            color: #718096;
+            font-size: 14px;
+        }
+        .activity-stars {
+            color: #f6ad55;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -301,6 +344,10 @@
                             <span class="value" id="userStatus">-</span>
                         </div>
                         <div class="user-info">
+                            <span class="label">Класс:</span>
+                            <span class="value" id="userClass">-</span>
+                        </div>
+                        <div class="user-info">
                             <span class="label">Персонаж:</span>
                             <span class="value" id="userCharacter">-</span>
                         </div>
@@ -320,6 +367,7 @@
                 <button class="btn btn-secondary" onclick="showScreen('quizzesScreen')">📝 Пройти квиз</button>
                 <button class="btn btn-warning" onclick="showScreen('activitiesScreen')">📊 Мои активности</button>
                 <button class="btn btn-danger" onclick="submitWork()">📸 Отправить работу</button>
+                <button class="btn" onclick="refreshData()">🔄 Обновить данные</button>
             </div>
         </div>
 
@@ -333,7 +381,7 @@
                 <div class="class-selection">
                     <h3 style="margin-bottom: 15px; color: #4a5568;">🎯 Выберите класс:</h3>
                     <div id="classesList">
-                        <!-- Классы будут загружены здесь -->
+                        <div class="loading">Загрузка классов...</div>
                     </div>
                 </div>
 
@@ -380,6 +428,18 @@
             </div>
         </div>
 
+        <!-- Экран прохождения квиза -->
+        <div id="quizScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('quizzesScreen')">← Назад</button>
+                <h1 id="quizTitle">Квиз</h1>
+                <div id="quizContent">
+                    <!-- Вопросы будут загружены здесь -->
+                </div>
+                <button class="btn" onclick="submitQuiz()" id="submitQuizBtn" style="display: none;">✅ Отправить ответы</button>
+            </div>
+        </div>
+
         <!-- Область для сообщений -->
         <div id="messageArea"></div>
     </div>
@@ -393,6 +453,8 @@
         let selectedCharacter = null;
         let charactersData = null;
         let classesData = null;
+        let currentQuiz = null;
+        let quizAnswers = [];
 
         const API_BASE_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000' 
@@ -511,6 +573,7 @@
             document.getElementById('levelBadge').textContent = user.level;
             document.getElementById('starsCount').textContent = `⭐ ${user.stars}`;
             document.getElementById('userStatus').textContent = user.is_registered ? 'Зарегистрирован' : 'Не зарегистрирован';
+            document.getElementById('userClass').textContent = user.class || 'Не выбран';
             document.getElementById('userCharacter').textContent = user.character_name || 'Не выбран';
 
             // Прогресс уровня
@@ -557,6 +620,7 @@
                 
             } catch (error) {
                 console.error('❌ Error loading classes:', error);
+                document.getElementById('classesList').innerHTML = '<div class="error">Ошибка загрузки классов</div>';
             }
         }
 
@@ -686,7 +750,7 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    showMessage('🎉 Регистрация завершена! Вы получили 5⭐', 'success');
+                    showMessage('🎉 ' + result.message, 'success');
                     showScreen('mainScreen');
                     loadUserData(); // Обновляем данные
                 } else {
@@ -716,7 +780,7 @@
                         quizElement.innerHTML = `
                             <div class="quiz-title">${quiz.title}</div>
                             <div class="quiz-desc">${quiz.description || 'Тестовый квиз'}</div>
-                            <div class="quiz-reward">🎯 Награда: ${quiz.stars_reward}⭐</div>
+                            <div class="quiz-reward">🎯 Награда: ${quiz.stars_reward}⭐ (${quiz.questions.length} вопросов)</div>
                             <div style="margin-top: 12px;">
                                 <button class="btn" onclick="startQuiz(${quiz.id})" style="padding: 12px; font-size: 16px;">
                                     Начать квиз
@@ -735,8 +799,102 @@
         }
 
         // Начать квиз
-        function startQuiz(quizId) {
-            showMessage(`🚀 Начинаем квиз! Эта функция будет реализована в следующем обновлении.`, 'success');
+        async function startQuiz(quizId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/webapp/quizzes`);
+                const quizzes = await response.json();
+                
+                currentQuiz = quizzes.find(q => q.id === quizId);
+                if (!currentQuiz) {
+                    showMessage('Квиз не найден', 'error');
+                    return;
+                }
+                
+                quizAnswers = [];
+                document.getElementById('quizTitle').textContent = currentQuiz.title;
+                document.getElementById('quizContent').innerHTML = '';
+                document.getElementById('submitQuizBtn').style.display = 'none';
+                
+                // Показываем вопросы
+                currentQuiz.questions.forEach((question, index) => {
+                    const questionElement = document.createElement('div');
+                    questionElement.className = 'quiz-question';
+                    questionElement.innerHTML = `
+                        <h4>Вопрос ${index + 1}: ${question.question}</h4>
+                        <div id="questionOptions${index}">
+                            ${question.options.map((option, optIndex) => `
+                                <div class="quiz-option" onclick="selectAnswer(${index}, ${optIndex})">
+                                    ${option}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    document.getElementById('quizContent').appendChild(questionElement);
+                });
+                
+                document.getElementById('submitQuizBtn').style.display = 'block';
+                showScreen('quizScreen');
+                
+            } catch (error) {
+                console.error('❌ Error starting quiz:', error);
+                showMessage('Ошибка запуска квиза', 'error');
+            }
+        }
+
+        // Выбор ответа
+        function selectAnswer(questionIndex, answerIndex) {
+            // Сбрасываем выделение для этого вопроса
+            const optionsContainer = document.getElementById(`questionOptions${questionIndex}`);
+            optionsContainer.querySelectorAll('.quiz-option').forEach((opt, idx) => {
+                opt.classList.remove('selected');
+            });
+            
+            // Выделяем выбранный вариант
+            optionsContainer.children[answerIndex].classList.add('selected');
+            
+            // Сохраняем ответ
+            quizAnswers[questionIndex] = answerIndex;
+        }
+
+        // Отправить ответы на квиз
+        async function submitQuiz() {
+            // Проверяем, что на все вопросы ответили
+            if (quizAnswers.length !== currentQuiz.questions.length || quizAnswers.includes(undefined)) {
+                showMessage('Пожалуйста, ответьте на все вопросы', 'error');
+                return;
+            }
+
+            try {
+                showMessage('⏳ Проверяем ответы...', 'loading');
+
+                const response = await fetch(`${API_BASE_URL}/api/webapp/quizzes/${currentQuiz.id}/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: currentUserId,
+                        answers: quizAnswers
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    if (result.passed) {
+                        showMessage(`🎉 ${result.message} Правильных ответов: ${result.correctAnswers}/${result.totalQuestions}`, 'success');
+                    } else {
+                        showMessage(`😔 ${result.message} Правильных ответов: ${result.correctAnswers}/${result.totalQuestions}`, 'error');
+                    }
+                    showScreen('quizzesScreen');
+                    loadUserData(); // Обновляем звезды
+                } else {
+                    showMessage('Ошибка при отправке ответов', 'error');
+                }
+            } catch (error) {
+                console.error('❌ Quiz submission error:', error);
+                showMessage('Ошибка при отправке ответов', 'error');
+            }
         }
 
         // ==================== ПЕРСОНАЖИ ====================
@@ -776,6 +934,7 @@
                 });
             } catch (error) {
                 console.error('❌ Error loading all characters:', error);
+                document.getElementById('allCharactersList').innerHTML = '<div class="error">Ошибка загрузки персонажей</div>';
             }
         }
 
@@ -784,23 +943,76 @@
         // Загрузка активностей
         async function loadActivities() {
             try {
-                // Временная заглушка - в реальном приложении здесь будет запрос к API
+                const response = await fetch(`${API_BASE_URL}/api/webapp/users/${currentUserId}/activities`);
+                const data = await response.json();
+                
                 const activitiesList = document.getElementById('activitiesList');
-                activitiesList.innerHTML = `
-                    <div style="text-align: center; padding: 20px; color: #718096;">
-                        📊 История активностей будет доступна после реализации API
-                    </div>
-                `;
+                activitiesList.innerHTML = '';
+                
+                if (data.activities && data.activities.length > 0) {
+                    data.activities.forEach(activity => {
+                        const activityElement = document.createElement('div');
+                        activityElement.className = 'activity-item';
+                        activityElement.innerHTML = `
+                            <div class="activity-type">${getActivityType(activity.activity_type)}</div>
+                            <div class="activity-desc">${activity.description}</div>
+                            <div class="activity-stars">+${activity.stars_earned}⭐</div>
+                            <div style="font-size: 12px; color: #718096; margin-top: 5px;">
+                                ${new Date(activity.created_at).toLocaleString('ru-RU')}
+                            </div>
+                        `;
+                        activitiesList.appendChild(activityElement);
+                    });
+                } else {
+                    activitiesList.innerHTML = '<div style="text-align: center; padding: 20px; color: #718096;">📊 Активностей пока нет</div>';
+                }
             } catch (error) {
                 console.error('❌ Error loading activities:', error);
+                document.getElementById('activitiesList').innerHTML = '<div class="error">Ошибка загрузки активностей</div>';
             }
+        }
+
+        // Тип активности
+        function getActivityType(type) {
+            const types = {
+                'registration': '📝 Регистрация',
+                'quiz': '📝 Квиз',
+                'photo_work': '📸 Фото работы'
+            };
+            return types[type] || type;
         }
 
         // ==================== РАБОТЫ ====================
 
         // Отправить работу
-        function submitWork() {
-            showMessage('📸 Функция отправки работ будет реализована в следующем обновлении', 'success');
+        async function submitWork() {
+            try {
+                showMessage('⏳ Отправляем работу...', 'loading');
+
+                const response = await fetch(`${API_BASE_URL}/api/webapp/submit-work`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: currentUserId,
+                        photoUrl: 'https://example.com/photo.jpg', // Заглушка
+                        description: 'Моя творческая работа'
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('🎉 ' + result.message, 'success');
+                    loadUserData(); // Обновляем звезды
+                } else {
+                    showMessage(`Ошибка: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('❌ Work submission error:', error);
+                showMessage('Ошибка при отправке работы', 'error');
+            }
         }
 
         // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
@@ -840,6 +1052,11 @@
                     messageDiv.remove();
                 }
             }, 5000);
+        }
+
+        function refreshData() {
+            loadUserData();
+            showMessage('✅ Данные обновлены!', 'success');
         }
 
         // ==================== ЗАПУСК ПРИЛОЖЕНИЯ ====================
