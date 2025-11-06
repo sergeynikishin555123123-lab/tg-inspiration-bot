@@ -16,6 +16,7 @@ router.get('/:userId', async (req, res) => {
       [userId],
       (err, user) => {
         if (err) {
+          console.error('Database error:', err);
           return res.status(500).json({ error: 'Database error' });
         }
         
@@ -40,6 +41,7 @@ router.get('/:userId', async (req, res) => {
       }
     );
   } catch (error) {
+    console.error('Error in user route:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -49,9 +51,14 @@ router.post('/register', async (req, res) => {
   try {
     const { userId, userClass, characterId, tgUsername, tgFirstName, tgLastName } = req.body;
     
+    if (!userId || !userClass || !characterId) {
+      return res.status(400).json({ error: 'User ID, class and character are required' });
+    }
+    
     // Проверяем, существует ли пользователь
     db.get('SELECT * FROM users WHERE user_id = ?', [userId], (err, existingUser) => {
       if (err) {
+        console.error('Database error:', err);
         return res.status(500).json({ error: 'Database error' });
       }
       
@@ -66,6 +73,7 @@ router.post('/register', async (req, res) => {
         [userId, tgUsername, tgFirstName, tgLastName, userClass, characterId],
         function(err) {
           if (err) {
+            console.error('Error creating user:', err);
             return res.status(500).json({ error: 'Error creating user' });
           }
           
@@ -73,7 +81,12 @@ router.post('/register', async (req, res) => {
           db.run(
             `INSERT INTO activities (user_id, activity_type, stars_earned, description) 
              VALUES (?, 'registration', 5, 'Регистрация в системе')`,
-            [userId]
+            [userId],
+            (err) => {
+              if (err) {
+                console.error('Error logging activity:', err);
+              }
+            }
           );
           
           res.json({ 
@@ -86,6 +99,7 @@ router.post('/register', async (req, res) => {
       );
     });
   } catch (error) {
+    console.error('Error in registration:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -96,8 +110,13 @@ router.post('/:userId/stars', async (req, res) => {
     const { userId } = req.params;
     const { stars, activityType, description } = req.body;
     
+    if (!stars) {
+      return res.status(400).json({ error: 'Stars amount is required' });
+    }
+    
     db.get('SELECT stars FROM users WHERE user_id = ?', [userId], (err, user) => {
       if (err) {
+        console.error('Database error:', err);
         return res.status(500).json({ error: 'Database error' });
       }
       
@@ -112,6 +131,7 @@ router.post('/:userId/stars', async (req, res) => {
         [newStars, userId],
         function(err) {
           if (err) {
+            console.error('Error updating stars:', err);
             return res.status(500).json({ error: 'Error updating stars' });
           }
           
@@ -120,7 +140,12 @@ router.post('/:userId/stars', async (req, res) => {
             db.run(
               `INSERT INTO activities (user_id, activity_type, stars_earned, description) 
                VALUES (?, ?, ?, ?)`,
-              [userId, activityType, stars, description]
+              [userId, activityType, stars, description || 'Activity'],
+              (err) => {
+                if (err) {
+                  console.error('Error logging activity:', err);
+                }
+              }
             );
           }
           
@@ -136,6 +161,7 @@ router.post('/:userId/stars', async (req, res) => {
       );
     });
   } catch (error) {
+    console.error('Error updating stars:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -153,6 +179,7 @@ router.get('/:userId/activities', async (req, res) => {
       [userId],
       (err, activities) => {
         if (err) {
+          console.error('Database error:', err);
           return res.status(500).json({ error: 'Database error' });
         }
         
@@ -160,6 +187,38 @@ router.get('/:userId/activities', async (req, res) => {
       }
     );
   } catch (error) {
+    console.error('Error getting activities:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Обновление информации о пользователе
+router.put('/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { characterId, tgUsername } = req.body;
+    
+    db.run(
+      'UPDATE users SET character_id = ?, tg_username = ?, last_active = CURRENT_TIMESTAMP WHERE user_id = ?',
+      [characterId, tgUsername, userId],
+      function(err) {
+        if (err) {
+          console.error('Error updating user:', err);
+          return res.status(500).json({ error: 'Error updating user' });
+        }
+        
+        if (this.changes === 0) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+        
+        res.json({ 
+          success: true, 
+          message: 'User updated successfully'
+        });
+      }
+    );
+  } catch (error) {
+    console.error('Error updating user:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
