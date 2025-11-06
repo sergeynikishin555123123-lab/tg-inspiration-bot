@@ -47,24 +47,13 @@ try {
   process.exit(1);
 }
 
-// Инициализация базы данных и маршрутов
+// Инициализация базы данных
 try {
   const { initDatabase } = await import('./config/database.js');
   initDatabase();
-  
-  // Импортируем маршруты
-  const userRoutes = (await import('./routes/users.js')).default;
-  const adminRoutes = (await import('./routes/admin.js')).default;
-  const webappRoutes = (await import('./routes/webapp.js')).default;
-  
-  // Подключаем маршруты
-  app.use('/api/users', userRoutes);
-  app.use('/api/admin', adminRoutes);
-  app.use('/api/webapp', webappRoutes);
-  
-  console.log('✅ Routes initialized');
+  console.log('✅ Database initialized');
 } catch (error) {
-  console.error('❌ Error initializing routes:', error);
+  console.error('❌ Error initializing database:', error);
 }
 
 // Базовые endpoint'ы
@@ -78,6 +67,239 @@ app.get('/health', (req, res) => {
   });
 });
 
+// API маршруты - ДОБАВЛЯЕМ ИХ ПРЯМО ЗДЕСЬ ДЛЯ ТЕСТА
+
+// Получение персонажей
+app.get('/api/webapp/characters', async (req, res) => {
+  try {
+    console.log('📝 GET /api/webapp/characters');
+    
+    // Импортируем базу данных
+    const db = (await import('./config/database.js')).default;
+    
+    db.all('SELECT * FROM characters ORDER BY class, character_name', (err, characters) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      // Группируем по классам
+      const groupedCharacters = characters.reduce((acc, character) => {
+        if (!acc[character.class]) {
+          acc[character.class] = [];
+        }
+        acc[character.class].push(character);
+        return acc;
+      }, {});
+      
+      console.log(`✅ Returned ${characters.length} characters`);
+      res.json(groupedCharacters);
+    });
+  } catch (error) {
+    console.error('Error in /api/webapp/characters:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Получение данных пользователя
+app.get('/api/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    console.log('📝 GET /api/users/', userId);
+    
+    const db = (await import('./config/database.js')).default;
+    
+    db.get(
+      `SELECT u.*, c.character_name, c.class, c.bonus_type, c.bonus_value 
+       FROM users u 
+       LEFT JOIN characters c ON u.character_id = c.id 
+       WHERE u.user_id = ?`,
+      [userId],
+      (err, user) => {
+        if (err) {
+          console.error('Database error:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        
+        if (user) {
+          // Рассчитываем уровень на основе звезд
+          const level = calculateLevel(user.stars);
+          user.level = level;
+          
+          res.json({ exists: true, user });
+        } else {
+          // Создаем временного пользователя
+          res.json({ 
+            exists: false, 
+            user: {
+              user_id: parseInt(userId),
+              stars: 0,
+              level: 'Ученик',
+              is_registered: false
+            }
+          });
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Error in /api/users:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Регистрация пользователя
+app.post('/api/users/register', async (req, res) => {
+  try {
+    const { userId, userClass, characterId, tgUsername, tgFirstName, tgLastName } = req.body;
+    console.log('📝 POST /api/users/register', { userId, userClass, characterId });
+    
+    if (!userId || !userClass || !characterId) {
+      return res.status(400).json({ error: 'User ID, class and character are required' });
+    }
+    
+    const db = (await import('./config/database.js')).default;
+    
+    // Проверяем, существует ли пользователь
+    db.get('SELECT * FROM users WHERE user_id = ?', [userId], (err, existingUser) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      if (existingUser) {
+        return res.status(400).json({ error: 'User already registered' });
+      }
+      
+      // Создаем нового пользователя
+      db.run(
+        `INSERT INTO users (user_id, tg_username, tg_first_name, tg_last_name, class, character_id, is_registered, stars) 
+         VALUES (?, ?, ?, ?, ?, ?, TRUE, 5)`,
+        [userId, tgUsername, tgFirstName, tgLastName, userClass, characterId],
+        function(err) {
+          if (err) {
+            console.error('Error creating user:', err);
+            return res.status(500).json({ error: 'Error creating user' });
+          }
+          
+          // Добавляем активность за регистрацию
+          db.run(
+            `INSERT INTO activities (user_id, activity_type, stars_earned, description) 
+             VALUES (?, 'registration', 5, 'Регистрация в системе')`,
+            [userId]
+          );
+          
+          res.json({ 
+            success: true, 
+            message: 'Пользователь успешно зарегистрирован',
+            starsAdded: 5,
+            userId: userId
+          });
+        }
+      );
+    });
+  } catch (error) {
+    console.error('Error in registration:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Получение квизов
+app.get('/api/webapp/quizzes', async (req, res) => {
+  try {
+    console.log('📝 GET /api/webapp/quizzes');
+    
+    const db = (await import('./config/database.js')).default;
+    
+    // Сначала создадим тестовый квиз если нет квизов
+    db.get("SELECT COUNT(*) as count FROM quizzes", (err, row) => {
+      if (err) {
+        console.error('Error checking quizzes:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      if (row.count === 0) {
+        // Создаем тестовый квиз
+        const testQuiz = {
+          title: "Тестовый квиз по искусству",
+          description: "Проверьте свои знания в искусстве",
+          questions: JSON.stringify([
+            {
+              question: "Кто написал картину 'Мона Лиза'?",
+              options: ["Винсент Ван Гог", "Леонардо да Винчи", "Пабло Пикассо", "Клод Моне"],
+              correctAnswer: 1
+            },
+            {
+              question: "В каком веке жил Рембрандт?",
+              options: ["16 век", "17 век", "18 век", "19 век"],
+              correctAnswer: 1
+            },
+            {
+              question: "Какой стиль живописи характеризуется мелкими точками?",
+              options: ["Импрессионизм", "Пуантилизм", "Кубизм", "Сюрреализм"],
+              correctAnswer: 1
+            }
+          ]),
+          stars_reward: 2
+        };
+        
+        db.run(
+          `INSERT INTO quizzes (title, description, questions, stars_reward) 
+           VALUES (?, ?, ?, ?)`,
+          [testQuiz.title, testQuiz.description, testQuiz.questions, testQuiz.stars_reward],
+          function(err) {
+            if (err) {
+              console.error('Error creating test quiz:', err);
+            } else {
+              console.log('✅ Created test quiz');
+            }
+            
+            // Теперь получаем квизы
+            sendQuizzesResponse(db, res);
+          }
+        );
+      } else {
+        sendQuizzesResponse(db, res);
+      }
+    });
+  } catch (error) {
+    console.error('Error in /api/webapp/quizzes:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+function sendQuizzesResponse(db, res) {
+  db.all(
+    `SELECT * FROM quizzes 
+     WHERE is_active = TRUE 
+     ORDER BY created_at DESC`,
+    (err, quizzes) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      // Парсим вопросы из JSON
+      const parsedQuizzes = quizzes.map(quiz => ({
+        ...quiz,
+        questions: quiz.questions ? JSON.parse(quiz.questions) : []
+      }));
+      
+      console.log(`✅ Returned ${quizzes.length} quizzes`);
+      res.json(parsedQuizzes);
+    }
+  );
+}
+
+// Функция расчета уровня
+function calculateLevel(stars) {
+  if (stars >= 400) return 'Наставник';
+  if (stars >= 300) return 'Мастер';
+  if (stars >= 150) return 'Знаток';
+  if (stars >= 50) return 'Искатель';
+  return 'Ученик';
+}
+
+// Главная страница
 app.get('/', (req, res) => {
   res.json({
     message: '🎨 Мастерская Вдохновения - API',
@@ -85,7 +307,9 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       user: '/api/users/:id',
-      characters: '/api/webapp/characters'
+      characters: '/api/webapp/characters',
+      quizzes: '/api/webapp/quizzes',
+      register: '/api/users/register (POST)'
     }
   });
 });
@@ -125,6 +349,11 @@ bot.onText(/\/start/, (msg) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 Health check: http://localhost:${PORT}/health`);
+  console.log(`📚 API endpoints:`);
+  console.log(`   GET  /api/webapp/characters`);
+  console.log(`   GET  /api/users/:userId`);
+  console.log(`   POST /api/users/register`);
+  console.log(`   GET  /api/webapp/quizzes`);
   console.log(`🤖 Bot: Active!`);
 }).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
