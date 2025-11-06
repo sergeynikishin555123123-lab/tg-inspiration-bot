@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
+import sqlite3 from 'sqlite3';
 
 // Загрузка переменных окружения
 dotenv.config();
@@ -31,10 +32,10 @@ if (!process.env.BOT_TOKEN) {
 }
 
 // Инициализация базы данных
-import sqlite3 from 'sqlite3';
 const db = new sqlite3.Database(':memory:');
 
-// Инициализация таблиц
+// ==================== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ====================
+
 db.serialize(() => {
   console.log('📊 Инициализация базы данных в памяти...');
   
@@ -68,7 +69,8 @@ db.serialize(() => {
     character_name TEXT NOT NULL,
     description TEXT,
     bonus_type TEXT NOT NULL,
-    bonus_value TEXT NOT NULL
+    bonus_value TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
   
   // Таблица квизов
@@ -92,7 +94,8 @@ db.serialize(() => {
     sparks_earned REAL NOT NULL,
     description TEXT,
     metadata TEXT DEFAULT '{}',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (user_id)
   )`);
 
   // Таблица постов канала
@@ -119,7 +122,8 @@ db.serialize(() => {
     comment_text TEXT NOT NULL,
     is_approved BOOLEAN DEFAULT FALSE,
     sparks_awarded BOOLEAN DEFAULT FALSE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (user_id)
   )`);
 
   // Таблица фото работ
@@ -131,7 +135,8 @@ db.serialize(() => {
     theme TEXT,
     is_approved BOOLEAN DEFAULT FALSE,
     sparks_awarded BOOLEAN DEFAULT FALSE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (user_id)
   )`);
 
   // Таблица приглашений
@@ -141,7 +146,9 @@ db.serialize(() => {
     invited_id INTEGER UNIQUE NOT NULL,
     invited_username TEXT,
     is_active BOOLEAN DEFAULT TRUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (inviter_id) REFERENCES users (user_id),
+    FOREIGN KEY (invited_id) REFERENCES users (user_id)
   )`);
 
   // Таблица админов
@@ -181,21 +188,21 @@ db.serialize(() => {
 
   // Заполняем персонажей
   const characters = [
-    [1, 'Художники', 'Лука Цветной', 'Рисует с детства, любит эксперименты с цветом', 'percent_bonus', '10'],
-    [2, 'Художники', 'Марина Кисть', 'Строгая преподавательница академической живописи', 'forgiveness', '1'],
-    [3, 'Художники', 'Феликс Штрих', 'Экспериментатор, мастер зарисовок', 'random_gift', '1-3'],
-    [4, 'Стилисты', 'Эстелла Моде', 'Бывший стилист, обучает восприятию образа', 'percent_bonus', '5'],
-    [5, 'Стилисты', 'Роза Ателье', 'Мастер практического шитья', 'secret_advice', '2weeks'],
-    [6, 'Стилисты', 'Гертруда Линия', 'Ценит детали и аксессуары', 'series_bonus', '1'],
-    [7, 'Мастера', 'Тихон Творец', 'Ремесленник, любит простые техники', 'photo_bonus', '1'],
-    [8, 'Мастера', 'Агата Узор', 'Любит неожиданные материалы', 'weekly_surprise', '6'],
-    [9, 'Мастера', 'Борис Клей', 'Весёлый мастер импровизаций', 'mini_quest', '2'],
-    [10, 'Историки', 'Профессор Артёмий', 'Любитель архивов и фактов', 'quiz_hint', '1'],
-    [11, 'Историки', 'Соня Гравюра', 'Рассказывает истории картин', 'fact_star', '1'],
-    [12, 'Историки', 'Михаил Эпоха', 'Любит хронологию и эпохи', 'streak_multiplier', '2']
+    ['Художники', 'Лука Цветной', 'Рисует с детства, любит эксперименты с цветом', 'percent_bonus', '10'],
+    ['Художники', 'Марина Кисть', 'Строгая преподавательница академической живописи', 'forgiveness', '1'],
+    ['Художники', 'Феликс Штрих', 'Экспериментатор, мастер зарисовок', 'random_gift', '1-3'],
+    ['Стилисты', 'Эстелла Моде', 'Бывший стилист, обучает восприятию образа', 'percent_bonus', '5'],
+    ['Стилисты', 'Роза Ателье', 'Мастер практического шитья', 'secret_advice', '2weeks'],
+    ['Стилисты', 'Гертруда Линия', 'Ценит детали и аксессуары', 'series_bonus', '1'],
+    ['Мастера', 'Тихон Творец', 'Ремесленник, любит простые техники', 'photo_bonus', '1'],
+    ['Мастера', 'Агата Узор', 'Любит неожиданные материалы', 'weekly_surprise', '6'],
+    ['Мастера', 'Борис Клей', 'Весёлый мастер импровизаций', 'mini_quest', '2'],
+    ['Историки', 'Профессор Артёмий', 'Любитель архивов и фактов', 'quiz_hint', '1'],
+    ['Историки', 'Соня Гравюра', 'Рассказывает истории картин', 'fact_star', '1'],
+    ['Историки', 'Михаил Эпоха', 'Любит хронологию и эпохи', 'streak_multiplier', '2']
   ];
   
-  const stmt = db.prepare("INSERT INTO characters (id, class, character_name, description, bonus_type, bonus_value) VALUES (?, ?, ?, ?, ?, ?)");
+  const stmt = db.prepare("INSERT INTO characters (class, character_name, description, bonus_type, bonus_value) VALUES (?, ?, ?, ?, ?)");
   characters.forEach(char => stmt.run(char));
   stmt.finalize();
   
@@ -211,58 +218,35 @@ db.serialize(() => {
   }
   
   // Добавляем тестовые квизы
-  const testQuizzes = [
-    {
-      id: 1,
-      title: "🎨 Основы живописи",
-      description: "Проверьте свои знания основ живописи",
-      questions: JSON.stringify([
-        {
-          question: "Кто написал картину 'Мона Лиза'?",
-          options: ["Винсент Ван Гог", "Леонардо да Винчи", "Пабло Пикассо", "Клод Моне"],
-          correctAnswer: 1
-        },
-        {
-          question: "Какие три основных цвета?",
-          options: ["Красный, синий, зеленый", "Красный, желтый, синий", "Черный, белый, серый", "Фиолетовый, оранжевый, зеленый"],
-          correctAnswer: 1
-        },
-        {
-          question: "Что такое акварель?",
-          options: ["Масляная краска", "Водорастворимая краска", "Акриловая краска", "Пастель"],
-          correctAnswer: 1
-        }
-      ]),
-      sparks_reward: 2
-    }
-  ];
+  const testQuiz = {
+    title: "🎨 Основы живописи",
+    description: "Проверьте свои знания основ живописи",
+    questions: JSON.stringify([
+      {
+        question: "Кто написал картину 'Мона Лиза'?",
+        options: ["Винсент Ван Гог", "Леонардо да Винчи", "Пабло Пикассо", "Клод Моне"],
+        correctAnswer: 1
+      },
+      {
+        question: "Какие три основных цвета?",
+        options: ["Красный, синий, зеленый", "Красный, желтый, синий", "Черный, белый, серый", "Фиолетовый, оранжевый, зеленый"],
+        correctAnswer: 1
+      }
+    ]),
+    sparks_reward: 2
+  };
   
-  const quizStmt = db.prepare("INSERT INTO quizzes (id, title, description, questions, sparks_reward) VALUES (?, ?, ?, ?, ?)");
-  testQuizzes.forEach(quiz => quizStmt.run([quiz.id, quiz.title, quiz.description, quiz.questions, quiz.sparks_reward]));
-  quizStmt.finalize();
+  db.run("INSERT INTO quizzes (title, description, questions, sparks_reward) VALUES (?, ?, ?, ?)",
+    [testQuiz.title, testQuiz.description, testQuiz.questions, testQuiz.sparks_reward]);
 
   // Добавляем тестовые товары в магазин
   const shopItems = [
-    {
-      title: "🎨 Урок акварели для начинающих",
-      description: "Полный видеоурок по основам акварельной живописи",
-      type: "video",
-      price: 15,
-      file_url: "https://example.com/video1.mp4",
-      preview_url: "https://example.com/preview1.jpg"
-    },
-    {
-      title: "📚 Основы композиции",
-      description: "Как правильно составлять композицию в картинах",
-      type: "video", 
-      price: 10,
-      file_url: "https://example.com/video2.mp4",
-      preview_url: "https://example.com/preview2.jpg"
-    }
+    ['🎨 Урок акварели для начинающих', 'Полный видеоурок по основам акварельной живописи', 'video', 'https://example.com/video1.mp4', 'https://example.com/preview1.jpg', 15],
+    ['📚 Основы композиции', 'Как правильно составлять композицию в картинах', 'video', 'https://example.com/video2.mp4', 'https://example.com/preview2.jpg', 10]
   ];
   
   const shopStmt = db.prepare("INSERT INTO shop_items (title, description, type, file_url, preview_url, price) VALUES (?, ?, ?, ?, ?, ?)");
-  shopItems.forEach(item => shopStmt.run([item.title, item.description, item.type, item.file_url, item.preview_url, item.price]));
+  shopItems.forEach(item => shopStmt.run(item));
   shopStmt.finalize();
   
   console.log('✅ База данных готова');
@@ -429,23 +413,35 @@ app.get('/api/users/:userId', (req, res) => {
         user.level = calculateLevel(user.sparks);
         res.json({ exists: true, user });
       } else {
-        res.json({ 
-          exists: false, 
-          user: {
-            user_id: parseInt(userId),
-            sparks: 0,
-            level: 'Ученик',
-            is_registered: false,
-            class: null,
-            character_name: null
+        // Создаем нового пользователя
+        db.run(
+          `INSERT INTO users (user_id, tg_first_name, sparks, level) VALUES (?, 'Новый пользователь', 0, 'Ученик')`,
+          [userId],
+          function(err) {
+            if (err) {
+              console.error('❌ Error creating user:', err);
+              return res.status(500).json({ error: 'Error creating user' });
+            }
+            
+            res.json({ 
+              exists: false, 
+              user: {
+                user_id: parseInt(userId),
+                sparks: 0,
+                level: 'Ученик',
+                is_registered: false,
+                class: null,
+                character_name: null,
+                tg_first_name: 'Новый пользователь'
+              }
+            });
           }
-        });
+        );
       }
     }
   );
 });
 
-// ИСПРАВЛЕННАЯ РЕГИСТРАЦИЯ - предотвращаем повторную регистрацию
 app.post('/api/users/register', (req, res) => {
   const { userId, userClass, characterId, tgUsername, tgFirstName, tgLastName } = req.body;
   
@@ -878,25 +874,9 @@ app.post('/api/webapp/shop/purchase', (req, res) => {
                 }
               );
               
-              // Отправляем сообщение пользователю через бота
-              const bot = new TelegramBot(process.env.BOT_TOKEN);
-              const message = `🎉 Поздравляем с покупкой!\n\n` +
-                            `📦 Товар: ${item.title}\n` +
-                            `💰 Стоимость: ${item.price}✨\n` +
-                            `📝 Описание: ${item.description}\n\n` +
-                            `Ссылка для скачивания: ${item.file_url}`;
-              
-              bot.sendMessage(userId, message)
-                .then(() => {
-                  console.log(`✅ Purchase completed for user ${userId}, item: ${item.title}`);
-                })
-                .catch(err => {
-                  console.error('Error sending purchase message:', err);
-                });
-              
               res.json({
                 success: true,
-                message: 'Покупка успешно завершена! Чек отправлен в Telegram.',
+                message: 'Покупка успешно завершена!',
                 item: item,
                 remainingSparks: user.sparks - item.price
               });
@@ -1595,24 +1575,7 @@ app.delete('/api/admin/admins/:userId', requireAdmin, (req, res) => {
 
 // ==================== TELEGRAM BOT ====================
 
-const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: false });
-
-// Настройка вебхука для продакшена
-if (process.env.NODE_ENV === 'production' && process.env.APP_URL) {
-  const webhookUrl = `${process.env.APP_URL}/bot${process.env.BOT_TOKEN}`;
-  console.log(`🌐 Setting webhook to: ${webhookUrl}`);
-  
-  bot.setWebHook(webhookUrl)
-    .then(() => console.log('✅ Webhook set successfully'))
-    .catch(err => console.error('❌ Webhook error:', err.message));
-} else {
-  console.log('🔧 Development mode: using polling');
-  bot.startPolling().then(() => {
-    console.log('✅ Bot polling started');
-  }).catch(err => {
-    console.log('⚠️ Bot polling error:', err.message);
-  });
-}
+const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 // Обработчики команд бота
 bot.onText(/\/start(?:\s+invite_(\d+))?/, (msg, match) => {
@@ -1674,63 +1637,17 @@ bot.onText(/\/admin/, (msg) => {
   });
 });
 
-// Обработка вебхука
-app.post(`/bot${process.env.BOT_TOKEN}`, (req, res) => {
-  bot.processUpdate(req.body);
-  res.sendStatus(200);
-});
-
 // ==================== SERVER START ====================
 
-function findFreePort(startPort) {
-  return new Promise((resolve) => {
-    const server = createServer();
-    server.listen(startPort, '0.0.0.0', () => {
-      const port = server.address().port;
-      server.close(() => resolve(port));
-    });
-    server.on('error', () => {
-      resolve(findFreePort(startPort + 1));
-    });
-  });
-}
+const PORT = process.env.PORT || 3000;
 
-async function startServer() {
-  const portsToTry = [3000, 3001, 3002, 3003, 3004, 3005];
-  let selectedPort = null;
-  
-  for (const port of portsToTry) {
-    try {
-      const server = createServer();
-      await new Promise((resolve, reject) => {
-        server.listen(port, '0.0.0.0', () => {
-          server.close(() => resolve(port));
-        });
-        server.on('error', reject);
-      });
-      selectedPort = port;
-      break;
-    } catch (err) {
-      console.log(`⚠️  Port ${port} is busy, trying next...`);
-    }
-  }
-  
-  if (!selectedPort) {
-    console.error('❌ No free ports found!');
-    process.exit(1);
-  }
-  
-  app.listen(selectedPort, '0.0.0.0', () => {
-    console.log(`🚀 Сервер запущен на порту ${selectedPort}`);
-    console.log(`📱 Mini App: ${process.env.APP_URL || `http://localhost:${selectedPort}`}`);
-    console.log(`🔧 Admin Panel: ${process.env.APP_URL || `http://localhost:${selectedPort}`}/admin`);
-    console.log(`📊 Health: http://localhost:${selectedPort}/health`);
-    console.log(`🌐 Webhook: ${process.env.APP_URL ? `${process.env.APP_URL}/bot${process.env.BOT_TOKEN}` : 'Not set'}`);
-    console.log(`🤖 Bot: ${process.env.NODE_ENV === 'production' ? 'Webhook mode' : 'Polling mode'}`);
-    console.log('=================================');
-  }).on('error', (err) => {
-    console.error('❌ Server error:', err);
-  });
-}
-
-startServer();
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Сервер запущен на порту ${PORT}`);
+  console.log(`📱 Mini App: ${process.env.APP_URL || `http://localhost:${PORT}`}`);
+  console.log(`🔧 Admin Panel: ${process.env.APP_URL || `http://localhost:${PORT}`}/admin`);
+  console.log(`📊 Health: http://localhost:${PORT}/health`);
+  console.log('🤖 Bot: Polling mode');
+  console.log('=================================');
+}).on('error', (err) => {
+  console.error('❌ Server error:', err);
+});
