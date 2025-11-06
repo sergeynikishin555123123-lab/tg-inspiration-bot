@@ -6,12 +6,25 @@ import { existsSync, mkdirSync } from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Используем относительный путь вместо абсолютного
 const dbPath = join(__dirname, '..', 'data', 'inspiration.db');
 
 // Создаем директорию для данных если её нет
 const dataDir = join(__dirname, '..', 'data');
 if (!existsSync(dataDir)) {
-  mkdirSync(dataDir, { recursive: true });
+  try {
+    mkdirSync(dataDir, { recursive: true });
+    console.log('📁 Created data directory:', dataDir);
+  } catch (error) {
+    console.error('❌ Error creating data directory:', error.message);
+    // Используем временную директорию как запасной вариант
+    const tempDir = join(__dirname, '..', 'temp_data');
+    if (!existsSync(tempDir)) {
+      mkdirSync(tempDir, { recursive: true });
+    }
+    dbPath = join(tempDir, 'inspiration.db');
+    console.log('📁 Using temporary directory:', tempDir);
+  }
 }
 
 const db = new sqlite3.Database(dbPath, (err) => {
@@ -22,6 +35,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
+// Остальной код без изменений...
 export const initDatabase = () => {
   // Таблица пользователей
   db.run(`CREATE TABLE IF NOT EXISTS users (
