@@ -1,0 +1,19 @@
+{
+  "name": "tg-inspiration-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot with Mini App",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-telegram-bot-api": "^0.64.0",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
