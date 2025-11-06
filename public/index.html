@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мастерская Вдохновения</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        .card h1 {
+            color: #2d3748;
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+        .card p {
+            color: #718096;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .user-info:last-child {
+            border-bottom: none;
+        }
+        .label {
+            color: #4a5568;
+            font-size: 14px;
+        }
+        .value {
+            color: #2d3748;
+            font-weight: 600;
+        }
+        .stars {
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            color: #f6e05e;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            margin: 20px 0;
+        }
+        .level-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102,126,234,0.4);
+        }
+        .welcome-section {
+            background: rgba(102,126,234,0.1);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🎨 Мастерская Вдохновения</h1>
+            <p>Ваш личный кабинет</p>
+            
+            <div id="userData">
+                <div class="user-info">
+                    <span class="label">Имя:</span>
+                    <span class="value" id="userName">Загрузка...</span>
+                </div>
+                <div class="user-info">
+                    <span class="label">Уровень:</span>
+                    <span class="value">
+                        <span id="userLevel">Загрузка...</span>
+                        <span class="level-badge" id="levelBadge"></span>
+                    </span>
+                </div>
+                
+                <div class="stars" id="starsCount">⭐ 0</div>
+                
+                <div class="user-info">
+                    <span class="label">Статус:</span>
+                    <span class="value" id="userStatus">Загрузка...</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="welcomeBlock" class="welcome-section" style="display: none;">
+            <h3 style="color: #2d3748; margin-bottom: 8px;">🎯 Добро пожаловать!</h3>
+            <p style="color: #718096; margin-bottom: 16px;">Для начала работы пройдите регистрацию</p>
+            <button class="btn" onclick="startRegistration()">Начать регистрацию</button>
+        </div>
+
+        <div class="card">
+            <h3>🚀 Быстрые действия</h3>
+            <button class="btn" onclick="showCharacters()">👥 Выбрать персонажа</button>
+            <button class="btn" onclick="refreshData()">🔄 Обновить данные</button>
+        </div>
+    </div>
+
+    <script>
+        async function loadUserData() {
+            try {
+                const initData = window.Telegram?.WebApp?.initDataUnsafe;
+                let userId = '12345';
+                
+                if (initData?.user?.id) {
+                    userId = initData.user.id;
+                }
+                
+                const response = await fetch(`/api/user/${userId}`);
+                const data = await response.json();
+                
+                if (data.exists) {
+                    const user = data.user;
+                    document.getElementById('userName').textContent = user.tg_name;
+                    document.getElementById('userLevel').textContent = user.level;
+                    document.getElementById('levelBadge').textContent = user.level;
+                    document.getElementById('starsCount').textContent = `⭐ ${user.stars}`;
+                    document.getElementById('userStatus').textContent = user.is_registered ? 'Зарегистрирован' : 'Не зарегистрирован';
+                    
+                    if (!user.is_registered) {
+                        document.getElementById('welcomeBlock').style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('userName').textContent = 'Ошибка загрузки';
+            }
+        }
+
+        function startRegistration() {
+            alert('Регистрация скоро будет доступна!');
+        }
+
+        function showCharacters() {
+            alert('Выбор персонажа скоро будет доступен!');
+        }
+
+        function refreshData() {
+            loadUserData();
+            alert('Данные обновлены!');
+        }
+
+        // Инициализация Telegram WebApp
+        if (window.Telegram && Telegram.WebApp) {
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
+            console.log('Telegram WebApp initialized');
+        }
+
+        // Загружаем данные при старте
+        loadUserData();
+    </script>
+</body>
+</html>
