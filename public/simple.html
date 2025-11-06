@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Тест Мастерская Вдохновения</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .card { background: #f5f5f5; padding: 20px; margin: 10px 0; border-radius: 10px; }
+        button { padding: 10px 20px; margin: 5px; font-size: 16px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>🎨 Мастерская Вдохновения - Тест</h1>
+    
+    <div class="card">
+        <h3>Тест API подключения</h3>
+        <button onclick="testHealth()">Тест /health</button>
+        <button onclick="testCharacters()">Тест /characters</button>
+        <button onclick="testUser()">Тест /users</button>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        
+        async function testHealth() {
+            try {
+                const response = await fetch(API_BASE + '/health');
+                const data = await response.json();
+                showResult('✅ Health: ' + data.message, 'success');
+            } catch (error) {
+                showResult('❌ Health error: ' + error.message, 'error');
+            }
+        }
+        
+        async function testCharacters() {
+            try {
+                const response = await fetch(API_BASE + '/api/webapp/characters');
+                const data = await response.json();
+                const count = Object.values(data).flat().length;
+                showResult(`✅ Characters: ${count} персонажей загружено`, 'success');
+                console.log('Characters:', data);
+            } catch (error) {
+                showResult('❌ Characters error: ' + error.message, 'error');
+            }
+        }
+        
+        async function testUser() {
+            try {
+                const response = await fetch(API_BASE + '/api/users/12345');
+                const data = await response.json();
+                showResult(`✅ User: ${data.user.tg_first_name}, ${data.user.stars}⭐`, 'success');
+                console.log('User:', data);
+            } catch (error) {
+                showResult('❌ User error: ' + error.message, 'error');
+            }
+        }
+        
+        function showResult(message, type) {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = message;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        // Автотест при загрузке
+        testHealth();
+        setTimeout(testCharacters, 500);
+        setTimeout(testUser, 1000);
+    </script>
+</body>
+</html>
