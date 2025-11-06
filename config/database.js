@@ -1,41 +1,23 @@
 import sqlite3 from 'sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Используем относительный путь вместо абсолютного
-const dbPath = join(__dirname, '..', 'data', 'inspiration.db');
+// Используем базу данных прямо в текущей директории
+const dbPath = join(process.cwd(), 'inspiration.db');
 
-// Создаем директорию для данных если её нет
-const dataDir = join(__dirname, '..', 'data');
-if (!existsSync(dataDir)) {
-  try {
-    mkdirSync(dataDir, { recursive: true });
-    console.log('📁 Created data directory:', dataDir);
-  } catch (error) {
-    console.error('❌ Error creating data directory:', error.message);
-    // Используем временную директорию как запасной вариант
-    const tempDir = join(__dirname, '..', 'temp_data');
-    if (!existsSync(tempDir)) {
-      mkdirSync(tempDir, { recursive: true });
-    }
-    dbPath = join(tempDir, 'inspiration.db');
-    console.log('📁 Using temporary directory:', tempDir);
-  }
-}
+console.log('📊 Database path:', dbPath);
 
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('❌ Error opening database:', err.message);
   } else {
-    console.log('📊 Connected to SQLite database:', dbPath);
+    console.log('✅ Connected to SQLite database');
   }
 });
 
-// Остальной код без изменений...
 export const initDatabase = () => {
   // Таблица пользователей
   db.run(`CREATE TABLE IF NOT EXISTS users (
@@ -52,8 +34,7 @@ export const initDatabase = () => {
     registration_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
     daily_commented BOOLEAN DEFAULT FALSE,
-    consecutive_days INTEGER DEFAULT 0,
-    FOREIGN KEY (character_id) REFERENCES characters(id)
+    consecutive_days INTEGER DEFAULT 0
   )`, (err) => {
     if (err) console.error('Error creating users table:', err);
     else console.log('✅ Users table ready');
@@ -80,8 +61,7 @@ export const initDatabase = () => {
     activity_type TEXT NOT NULL,
     stars_earned REAL NOT NULL,
     description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`, (err) => {
     if (err) console.error('Error creating activities table:', err);
     else console.log('✅ Activities table ready');
@@ -122,7 +102,10 @@ export const initDatabase = () => {
   // Заполняем персонажей согласно ТЗ
   setTimeout(() => {
     db.get("SELECT COUNT(*) as count FROM characters", (err, row) => {
-      if (err) return console.error('Error checking characters:', err);
+      if (err) {
+        console.error('Error checking characters:', err);
+        return;
+      }
       
       if (row.count === 0) {
         console.log('👥 Adding default characters...');
@@ -222,11 +205,15 @@ export const initDatabase = () => {
                                       VALUES (?, ?, ?, ?, ?)`);
         
         characters.forEach(char => {
-          insertStmt.run([char.class, char.character_name, char.description, char.bonus_type, char.bonus_value]);
+          insertStmt.run([char.class, char.character_name, char.description, char.bonus_type, char.bonus_value], (err) => {
+            if (err) console.error('Error inserting character:', err);
+          });
         });
         
         insertStmt.finalize();
         console.log('✅ Default characters added');
+      } else {
+        console.log(`✅ Database already has ${row.count} characters`);
       }
     });
   }, 1000);
