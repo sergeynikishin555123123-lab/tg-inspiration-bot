@@ -1385,6 +1385,26 @@ app.delete('/api/admin/admins/:userId', requireAdmin, (req, res) => {
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: false });
 
+// Настройка вебхука для продакшена
+if (process.env.NODE_ENV === 'production' && process.env.APP_URL) {
+  const webhookUrl = `${process.env.APP_URL}/bot${process.env.BOT_TOKEN}`;
+  console.log(`🌐 Setting webhook to: ${webhookUrl}`);
+  
+  bot.setWebHook(webhookUrl)
+    .then(() => console.log('✅ Webhook set successfully'))
+    .catch(err => console.error('❌ Webhook error:', err.message));
+} else {
+  console.log('🔧 Development mode: using polling');
+  // В разработке используем polling
+  bot.startPolling().then(() => {
+    console.log('✅ Bot polling started');
+  }).catch(err => {
+    console.log('⚠️ Bot polling error:', err.message);
+  });
+}
+// ===> КОНЕЦ ВСТАВКИ <===
+
+// Обработчики команд бота
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   const name = msg.from.first_name || 'Друг';
