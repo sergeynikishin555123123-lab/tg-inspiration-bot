@@ -1385,6 +1385,7 @@ app.delete('/api/admin/admins/:userId', requireAdmin, (req, res) => {
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: false });
 
+// ===> ВСТАВЬТЕ ЗДЕСЬ ВЕБХУК <===
 // Настройка вебхука для продакшена
 if (process.env.NODE_ENV === 'production' && process.env.APP_URL) {
   const webhookUrl = `${process.env.APP_URL}/bot${process.env.BOT_TOKEN}`;
@@ -1412,7 +1413,7 @@ bot.onText(/\/start/, (msg) => {
   
   const welcomeText = `🎨 Привет, ${name}! 
 
-Добро пожаловать в **Мастерскую Вдохновения**! 
+Добро пожаловать в **Мастерская Вдохновения**! 
 
 ✨ Вот что вас ждет:
 • 📚 Обучающие видео и задания
@@ -1455,6 +1456,13 @@ bot.onText(/\/admin/, (msg) => {
     
     bot.sendMessage(chatId, `🔧 Панель администратора\n\nДоступ: ${admin.role}\n\n${adminUrl}`);
   });
+});
+
+// ===> ДОБАВЬТЕ ЭТОТ КОД ДЛЯ ОБРАБОТКИ ВЕБХУКА <===
+// Обработка вебхука
+app.post(`/bot${process.env.BOT_TOKEN}`, (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
 });
 
 // Запускаем polling вручную после старта сервера
