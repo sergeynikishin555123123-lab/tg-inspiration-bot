@@ -1,8 +1,24 @@
-require('dotenv').config();
-const express = require('express');
-const path = require('path');
-const TelegramBot = require('node-telegram-bot-api');
-const cors = require('cors');
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import TelegramBot from 'node-telegram-bot-api';
+import cors from 'cors';
+import dotenv from 'dotenv';
+
+// Импортируем функции базы данных
+import { 
+  initializeDatabase, 
+  getUser, 
+  createUser, 
+  updateUser,
+  addStars 
+} from './database.js';
+
+// Конфигурация ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,9 +26,11 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(express.json());
 app.use(cors());
-app.use(express.static('public'));
 
-// Инициализация бота с LONG POLLING
+// Serve static files from React build
+app.use(express.static(path.join(__dirname, 'client/dist')));
+
+// Инициализация бота
 const bot = new TelegramBot(process.env.BOT_TOKEN, {
   polling: {
     interval: 300,
@@ -25,62 +43,87 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, {
 
 console.log('🤖 Bot starting in POLLING mode...');
 
-// Временное хранилище пользователей
-const users = new Map();
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    message: '✅ Бот работает через long polling!',
-    mode: 'polling',
-    users_count: users.size,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// API для Mini App - получение данных пользователя
-app.get('/api/user/:userId', (req, res) => {
-  const { userId } = req.params;
-  const user = users.get(userId);
-  
-  if (!user) {
-    return res.json({ exists: false });
-  }
-  
-  res.json({ exists: true, user });
-});
-
-// API для Mini App - регистрация пользователя
-app.post('/api/user/register', (req, res) => {
+// Health check endpoint
+app.get('/health', async (req, res) => {
   try {
-    const { userId, username, name, userClass, character } = req.body;
-    
-    const user = {
-      user_id: userId,
-      tg_username: username,
-      tg_name: name,
-      class: userClass,
-      character: character,
-      stars: 0,
-      level: 'Ученик',
-      created_at: new Date().toISOString()
+    const healthInfo = {
+      status: 'OK',
+      message: '✅ Бот работает через long polling!',
+      mode: 'polling',
+      timestamp: new Date().toISOString(),
+      database: 'PostgreSQL',
+      environment: process.env.NODE_ENV
     };
-    
-    users.set(userId.toString(), user);
-    res.json({ success: true, message: 'Пользователь зарегистрирован' });
+    res.json(healthInfo);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Serve Mini App
+// API для Mini App - получение данных пользователя
+app.get('/api/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await getUser(parseInt(userId));
+    
+    if (!user) {
+      return res.json({ exists: false });
+    }
+    
+    res.json({ exists: true, user });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API для Mini App - регистрация пользователя
+app.post('/api/user/register', async (req, res) => {
+  try {
+    const { userId, username, name, userClass, character } = req.body;
+    
+    const updateData = {
+      user_class: userClass,
+      character_name: character,
+      is_registered: true
+    };
+    
+    const updatedUser = await updateUser(userId, updateData);
+    
+    if (updatedUser) {
+      // Начисляем звезды за регистрацию
+      await addStars(userId, 5, 'registration', 'Регистрация в системе');
+      
+      res.json({ 
+        success: true, 
+        message: 'Пользователь зарегистрирован',
+        starsAdded: 5
+      });
+    } else {
+      res.status(400).json({ error: 'Пользователь не найден' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API для получения классов и персонажей
+app.get('/api/characters', async (req, res) => {
+  try {
+    const { pool } = await import('./database.js');
+    const result = await pool.query('SELECT * FROM characters ORDER BY class, character_name');
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Serve React App for all other routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
 });
 
 // Обработчик команды /start
-bot.onText(/\/start/, (msg) => {
+bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
   const username = msg.from.username || '';
@@ -88,17 +131,15 @@ bot.onText(/\/start/, (msg) => {
   
   console.log(`👋 Новый пользователь: ${name} (ID: ${userId})`);
   
-  // Сохраняем пользователя
-  const user = {
-    user_id: userId,
-    tg_username: username,
-    tg_name: name,
-    stars: 0,
-    level: 'Ученик',
-    created_at: new Date().toISOString()
-  };
-  
-  users.set(userId.toString(), user);
+  // Создаем или получаем пользователя
+  let user = await getUser(userId);
+  if (!user) {
+    user = await createUser({
+      user_id: userId,
+      tg_username: username,
+      tg_name: name
+    });
+  }
   
   const welcomeText = `🎨 Привет, ${name}! 
 
@@ -106,7 +147,7 @@ bot.onText(/\/start/, (msg) => {
 
 ✨ Вот что вас ждет:
 • 📚 Обучающие видео и задания
-• ⭐ Система уровней и звёзд
+• ⭐ Система уровней и звёзд (сейчас: ${user?.stars || 0}⭐)
 • 🏆 Достижения и бонусы
 • 👥 Сообщество единомышленников
 
@@ -140,35 +181,24 @@ bot.on('message', (msg) => {
   }
 });
 
-// Обработчик callback queries (если будут кнопки)
-bot.on('callback_query', (callbackQuery) => {
-  const msg = callbackQuery.message;
-  bot.answerCallbackQuery(callbackQuery.id)
-    .then(() => {
-      bot.sendMessage(msg.chat.id, '🔄 Обновляю...');
+// Функция запуска приложения
+async function startApp() {
+  try {
+    // Инициализируем базу данных
+    await initializeDatabase();
+    
+    // Запускаем сервер
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`📱 Mini App: ${process.env.APP_URL}`);
+      console.log(`🗄️ Database: PostgreSQL`);
+      console.log(`✅ Bot is LIVE and waiting for messages!`);
     });
-});
-
-// Обработчик ошибок
-bot.on('error', (error) => {
-  console.error('❌ Bot error:', error);
-});
-
-bot.on('polling_error', (error) => {
-  console.error('❌ Polling error:', error);
-});
-
-// Запуск сервера
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📱 Mini App: ${process.env.APP_URL}`);
-  console.log(`👥 Users storage: in-memory`);
-  console.log(`✅ Bot is LIVE and waiting for messages!`);
-  
-  // Проверяем переменные окружения
-  if (!process.env.BOT_TOKEN) {
-    console.error('❌ BOT_TOKEN not found in environment variables!');
-  } else {
-    console.log(`🤖 Bot token: ${process.env.BOT_TOKEN.substring(0, 10)}...`);
+  } catch (error) {
+    console.error('❌ Failed to start application:', error);
+    process.exit(1);
   }
-});
+}
+
+// Запускаем приложение
+startApp();
