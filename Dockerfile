@@ -4,15 +4,19 @@ WORKDIR /app
 
 # Копируем package.json
 COPY package.json ./
+COPY client/package.json ./client/
 
-# Устанавливаем зависимости простым способом
+# Устанавливаем зависимости
 RUN npm install
 
-# Копируем все файлы
+# Устанавливаем зависимости клиента
+RUN cd client && npm install
+
+# Копируем исходный код
 COPY . .
 
-# Создаем папку client/dist если её нет (для избежания ошибок)
-RUN mkdir -p client/dist
+# Собираем клиент
+RUN cd client && npm run build
 
 # Открываем порт
 EXPOSE 3000
