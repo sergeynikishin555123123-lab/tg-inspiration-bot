@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мастерская Вдохновения</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh; 
+            padding: 20px;
+            color: white;
+        }
+        .container { max-width: 400px; margin: 0 auto; }
+        .card { 
+            background: rgba(255,255,255,0.95); 
+            border-radius: 15px; 
+            padding: 20px; 
+            margin: 10px 0; 
+            color: #333;
+        }
+        h1 { text-align: center; margin-bottom: 10px; color: #2d3748; }
+        .btn { 
+            width: 100%; 
+            padding: 15px; 
+            background: #667eea; 
+            color: white; 
+            border: none; 
+            border-radius: 10px; 
+            font-size: 18px; 
+            margin: 5px 0; 
+            cursor: pointer;
+        }
+        .info { padding: 10px 0; border-bottom: 1px solid #eee; }
+        .success { background: #48bb78; color: white; padding: 10px; border-radius: 5px; margin: 5px 0; }
+        .error { background: #f56565; color: white; padding: 10px; border-radius: 5px; margin: 5px 0; }
+        .loading { text-align: center; padding: 20px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🎨 Мастерская Вдохновения</h1>
+            <p style="text-align: center; color: #666;">Ваш личный кабинет</p>
+            
+            <div id="userData">
+                <div class="loading">⏳ Загрузка данных...</div>
+            </div>
+            
+            <div id="actions">
+                <button class="btn" onclick="loadUserData()">🔄 Обновить</button>
+                <button class="btn" onclick="testAPI()">🔍 Тест API</button>
+                <button class="btn" onclick="showCharacters()">👥 Персонажи</button>
+            </div>
+            
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        
+        // Загрузка данных пользователя
+        async function loadUserData() {
+            showMessage('⏳ Загрузка...', 'loading');
+            
+            try {
+                // Тестовый ID
+                const userId = 12345;
+                
+                const response = await fetch(`${API_URL}/api/users/${userId}`);
+                const data = await response.json();
+                
+                const user = data.user;
+                document.getElementById('userData').innerHTML = `
+                    <div class="info"><strong>ID:</strong> ${user.user_id}</div>
+                    <div class="info"><strong>Имя:</strong> ${user.tg_first_name || 'Неизвестно'}</div>
+                    <div class="info"><strong>Звёзды:</strong> ${user.stars} ⭐</div>
+                    <div class="info"><strong>Уровень:</strong> ${user.level}</div>
+                    <div class="info"><strong>Статус:</strong> ${user.is_registered ? '✅ Зарегистрирован' : '❌ Не зарегистрирован'}</div>
+                `;
+                
+                showMessage('✅ Данные загружены!', 'success');
+            } catch (error) {
+                document.getElementById('userData').innerHTML = `<div class="error">❌ Ошибка: ${error.message}</div>`;
+                showMessage('❌ Ошибка загрузки', 'error');
+            }
+        }
+        
+        // Тест API
+        async function testAPI() {
+            showMessage('🔍 Тестируем API...', 'loading');
+            
+            const endpoints = [
+                { name: 'Health', url: '/health' },
+                { name: 'Персонажи', url: '/api/webapp/characters' },
+                { name: 'Пользователи', url: '/api/users/12345' }
+            ];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(API_URL + endpoint.url);
+                    const data = await response.json();
+                    console.log(`✅ ${endpoint.name}:`, data);
+                } catch (error) {
+                    console.log(`❌ ${endpoint.name}:`, error.message);
+                    showMessage(`❌ ${endpoint.name}: ${error.message}`, 'error');
+                    return;
+                }
+            }
+            
+            showMessage('✅ Все API работают!', 'success');
+        }
+        
+        // Показать персонажей
+        async function showCharacters() {
+            showMessage('👥 Загрузка персонажей...', 'loading');
+            
+            try {
+                const response = await fetch(API_URL + '/api/webapp/characters');
+                const data = await response.json();
+                
+                let html = '<h3>👥 Персонажи:</h3>';
+                Object.keys(data).forEach(className => {
+                    html += `<h4>${className}</h4>`;
+                    data[className].forEach(char => {
+                        html += `<div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 5px;">
+                            <strong>${char.character_name}</strong><br>
+                            <small>${char.description}</small>
+                        </div>`;
+                    });
+                });
+                
+                document.getElementById('results').innerHTML = html;
+                showMessage('✅ Персонажи загружены!', 'success');
+            } catch (error) {
+                showMessage(`❌ Ошибка: ${error.message}`, 'error');
+            }
+        }
+        
+        // Показать сообщение
+        function showMessage(text, type) {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = text;
+            document.getElementById('results').appendChild(div);
+            setTimeout(() => div.remove(), 5000);
+        }
+        
+        // Автозагрузка при старте
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Приложение запущено');
+            loadUserData();
+        });
+    </script>
+</body>
+</html>
