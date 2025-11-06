@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мастерская Вдохновения</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * {
             margin: 0;
@@ -11,11 +12,12 @@
             box-sizing: border-box;
         }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
-            color: white;
+            color: #333;
+            font-size: 18px; /* Увеличиваем шрифт для пенсионеров */
         }
         .container {
             max-width: 400px;
@@ -27,17 +29,21 @@
             padding: 24px;
             margin-bottom: 20px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
         }
         .card h1 {
             color: #2d3748;
             text-align: center;
-            margin-bottom: 8px;
-            font-size: 24px;
+            margin-bottom: 16px;
+            font-size: 28px;
+            font-weight: 700;
         }
-        .card p {
-            color: #718096;
+        .card h2 {
+            color: #4a5568;
             text-align: center;
             margin-bottom: 20px;
+            font-size: 20px;
+            font-weight: 500;
         }
         .user-info {
             display: flex;
@@ -45,153 +51,562 @@
             align-items: center;
             padding: 16px 0;
             border-bottom: 1px solid #e2e8f0;
+            font-size: 18px;
         }
         .user-info:last-child {
             border-bottom: none;
         }
         .label {
             color: #4a5568;
-            font-size: 14px;
+            font-weight: 500;
         }
         .value {
             color: #2d3748;
             font-weight: 600;
         }
         .stars {
-            font-size: 48px;
+            font-size: 52px;
             font-weight: bold;
             text-align: center;
-            color: #f6e05e;
+            color: #f6ad55;
             text-shadow: 0 2px 4px rgba(0,0,0,0.3);
             margin: 20px 0;
+            padding: 10px;
         }
         .level-badge {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 16px;
             font-weight: 600;
         }
         .btn {
             width: 100%;
-            padding: 16px;
+            padding: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 12px;
-            font-size: 16px;
+            border-radius: 15px;
+            font-size: 20px;
             font-weight: 600;
             cursor: pointer;
             margin-top: 10px;
+            transition: all 0.3s ease;
         }
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(102,126,234,0.4);
         }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .btn-secondary {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+        .btn-warning {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+        }
         .welcome-section {
             background: rgba(102,126,234,0.1);
             padding: 20px;
-            border-radius: 12px;
+            border-radius: 15px;
             text-align: center;
             margin-top: 20px;
+            border: 2px dashed #667eea;
+        }
+        .loading {
+            text-align: center;
+            color: #718096;
+            padding: 20px;
+            font-size: 18px;
+        }
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            text-align: center;
+            border: 1px solid #feb2b2;
+        }
+        .success {
+            background: #c6f6d5;
+            color: #276749;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            text-align: center;
+            border: 1px solid #9ae6b4;
+        }
+        .character-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin: 15px 0;
+        }
+        .character-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .character-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+        .character-card.selected {
+            border-color: #667eea;
+            background: rgba(102,126,234,0.1);
+        }
+        .character-name {
+            font-weight: 600;
+            font-size: 18px;
+            color: #2d3748;
+        }
+        .character-class {
+            font-size: 14px;
+            color: #718096;
+            margin-bottom: 8px;
+        }
+        .character-desc {
+            font-size: 14px;
+            color: #4a5568;
+        }
+        .class-selection {
+            margin: 20px 0;
+        }
+        .class-btn {
+            width: 100%;
+            padding: 18px;
+            margin: 8px 0;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .class-btn:hover {
+            border-color: #667eea;
+            background: rgba(102,126,234,0.05);
+        }
+        .class-btn.selected {
+            border-color: #667eea;
+            background: rgba(102,126,234,0.1);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="card">
-            <h1>🎨 Мастерская Вдохновения</h1>
-            <p>Ваш личный кабинет</p>
-            
-            <div id="userData">
-                <div class="user-info">
-                    <span class="label">Имя:</span>
-                    <span class="value" id="userName">Загрузка...</span>
-                </div>
-                <div class="user-info">
-                    <span class="label">Уровень:</span>
-                    <span class="value">
-                        <span id="userLevel">Загрузка...</span>
-                        <span class="level-badge" id="levelBadge"></span>
-                    </span>
-                </div>
+        <!-- Основной экран -->
+        <div id="mainScreen">
+            <div class="card">
+                <h1>🎨 Мастерская Вдохновения</h1>
+                <h2>Ваш личный кабинет</h2>
                 
-                <div class="stars" id="starsCount">⭐ 0</div>
+                <div id="userData">
+                    <div class="loading" id="loadingData">
+                        ⏳ Загрузка данных...
+                    </div>
+                    <div id="userContent" style="display: none;">
+                        <div class="user-info">
+                            <span class="label">Имя:</span>
+                            <span class="value" id="userName">-</span>
+                        </div>
+                        <div class="user-info">
+                            <span class="label">Уровень:</span>
+                            <span class="value">
+                                <span id="userLevel">-</span>
+                                <span class="level-badge" id="levelBadge">-</span>
+                            </span>
+                        </div>
+                        
+                        <div class="stars" id="starsCount">⭐ 0</div>
+                        
+                        <div class="user-info">
+                            <span class="label">Статус:</span>
+                            <span class="value" id="userStatus">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="welcomeBlock" class="welcome-section" style="display: none;">
+                <h3 style="color: #2d3748; margin-bottom: 12px;">🎯 Добро пожаловать!</h3>
+                <p style="color: #718096; margin-bottom: 20px; font-size: 16px;">Для начала работы пройдите регистрацию и выберите своего персонажа</p>
+                <button class="btn" onclick="startRegistration()">Начать регистрацию</button>
+            </div>
+
+            <div class="card">
+                <h3 style="color: #2d3748; margin-bottom: 16px;">🚀 Быстрые действия</h3>
+                <button class="btn" onclick="showCharacters()">👥 Выбрать персонажа</button>
+                <button class="btn btn-secondary" onclick="showQuizzes()">📝 Пройти квиз</button>
+                <button class="btn btn-warning" onclick="refreshData()">🔄 Обновить данные</button>
+            </div>
+        </div>
+
+        <!-- Экран регистрации -->
+        <div id="registrationScreen" style="display: none;">
+            <div class="card">
+                <h1>📝 Регистрация</h1>
+                <p style="text-align: center; color: #718096; margin-bottom: 20px;">Выберите свой класс и персонажа</p>
                 
-                <div class="user-info">
-                    <span class="label">Статус:</span>
-                    <span class="value" id="userStatus">Загрузка...</span>
+                <div class="class-selection">
+                    <h3 style="margin-bottom: 15px; color: #4a5568;">🎯 Выберите класс:</h3>
+                    <button class="class-btn" onclick="selectClass('Художники')">🎨 Художники</button>
+                    <button class="class-btn" onclick="selectClass('Стилисты')">👗 Стилисты</button>
+                    <button class="class-btn" onclick="selectClass('Мастера')">🧵 Мастера</button>
+                    <button class="class-btn" onclick="selectClass('Историки')">🏛️ Историки</button>
+                </div>
+
+                <div id="charactersSection" style="display: none;">
+                    <h3 style="margin-bottom: 15px; color: #4a5568;">👥 Выберите персонажа:</h3>
+                    <div id="charactersList" class="character-grid">
+                        <!-- Персонажи будут загружены здесь -->
+                    </div>
+                    <button class="btn" onclick="completeRegistration()" id="completeBtn" disabled>✅ Завершить регистрацию</button>
+                    <button class="btn" onclick="showMainScreen()" style="background: #718096;">← Назад</button>
                 </div>
             </div>
         </div>
 
-        <div id="welcomeBlock" class="welcome-section" style="display: none;">
-            <h3 style="color: #2d3748; margin-bottom: 8px;">🎯 Добро пожаловать!</h3>
-            <p style="color: #718096; margin-bottom: 16px;">Для начала работы пройдите регистрацию</p>
-            <button class="btn" onclick="startRegistration()">Начать регистрацию</button>
-        </div>
-
-        <div class="card">
-            <h3>🚀 Быстрые действия</h3>
-            <button class="btn" onclick="showCharacters()">👥 Выбрать персонажа</button>
-            <button class="btn" onclick="refreshData()">🔄 Обновить данные</button>
+        <!-- Экран квизов -->
+        <div id="quizzesScreen" style="display: none;">
+            <div class="card">
+                <h1>📝 Доступные квизы</h1>
+                <div id="quizzesList">
+                    <div class="loading">Загрузка квизов...</div>
+                </div>
+                <button class="btn" onclick="showMainScreen()">← Назад</button>
+            </div>
         </div>
     </div>
 
     <script>
+        // Глобальные переменные
+        let tg = null;
+        let currentUser = null;
+        let selectedClass = null;
+        let selectedCharacter = null;
+        let charactersData = null;
+
+        // Инициализация Telegram WebApp
+        function initTelegram() {
+            if (window.Telegram && Telegram.WebApp) {
+                tg = Telegram.WebApp;
+                tg.ready();
+                tg.expand();
+                console.log('✅ Telegram WebApp initialized');
+                
+                // Устанавливаем цвет темы
+                tg.setHeaderColor('#667eea');
+                tg.setBackgroundColor('#667eea');
+                
+                return true;
+            }
+            return false;
+        }
+
+        // Получение данных пользователя
         async function loadUserData() {
             try {
-                const initData = window.Telegram?.WebApp?.initDataUnsafe;
-                let userId = '12345';
+                showLoading('userData');
                 
-                if (initData?.user?.id) {
-                    userId = initData.user.id;
+                let userId = '12345'; // Заглушка для теста
+                
+                // Пробуем получить ID из Telegram WebApp
+                if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    userId = tg.initDataUnsafe.user.id;
+                    console.log('👤 Telegram User ID:', userId);
                 }
                 
-                const response = await fetch(`/api/user/${userId}`);
+                const response = await fetch(`/api/users/${userId}`);
                 const data = await response.json();
                 
                 if (data.exists) {
-                    const user = data.user;
-                    document.getElementById('userName').textContent = user.tg_name;
-                    document.getElementById('userLevel').textContent = user.level;
-                    document.getElementById('levelBadge').textContent = user.level;
-                    document.getElementById('starsCount').textContent = `⭐ ${user.stars}`;
-                    document.getElementById('userStatus').textContent = user.is_registered ? 'Зарегистрирован' : 'Не зарегистрирован';
+                    currentUser = data.user;
+                    displayUserData(currentUser);
                     
-                    if (!user.is_registered) {
-                        document.getElementById('welcomeBlock').style.display = 'block';
+                    if (!currentUser.is_registered) {
+                        showElement('welcomeBlock');
                     }
+                } else {
+                    // Пользователь не зарегистрирован
+                    displayUserData(data.user);
+                    showElement('welcomeBlock');
                 }
+                
+                hideLoading('userData');
+                showElement('userContent');
+                
             } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('userName').textContent = 'Ошибка загрузки';
+                console.error('❌ Error loading user data:', error);
+                showError('userData', 'Ошибка загрузки данных. Проверьте подключение.');
             }
         }
 
-        function startRegistration() {
-            alert('Регистрация скоро будет доступна!');
+        // Отображение данных пользователя
+        function displayUserData(user) {
+            document.getElementById('userName').textContent = user.tg_name || 'Неизвестно';
+            document.getElementById('userLevel').textContent = user.level;
+            document.getElementById('levelBadge').textContent = user.level;
+            document.getElementById('starsCount').textContent = `⭐ ${user.stars}`;
+            document.getElementById('userStatus').textContent = user.is_registered ? 'Зарегистрирован' : 'Не зарегистрирован';
         }
 
-        function showCharacters() {
-            alert('Выбор персонажа скоро будет доступен!');
+        // Загрузка персонажей
+        async function loadCharacters() {
+            try {
+                const response = await fetch('/api/webapp/characters');
+                charactersData = await response.json();
+                console.log('✅ Characters loaded:', charactersData);
+                return charactersData;
+            } catch (error) {
+                console.error('❌ Error loading characters:', error);
+                return null;
+            }
+        }
+
+        // Навигация по экранам
+        function showMainScreen() {
+            showElement('mainScreen');
+            hideElement('registrationScreen');
+            hideElement('quizzesScreen');
+        }
+
+        function startRegistration() {
+            hideElement('mainScreen');
+            showElement('registrationScreen');
+        }
+
+        function showQuizzes() {
+            hideElement('mainScreen');
+            showElement('quizzesScreen');
+            loadQuizzes();
+        }
+
+        // Выбор класса
+        function selectClass(className) {
+            selectedClass = className;
+            
+            // Сбрасываем выбор персонажа
+            selectedCharacter = null;
+            document.getElementById('completeBtn').disabled = true;
+            
+            // Убираем выделение со всех кнопок классов
+            document.querySelectorAll('.class-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // Выделяем выбранный класс
+            event.target.classList.add('selected');
+            
+            // Показываем персонажей этого класса
+            showCharactersForClass(className);
+        }
+
+        // Показ персонажей для выбранного класса
+        async function showCharactersForClass(className) {
+            if (!charactersData) {
+                await loadCharacters();
+            }
+            
+            const charactersList = document.getElementById('charactersList');
+            charactersList.innerHTML = '';
+            
+            const classCharacters = charactersData[className];
+            if (classCharacters && classCharacters.length > 0) {
+                classCharacters.forEach(character => {
+                    const characterCard = document.createElement('div');
+                    characterCard.className = 'character-card';
+                    characterCard.onclick = () => selectCharacter(character);
+                    characterCard.innerHTML = `
+                        <div class="character-class">${className}</div>
+                        <div class="character-name">${character.character_name}</div>
+                        <div class="character-desc">${character.description}</div>
+                        <div style="margin-top: 8px; font-size: 14px; color: #667eea;">
+                            💫 Бонус: ${getBonusDescription(character.bonus_type, character.bonus_value)}
+                        </div>
+                    `;
+                    charactersList.appendChild(characterCard);
+                });
+            } else {
+                charactersList.innerHTML = '<div class="error">Персонажи не найдены</div>';
+            }
+            
+            showElement('charactersSection');
+        }
+
+        // Выбор персонажа
+        function selectCharacter(character) {
+            selectedCharacter = character;
+            
+            // Сбрасываем выделение
+            document.querySelectorAll('.character-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Выделяем выбранного персонажа
+            event.currentTarget.classList.add('selected');
+            
+            // Активируем кнопку завершения
+            document.getElementById('completeBtn').disabled = false;
+        }
+
+        // Описание бонусов
+        function getBonusDescription(bonusType, bonusValue) {
+            const bonuses = {
+                'percent_bonus': `+${bonusValue}% к звездам`,
+                'forgiveness': 'Право на ошибку',
+                'random_gift': 'Случайный подарок',
+                'secret_advice': 'Секретные советы',
+                'series_bonus': 'Бонус за серии',
+                'photo_bonus': 'Бонус за фото',
+                'weekly_surprise': 'Еженедельный сюрприз',
+                'mini_quest': 'Мини-квесты',
+                'quiz_hint': 'Подсказки в квизах',
+                'fact_star': 'Факт-звезды',
+                'streak_multiplier': 'Множитель за серию'
+            };
+            return bonuses[bonusType] || 'Особый бонус';
+        }
+
+        // Завершение регистрации
+        async function completeRegistration() {
+            if (!selectedClass || !selectedCharacter) {
+                alert('Пожалуйста, выберите класс и персонажа');
+                return;
+            }
+
+            try {
+                let userId = '12345';
+                if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    userId = tg.initDataUnsafe.user.id;
+                }
+
+                const response = await fetch('/api/users/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: userId,
+                        userClass: selectedClass,
+                        characterId: selectedCharacter.id,
+                        tgUsername: tg?.initDataUnsafe?.user?.username || '',
+                        tgFirstName: tg?.initDataUnsafe?.user?.first_name || '',
+                        tgLastName: tg?.initDataUnsafe?.user?.last_name || ''
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMainScreen();
+                    loadUserData(); // Обновляем данные
+                    alert('🎉 Регистрация завершена! Вы получили 5⭐');
+                } else {
+                    alert('Ошибка регистрации: ' + result.error);
+                }
+            } catch (error) {
+                console.error('❌ Registration error:', error);
+                alert('Ошибка при регистрации');
+            }
+        }
+
+        // Загрузка квизов
+        async function loadQuizzes() {
+            try {
+                const response = await fetch('/api/webapp/quizzes');
+                const quizzes = await response.json();
+                
+                const quizzesList = document.getElementById('quizzesList');
+                quizzesList.innerHTML = '';
+                
+                if (quizzes.length > 0) {
+                    quizzes.forEach(quiz => {
+                        const quizElement = document.createElement('div');
+                        quizElement.className = 'character-card';
+                        quizElement.innerHTML = `
+                            <div class="character-name">${quiz.title}</div>
+                            <div class="character-desc">${quiz.description || 'Тестовый квиз'}</div>
+                            <div style="margin-top: 8px; color: #48bb78;">
+                                🎯 Награда: ${quiz.stars_reward}⭐
+                            </div>
+                            <button class="btn" onclick="startQuiz(${quiz.id})" style="margin-top: 10px; padding: 12px;">
+                                Начать квиз
+                            </button>
+                        `;
+                        quizzesList.appendChild(quizElement);
+                    });
+                } else {
+                    quizzesList.innerHTML = '<div class="error">Квизы пока не доступны</div>';
+                }
+            } catch (error) {
+                console.error('❌ Error loading quizzes:', error);
+                document.getElementById('quizzesList').innerHTML = '<div class="error">Ошибка загрузки квизов</div>';
+            }
+        }
+
+        function startQuiz(quizId) {
+            alert(`🚀 Начинаем квиз #${quizId}! Эта функция будет реализована в следующем этапе.`);
+        }
+
+        // Вспомогательные функции
+        function showElement(id) {
+            document.getElementById(id).style.display = 'block';
+        }
+
+        function hideElement(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function showLoading(containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '<div class="loading">⏳ Загрузка...</div>';
+        }
+
+        function showError(containerId, message) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `<div class="error">❌ ${message}</div>`;
+        }
+
+        function hideLoading(containerId) {
+            // Убираем только если там loading
+            const container = document.getElementById(containerId);
+            if (container.querySelector('.loading')) {
+                // Данные уже отображаются в userContent
+            }
         }
 
         function refreshData() {
             loadUserData();
-            alert('Данные обновлены!');
+            alert('✅ Данные обновлены!');
         }
 
-        // Инициализация Telegram WebApp
-        if (window.Telegram && Telegram.WebApp) {
-            Telegram.WebApp.ready();
-            Telegram.WebApp.expand();
-            console.log('Telegram WebApp initialized');
+        function showCharacters() {
+            alert('👥 Для выбора персонажа пройдите регистрацию');
+            startRegistration();
         }
 
-        // Загружаем данные при старте
-        loadUserData();
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 App starting...');
+            
+            // Инициализируем Telegram WebApp
+            initTelegram();
+            
+            // Загружаем данные пользователя
+            await loadUserData();
+            
+            // Предзагружаем персонажей
+            await loadCharacters();
+            
+            console.log('✅ App initialized');
+        });
     </script>
 </body>
 </html>
