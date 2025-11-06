@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001; // Изменили на 3001
 
 // Middleware
 app.use(express.json());
@@ -21,20 +21,34 @@ app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(join(__dirname, 'public')));
 
-// Инициализация бота
-const bot = new TelegramBot(process.env.BOT_TOKEN, {
-  polling: {
-    interval: 300,
-    autoStart: true,
-    params: {
-      timeout: 10
+// Проверяем наличие BOT_TOKEN
+if (!process.env.BOT_TOKEN) {
+  console.error('❌ BOT_TOKEN не найден в переменных окружения!');
+  process.exit(1);
+}
+
+console.log('🤖 Bot starting with token:', process.env.BOT_TOKEN.substring(0, 10) + '...');
+
+// Инициализация бота с обработкой ошибок
+let bot;
+try {
+  bot = new TelegramBot(process.env.BOT_TOKEN, {
+    polling: {
+      interval: 300,
+      autoStart: true,
+      params: {
+        timeout: 10
+      }
     }
-  }
-});
+  });
+  
+  console.log('✅ Bot initialized successfully');
+} catch (error) {
+  console.error('❌ Error initializing bot:', error);
+  process.exit(1);
+}
 
-console.log('🤖 Bot starting...');
-
-// Импорт маршрутов
+// Импорт маршрутов и базы данных
 import { initDatabase } from './config/database.js';
 import userRoutes from './routes/users.js';
 import adminRoutes from './routes/admin.js';
@@ -54,7 +68,8 @@ app.get('/health', (req, res) => {
     status: 'OK', 
     message: '✅ Бот работает!',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    port: PORT
   });
 });
 
@@ -62,8 +77,21 @@ app.get('/api/status', (req, res) => {
   res.json({
     bot: 'active',
     database: 'connected',
-    users: 0, // Будем получать из БД
-    activities: 0
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+app.get('/', (req, res) => {
+  res.json({
+    message: '🎨 Мастерская Вдохновения - API',
+    status: 'Работает',
+    endpoints: {
+      health: '/health',
+      status: '/api/status',
+      user: '/api/users/:id',
+      characters: '/api/webapp/characters'
+    }
   });
 });
 
@@ -73,18 +101,9 @@ bot.onText(/\/start/, async (msg) => {
   const name = msg.from.first_name || 'Друг';
   const userId = msg.from.id;
   
-  // Проверяем, зарегистрирован ли пользователь
-  const db = (await import('./config/database.js')).default;
-  
-  try {
-    const user = await new Promise((resolve, reject) => {
-      db.get('SELECT * FROM users WHERE user_id = ?', [userId], (err, row) => {
-        if (err) reject(err);
-        resolve(row);
-      });
-    });
+  console.log(`👤 User ${userId} started bot`);
 
-    const welcomeText = `🎨 Привет, ${name}! 
+  const welcomeText = `🎨 Привет, ${name}! 
 
 Добро пожаловать в **Мастерскую Вдохновения**! 
 
@@ -95,35 +114,22 @@ bot.onText(/\/start/, async (msg) => {
 • 👥 Сообщество единомышленников
 
 Нажмите кнопку ниже чтобы открыть личный кабинет!`;
-    
-    const keyboard = {
-      inline_keyboard: [[
-        {
-          text: "📱 Открыть Личный Кабинет",
-          web_app: { url: process.env.APP_URL }
-        }
-      ]]
-    };
+  
+  const keyboard = {
+    inline_keyboard: [[
+      {
+        text: "📱 Открыть Личный Кабинет",
+        web_app: { url: process.env.APP_URL || `http://localhost:${PORT}` }
+      }
+    ]]
+  };
 
-    // Если пользователь не зарегистрирован, добавляем кнопку регистрации
-    if (!user) {
-      keyboard.inline_keyboard.push([
-        {
-          text: "📝 Начать регистрацию",
-          callback_data: 'start_registration'
-        }
-      ]);
-    }
-
-    bot.sendMessage(chatId, welcomeText, {
-      parse_mode: 'Markdown',
-      reply_markup: keyboard
-    });
-
-  } catch (error) {
-    console.error('Error in /start:', error);
-    bot.sendMessage(chatId, 'Привет! Добро пожаловать в Мастерскую Вдохновения! 🎨');
-  }
+  bot.sendMessage(chatId, welcomeText, {
+    parse_mode: 'Markdown',
+    reply_markup: keyboard
+  }).catch(error => {
+    console.error('Error sending welcome message:', error);
+  });
 });
 
 // Обработка callback кнопок
@@ -131,6 +137,8 @@ bot.on('callback_query', async (callbackQuery) => {
   const message = callbackQuery.message;
   const data = callbackQuery.data;
   const userId = callbackQuery.from.id;
+
+  console.log(`🔘 Callback from user ${userId}:`, data);
 
   if (data === 'start_registration') {
     const registrationText = `📝 **Регистрация в Мастерской Вдохновения**
@@ -145,10 +153,12 @@ bot.on('callback_query', async (callbackQuery) => {
         inline_keyboard: [[
           {
             text: "📱 Открыть Личный Кабинет",
-            web_app: { url: process.env.APP_URL }
+            web_app: { url: process.env.APP_URL || `http://localhost:${PORT}` }
           }
         ]]
       }
+    }).catch(error => {
+      console.error('Error editing message:', error);
     });
   }
 });
@@ -162,18 +172,46 @@ bot.on('message', (msg) => {
         inline_keyboard: [[
           {
             text: "📱 Открыть Личный Кабинет",
-            web_app: { url: process.env.APP_URL }
+            web_app: { url: process.env.APP_URL || `http://localhost:${PORT}` }
           }
         ]]
       }
+    }).catch(error => {
+      console.error('Error sending message:', error);
     });
   }
 });
 
-// Запуск сервера
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📱 Mini App: ${process.env.APP_URL}`);
-  console.log(`🤖 Bot: Active!`);
-  console.log(`📊 API endpoints available`);
+// Обработка ошибок бота
+bot.on('error', (error) => {
+  console.error('❌ Bot error:', error);
 });
+
+// Запуск сервера с обработкой ошибок
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📱 Health check: http://localhost:${PORT}/health`);
+  console.log(`🤖 Bot: Active!`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use!`);
+    console.log('💡 Try one of these solutions:');
+    console.log('   1. Kill the process using port:', PORT);
+    console.log('   2. Change PORT in .env file');
+    console.log('   3. Wait a few minutes and try again');
+  } else {
+    console.error('❌ Server error:', err);
+  }
+  process.exit(1);
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('🛑 Shutting down gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+export default app;
