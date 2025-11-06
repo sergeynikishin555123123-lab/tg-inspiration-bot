@@ -5,17 +5,10 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
-    assetsDir: 'assets',
-    rollupOptions: {
-      output: {
-        manualChunks: undefined,
-      },
-    },
+    assetsDir: 'assets'
   },
   server: {
     host: true,
-    port: 3001,
-  },
-  // Добавляем базовый путь для продакшена
-  base: process.env.NODE_ENV === 'production' ? '/' : '/',
+    port: 3001
+  }
 })
