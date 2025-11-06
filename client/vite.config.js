@@ -16,4 +16,6 @@ export default defineConfig({
     host: true,
     port: 3001,
   },
+  // Добавляем базовый путь для продакшена
+  base: process.env.NODE_ENV === 'production' ? '/' : '/',
 })
