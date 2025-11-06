@@ -32,7 +32,10 @@ async function testEndpoint(path) {
         try {
           if (res.headers['content-type']?.includes('application/json')) {
             const jsonData = JSON.parse(data);
-            console.log(`✅ Success:`, jsonData);
+            console.log(`✅ Success:`, Object.keys(jsonData));
+            if (path === '/api/webapp/characters' && jsonData.Художники) {
+              console.log(`   👥 Characters: ${jsonData.Художники.length} художников, ${jsonData.Стилисты?.length || 0} стилистов`);
+            }
           } else {
             console.log(`❌ Wrong content type:`, data.substring(0, 100));
           }
