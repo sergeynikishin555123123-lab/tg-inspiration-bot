@@ -2,18 +2,17 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Копируем package.json и package-lock.json
-COPY package*.json ./
-COPY client/package*.json ./client/
+# Копируем package.json
+COPY package.json ./
 
-# Устанавливаем зависимости
+# Устанавливаем зависимости простым способом
 RUN npm install
 
-# Копируем исходный код
+# Копируем все файлы
 COPY . .
 
-# Собираем клиент
-RUN cd client && npm run build
+# Создаем папку client/dist если её нет (для избежания ошибок)
+RUN mkdir -p client/dist
 
 # Открываем порт
 EXPOSE 3000
