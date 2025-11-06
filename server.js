@@ -48,7 +48,8 @@ db.serialize(() => {
     character_id INTEGER,
     stars REAL DEFAULT 0,
     level TEXT DEFAULT 'Ученик',
-    is_registered BOOLEAN DEFAULT FALSE
+    is_registered BOOLEAN DEFAULT FALSE,
+    last_active DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
   
   // Таблица персонажей
@@ -147,19 +148,6 @@ db.serialize(() => {
         }
       ]),
       stars_reward: 1
-    },
-    {
-      id: 3,
-      title: "👗 Стиль и мода",
-      description: "Тест по стилю и моде",
-      questions: JSON.stringify([
-        {
-          question: "Что такое базовый гардероб?",
-          options: ["Ультрамодные вещи", "Универсальные вещи на каждый день", "Спортивная одежда", "Вечерние наряды"],
-          correctAnswer: 1
-        }
-      ]),
-      stars_reward: 1
     }
   ];
   
@@ -168,8 +156,6 @@ db.serialize(() => {
   quizStmt.finalize();
   
   console.log('✅ База данных готова');
-  console.log('👥 Загружено персонажей:', characters.length);
-  console.log('📝 Загружено квизов:', testQuizzes.length);
 });
 
 // ==================== API ROUTES ====================
@@ -179,23 +165,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     message: '✅ Сервер работает!',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0'
-  });
-});
-
-// Главная страница API
-app.get('/api', (req, res) => {
-  res.json({
-    name: 'Мастерская Вдохновения',
-    version: '1.0.0',
-    endpoints: {
-      health: '/health',
-      characters: '/api/webapp/characters',
-      user: '/api/users/:id',
-      register: '/api/users/register (POST)',
-      quizzes: '/api/webapp/quizzes'
-    }
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -213,7 +183,6 @@ app.get('/api/webapp/characters', (req, res) => {
       return acc;
     }, {});
     
-    console.log(`✅ Отправлено ${characters.length} персонажей`);
     res.json(grouped);
   });
 });
@@ -250,7 +219,7 @@ app.get('/api/webapp/classes', (req, res) => {
   res.json(classes);
 });
 
-// Получить пользователя
+// Получить пользователя - ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.get('/api/users/:userId', (req, res) => {
   const userId = req.params.userId;
   
@@ -268,15 +237,19 @@ app.get('/api/users/:userId', (req, res) => {
       
       if (user) {
         user.level = calculateLevel(user.stars);
+        console.log(`✅ User data loaded: ${user.tg_first_name}, stars: ${user.stars}, character: ${user.character_name}`);
         res.json({ exists: true, user });
       } else {
+        console.log(`✅ New user created: ${userId}`);
         res.json({ 
           exists: false, 
           user: {
             user_id: parseInt(userId),
             stars: 0,
             level: 'Ученик',
-            is_registered: false
+            is_registered: false,
+            class: null,
+            character_name: null
           }
         });
       }
@@ -284,7 +257,7 @@ app.get('/api/users/:userId', (req, res) => {
   );
 });
 
-// Регистрация пользователя - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// Регистрация пользователя - ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.post('/api/users/register', (req, res) => {
   const { userId, userClass, characterId, tgUsername, tgFirstName, tgLastName } = req.body;
   
@@ -294,71 +267,46 @@ app.post('/api/users/register', (req, res) => {
     return res.status(400).json({ error: 'User ID, class and character are required' });
   }
   
-  // Проверяем, существует ли пользователь
-  db.get('SELECT * FROM users WHERE user_id = ?', [userId], (err, existingUser) => {
-    if (err) {
-      console.error('❌ Database error:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    if (existingUser) {
-      // Обновляем существующего пользователя
+  // Всегда обновляем пользователя (создаем или изменяем)
+  db.run(
+    `INSERT OR REPLACE INTO users (
+      user_id, tg_username, tg_first_name, tg_last_name, 
+      class, character_id, is_registered, stars, last_active
+    ) VALUES (?, ?, ?, ?, ?, ?, TRUE, COALESCE((SELECT stars FROM users WHERE user_id = ?), 0) + 5, CURRENT_TIMESTAMP)`,
+    [userId, tgUsername, tgFirstName, tgLastName, userClass, characterId, userId],
+    function(err) {
+      if (err) {
+        console.error('❌ Error saving user:', err);
+        return res.status(500).json({ error: 'Error saving user' });
+      }
+      
+      // Добавляем активность за регистрацию/смену персонажа
+      const activityType = this.changes === 1 ? 'registration' : 'character_change';
+      const activityDesc = activityType === 'registration' ? 'Регистрация в системе' : 'Смена персонажа';
+      
       db.run(
-        `UPDATE users SET class = ?, character_id = ?, is_registered = TRUE, 
-         tg_username = ?, tg_first_name = ?, tg_last_name = ?,
-         stars = stars + 5 
-         WHERE user_id = ?`,
-        [userClass, characterId, tgUsername, tgFirstName, tgLastName, userId],
-        function(err) {
-          if (err) {
-            console.error('❌ Error updating user:', err);
-            return res.status(500).json({ error: 'Error updating user' });
-          }
-          
-          // Добавляем активность за регистрацию
-          db.run(
-            `INSERT INTO activities (user_id, activity_type, stars_earned, description) 
-             VALUES (?, 'registration', 5, 'Регистрация в системе')`,
-            [userId]
-          );
-          
-          res.json({ 
-            success: true, 
-            message: 'Персонаж успешно выбран! +5⭐',
-            starsAdded: 5,
-            userId: userId
-          });
+        `INSERT INTO activities (user_id, activity_type, stars_earned, description) 
+         VALUES (?, ?, 5, ?)`,
+        [userId, activityType, activityDesc],
+        (err) => {
+          if (err) console.error('Error logging activity:', err);
         }
       );
-    } else {
-      // Создаем нового пользователя
-      db.run(
-        `INSERT INTO users (user_id, tg_username, tg_first_name, tg_last_name, class, character_id, is_registered, stars) 
-         VALUES (?, ?, ?, ?, ?, ?, TRUE, 5)`,
-        [userId, tgUsername, tgFirstName, tgLastName, userClass, characterId],
-        function(err) {
-          if (err) {
-            console.error('❌ Error creating user:', err);
-            return res.status(500).json({ error: 'Error creating user' });
-          }
-          
-          // Добавляем активность за регистрацию
-          db.run(
-            `INSERT INTO activities (user_id, activity_type, stars_earned, description) 
-             VALUES (?, 'registration', 5, 'Регистрация в системе')`,
-            [userId]
-          );
-          
-          res.json({ 
-            success: true, 
-            message: 'Регистрация успешна! +5⭐',
-            starsAdded: 5,
-            userId: userId
-          });
-        }
-      );
+      
+      const message = activityType === 'registration' 
+        ? 'Регистрация успешна! +5⭐' 
+        : 'Персонаж успешно изменен! +5⭐';
+      
+      console.log(`✅ ${message} for user ${userId}`);
+      res.json({ 
+        success: true, 
+        message: message,
+        starsAdded: 5,
+        userId: userId,
+        changes: this.changes
+      });
     }
-  });
+  );
 });
 
 // Получить квизы
@@ -369,13 +317,11 @@ app.get('/api/webapp/quizzes', (req, res) => {
       return res.status(500).json({ error: 'Database error' });
     }
     
-    // Парсим вопросы из JSON
     const parsedQuizzes = quizzes.map(quiz => ({
       ...quiz,
       questions: JSON.parse(quiz.questions)
     }));
     
-    console.log(`✅ Отправлено ${quizzes.length} квизов`);
     res.json(parsedQuizzes);
   });
 });
@@ -385,7 +331,7 @@ app.post('/api/webapp/quizzes/:quizId/submit', (req, res) => {
   const { quizId } = req.params;
   const { userId, answers } = req.body;
   
-  console.log(`📝 Отправка ответов на квиз ${quizId} от пользователя ${userId}`);
+  console.log(`📝 Отправка ответов на квиз ${quizId} от пользователя ${userId}`, answers);
   
   if (!userId) {
     return res.status(400).json({ error: 'User ID is required' });
@@ -415,10 +361,8 @@ app.post('/api/webapp/quizzes/:quizId/submit', (req, res) => {
     // Рассчитываем награду согласно ТЗ
     let starsEarned = 0;
     if (questions.length <= 3) {
-      // Короткий опрос (3 вопроса)
       starsEarned = correctAnswers >= 1 ? 1 : 0;
     } else {
-      // Викторина (3-5 вопросов)
       if (correctAnswers >= Math.ceil(questions.length * 0.6)) {
         starsEarned = 2;
       } else if (correctAnswers >= 1) {
@@ -426,76 +370,65 @@ app.post('/api/webapp/quizzes/:quizId/submit', (req, res) => {
       }
     }
     
-    // Если пользователь получил звезды, обновляем его баланс
-    if (starsEarned > 0) {
-      db.get('SELECT stars FROM users WHERE user_id = ?', [userId], (err, user) => {
-        if (err) {
-          console.error('❌ Database error:', err);
-          return res.json({
-            success: true,
-            correctAnswers,
-            totalQuestions: questions.length,
-            starsEarned: 0,
-            passed: false
-          });
-        }
-        
-        if (user) {
-          const newStars = user.stars + starsEarned;
+    console.log(`✅ Quiz results: ${correctAnswers}/${questions.length} correct, stars earned: ${starsEarned}`);
+    
+    // Всегда обновляем звезды пользователя
+    db.get('SELECT stars FROM users WHERE user_id = ?', [userId], (err, user) => {
+      if (err) {
+        console.error('❌ Database error:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      let newStars = starsEarned;
+      if (user) {
+        newStars = user.stars + starsEarned;
+      }
+      
+      // Создаем или обновляем пользователя
+      db.run(
+        `INSERT OR REPLACE INTO users (user_id, stars, last_active) 
+         VALUES (?, ?, CURRENT_TIMESTAMP)`,
+        [userId, newStars],
+        function(err) {
+          if (err) {
+            console.error('❌ Error updating user stars:', err);
+            return res.status(500).json({ error: 'Error updating stars' });
+          }
           
-          db.run(
-            'UPDATE users SET stars = ?, last_active = CURRENT_TIMESTAMP WHERE user_id = ?',
-            [newStars, userId],
-            (err) => {
-              if (err) {
-                console.error('❌ Error updating stars:', err);
+          // Записываем активность только если получили звезды
+          if (starsEarned > 0) {
+            db.run(
+              `INSERT INTO activities (user_id, activity_type, stars_earned, description) 
+               VALUES (?, 'quiz', ?, ?)`,
+              [userId, starsEarned, `Квиз: ${quiz.title}`],
+              (err) => {
+                if (err) console.error('Error logging activity:', err);
               }
-              
-              // Записываем активность
-              db.run(
-                `INSERT INTO activities (user_id, activity_type, stars_earned, description) 
-                 VALUES (?, 'quiz', ?, ?)`,
-                [userId, starsEarned, `Квиз: ${quiz.title}`]
-              );
-              
-              res.json({
-                success: true,
-                correctAnswers,
-                totalQuestions: questions.length,
-                starsEarned,
-                passed: starsEarned > 0,
-                newTotalStars: newStars,
-                message: `Поздравляем! Вы получили ${starsEarned}⭐`
-              });
-            }
-          );
-        } else {
+            );
+          }
+          
+          const message = starsEarned > 0 
+            ? `Поздравляем! Вы получили ${starsEarned}⭐` 
+            : 'Попробуйте еще раз!';
+          
           res.json({
             success: true,
             correctAnswers,
             totalQuestions: questions.length,
             starsEarned,
             passed: starsEarned > 0,
-            message: `Поздравляем! Вы получили ${starsEarned}⭐`
+            newTotalStars: newStars,
+            message: message
           });
         }
-      });
-    } else {
-      res.json({
-        success: true,
-        correctAnswers,
-        totalQuestions: questions.length,
-        starsEarned,
-        passed: false,
-        message: 'Попробуйте еще раз!'
-      });
-    }
+      );
+    });
   });
 });
 
-// Отправить фото работы
+// Отправить фото работы - ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.post('/api/webapp/submit-work', (req, res) => {
-  const { userId, photoUrl, description } = req.body;
+  const { userId, description } = req.body;
   
   console.log('📸 Отправка работы от пользователя:', userId);
   
@@ -503,26 +436,28 @@ app.post('/api/webapp/submit-work', (req, res) => {
     return res.status(400).json({ error: 'User ID is required' });
   }
   
-  // Начисляем 3 звезды за работу согласно ТЗ
+  const starsEarned = 3;
+  
+  // Получаем текущие звезды пользователя
   db.get('SELECT stars FROM users WHERE user_id = ?', [userId], (err, user) => {
     if (err) {
       console.error('❌ Database error:', err);
       return res.status(500).json({ error: 'Database error' });
     }
     
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+    let newStars = starsEarned;
+    if (user) {
+      newStars = user.stars + starsEarned;
     }
     
-    const starsEarned = 3;
-    const newStars = user.stars + starsEarned;
-    
+    // Создаем или обновляем пользователя
     db.run(
-      'UPDATE users SET stars = ?, last_active = CURRENT_TIMESTAMP WHERE user_id = ?',
-      [newStars, userId],
-      (err) => {
+      `INSERT OR REPLACE INTO users (user_id, stars, last_active) 
+       VALUES (?, ?, CURRENT_TIMESTAMP)`,
+      [userId, newStars],
+      function(err) {
         if (err) {
-          console.error('❌ Error updating stars:', err);
+          console.error('❌ Error updating user stars:', err);
           return res.status(500).json({ error: 'Error updating stars' });
         }
         
@@ -530,8 +465,13 @@ app.post('/api/webapp/submit-work', (req, res) => {
         db.run(
           `INSERT INTO activities (user_id, activity_type, stars_earned, description) 
            VALUES (?, 'photo_work', ?, ?)`,
-          [userId, starsEarned, description || 'Фото работы']
+          [userId, starsEarned, description || 'Фото работы'],
+          (err) => {
+            if (err) console.error('Error logging activity:', err);
+          }
         );
+        
+        console.log(`✅ Work submitted: +${starsEarned} stars for user ${userId}, total: ${newStars}`);
         
         res.json({
           success: true,
@@ -587,7 +527,6 @@ bot.onText(/\/start/, (msg) => {
 • 📚 Обучающие видео и задания
 • ⭐ Система уровней и звёзд
 • 🏆 Достижения и бонусы
-• 👥 Сообщество единомышленников
 
 Нажмите кнопку ниже чтобы открыть личный кабинет!`;
   
@@ -600,53 +539,12 @@ bot.onText(/\/start/, (msg) => {
     ]]
   };
 
-  // Проверяем, зарегистрирован ли пользователь
-  db.get('SELECT * FROM users WHERE user_id = ?', [userId], (err, user) => {
-    if (!user || !user.is_registered) {
-      keyboard.inline_keyboard.push([
-        {
-          text: "📝 Начать регистрацию",
-          callback_data: 'start_registration'
-        }
-      ]);
-    }
-
-    bot.sendMessage(chatId, welcomeText, {
-      parse_mode: 'Markdown',
-      reply_markup: keyboard
-    }).catch(err => {
-      console.log('Bot message error:', err.message);
-    });
+  bot.sendMessage(chatId, welcomeText, {
+    parse_mode: 'Markdown',
+    reply_markup: keyboard
+  }).catch(err => {
+    console.log('Bot message error:', err.message);
   });
-});
-
-// Обработка callback кнопок
-bot.on('callback_query', (callbackQuery) => {
-  const message = callbackQuery.message;
-  const data = callbackQuery.data;
-  const userId = callbackQuery.from.id;
-
-  if (data === 'start_registration') {
-    const registrationText = `📝 **Регистрация в Мастерской Вдохновения**
-
-Для завершения регистрации откройте личный кабинет и выберите свой класс и персонажа!`;
-    
-    bot.editMessageText(registrationText, {
-      chat_id: message.chat.id,
-      message_id: message.message_id,
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: [[
-          {
-            text: "📱 Открыть Личный Кабинет",
-            web_app: { url: process.env.APP_URL || `http://localhost:3000` }
-          }
-        ]]
-      }
-    }).catch(err => {
-      console.log('Bot edit message error:', err.message);
-    });
-  }
 });
 
 // Запускаем polling вручную после старта сервера
