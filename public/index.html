@@ -363,7 +363,7 @@
 
             <div class="card">
                 <h3>🚀 Быстрые действия</h3>
-                <button class="btn" onclick="showScreen('charactersScreen')">👥 Выбрать персонажа</button>
+                <button class="btn" onclick="showScreen('registrationScreen')">👥 Выбрать персонажа</button>
                 <button class="btn btn-secondary" onclick="showScreen('quizzesScreen')">📝 Пройти квиз</button>
                 <button class="btn btn-warning" onclick="showScreen('activitiesScreen')">📊 Мои активности</button>
                 <button class="btn btn-danger" onclick="submitWork()">📸 Отправить работу</button>
@@ -433,6 +433,7 @@
             <div class="card">
                 <button class="btn back-btn" onclick="showScreen('quizzesScreen')">← Назад</button>
                 <h1 id="quizTitle">Квиз</h1>
+                <div id="quizProgress" style="margin-bottom: 15px; color: #718096;"></div>
                 <div id="quizContent">
                     <!-- Вопросы будут загружены здесь -->
                 </div>
@@ -455,6 +456,7 @@
         let classesData = null;
         let currentQuiz = null;
         let quizAnswers = [];
+        let currentQuestionIndex = 0;
 
         const API_BASE_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000' 
@@ -526,7 +528,25 @@
                 loadQuizzes();
             } else if (screenId === 'activitiesScreen') {
                 loadActivities();
+            } else if (screenId === 'registrationScreen') {
+                resetRegistrationForm();
             }
+        }
+
+        // Сброс формы регистрации
+        function resetRegistrationForm() {
+            selectedClass = null;
+            selectedCharacter = null;
+            document.getElementById('completeBtn').disabled = true;
+            document.getElementById('charactersSection').style.display = 'none';
+            
+            // Сбрасываем выделение
+            document.querySelectorAll('.class-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.querySelectorAll('.character-card').forEach(card => {
+                card.classList.remove('selected');
+            });
         }
 
         // ==================== ПОЛЬЗОВАТЕЛЬ ====================
@@ -591,8 +611,8 @@
             };
             
             const range = levelRanges[level] || levelRanges['Ученик'];
-            const progress = ((stars - range.min) / (range.max - range.min)) * 100;
-            document.getElementById('levelProgress').style.width = Math.min(Math.max(progress, 0), 100) + '%';
+            const progress = Math.min(Math.max(((stars - range.min) / (range.max - range.min)) * 100, 0), 100);
+            document.getElementById('levelProgress').style.width = progress + '%';
         }
 
         // ==================== РЕГИСТРАЦИЯ ====================
@@ -730,7 +750,7 @@
             }
 
             try {
-                showMessage('⏳ Регистрируем...', 'loading');
+                showMessage('⏳ Сохраняем выбор...', 'loading');
 
                 const response = await fetch(`${API_BASE_URL}/api/users/register`, {
                     method: 'POST',
@@ -752,13 +772,16 @@
                 if (result.success) {
                     showMessage('🎉 ' + result.message, 'success');
                     showScreen('mainScreen');
-                    loadUserData(); // Обновляем данные
+                    // Принудительно обновляем данные пользователя
+                    setTimeout(() => {
+                        loadUserData();
+                    }, 1000);
                 } else {
-                    showMessage(`Ошибка регистрации: ${result.error}`, 'error');
+                    showMessage(`Ошибка: ${result.error}`, 'error');
                 }
             } catch (error) {
                 console.error('❌ Registration error:', error);
-                showMessage('Ошибка при регистрации', 'error');
+                showMessage('Ошибка при сохранении выбора', 'error');
             }
         }
 
@@ -811,28 +834,12 @@
                 }
                 
                 quizAnswers = [];
+                currentQuestionIndex = 0;
+                
                 document.getElementById('quizTitle').textContent = currentQuiz.title;
-                document.getElementById('quizContent').innerHTML = '';
                 document.getElementById('submitQuizBtn').style.display = 'none';
                 
-                // Показываем вопросы
-                currentQuiz.questions.forEach((question, index) => {
-                    const questionElement = document.createElement('div');
-                    questionElement.className = 'quiz-question';
-                    questionElement.innerHTML = `
-                        <h4>Вопрос ${index + 1}: ${question.question}</h4>
-                        <div id="questionOptions${index}">
-                            ${question.options.map((option, optIndex) => `
-                                <div class="quiz-option" onclick="selectAnswer(${index}, ${optIndex})">
-                                    ${option}
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
-                    document.getElementById('quizContent').appendChild(questionElement);
-                });
-                
-                document.getElementById('submitQuizBtn').style.display = 'block';
+                showQuestion(0);
                 showScreen('quizScreen');
                 
             } catch (error) {
@@ -841,19 +848,55 @@
             }
         }
 
+        // Показать вопрос
+        function showQuestion(questionIndex) {
+            const question = currentQuiz.questions[questionIndex];
+            currentQuestionIndex = questionIndex;
+            
+            document.getElementById('quizProgress').textContent = `Вопрос ${questionIndex + 1} из ${currentQuiz.questions.length}`;
+            
+            const quizContent = document.getElementById('quizContent');
+            quizContent.innerHTML = '';
+            
+            const questionElement = document.createElement('div');
+            questionElement.className = 'quiz-question';
+            questionElement.innerHTML = `
+                <h4>${question.question}</h4>
+                <div id="questionOptions">
+                    ${question.options.map((option, optIndex) => `
+                        <div class="quiz-option" onclick="selectAnswer(${optIndex})">
+                            ${option}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            quizContent.appendChild(questionElement);
+            
+            // Показываем кнопку отправки только на последнем вопросе
+            if (questionIndex === currentQuiz.questions.length - 1) {
+                document.getElementById('submitQuizBtn').style.display = 'block';
+            }
+        }
+
         // Выбор ответа
-        function selectAnswer(questionIndex, answerIndex) {
-            // Сбрасываем выделение для этого вопроса
-            const optionsContainer = document.getElementById(`questionOptions${questionIndex}`);
-            optionsContainer.querySelectorAll('.quiz-option').forEach((opt, idx) => {
+        function selectAnswer(answerIndex) {
+            // Сбрасываем выделение
+            document.querySelectorAll('.quiz-option').forEach(opt => {
                 opt.classList.remove('selected');
             });
             
             // Выделяем выбранный вариант
-            optionsContainer.children[answerIndex].classList.add('selected');
+            event.currentTarget.classList.add('selected');
             
             // Сохраняем ответ
-            quizAnswers[questionIndex] = answerIndex;
+            quizAnswers[currentQuestionIndex] = answerIndex;
+            
+            // Автоматически переходим к следующему вопросу через 1 секунду
+            setTimeout(() => {
+                if (currentQuestionIndex < currentQuiz.questions.length - 1) {
+                    showQuestion(currentQuestionIndex + 1);
+                }
+            }, 1000);
         }
 
         // Отправить ответы на квиз
@@ -887,7 +930,10 @@
                         showMessage(`😔 ${result.message} Правильных ответов: ${result.correctAnswers}/${result.totalQuestions}`, 'error');
                     }
                     showScreen('quizzesScreen');
-                    loadUserData(); // Обновляем звезды
+                    // Принудительно обновляем данные пользователя
+                    setTimeout(() => {
+                        loadUserData();
+                    }, 500);
                 } else {
                     showMessage('Ошибка при отправке ответов', 'error');
                 }
@@ -976,6 +1022,7 @@
         function getActivityType(type) {
             const types = {
                 'registration': '📝 Регистрация',
+                'character_change': '👥 Смена персонажа',
                 'quiz': '📝 Квиз',
                 'photo_work': '📸 Фото работы'
             };
@@ -996,7 +1043,6 @@
                     },
                     body: JSON.stringify({
                         userId: currentUserId,
-                        photoUrl: 'https://example.com/photo.jpg', // Заглушка
                         description: 'Моя творческая работа'
                     })
                 });
@@ -1005,7 +1051,10 @@
 
                 if (result.success) {
                     showMessage('🎉 ' + result.message, 'success');
-                    loadUserData(); // Обновляем звезды
+                    // Принудительно обновляем данные пользователя
+                    setTimeout(() => {
+                        loadUserData();
+                    }, 500);
                 } else {
                     showMessage(`Ошибка: ${result.error}`, 'error');
                 }
