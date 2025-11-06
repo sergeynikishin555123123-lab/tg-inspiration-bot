@@ -6,6 +6,7 @@
     <title>Мастерская Вдохновения</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* Существующие стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -114,6 +115,9 @@
         }
         .btn-danger {
             background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+        }
+        .btn-info {
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
         }
         .welcome-section {
             background: rgba(102,126,234,0.1);
@@ -302,6 +306,36 @@
             color: #f6ad55;
             font-weight: 600;
         }
+        .invite-section {
+            background: rgba(102,126,234,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 1px solid #667eea;
+        }
+        .invite-link {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            word-break: break-all;
+        }
+        .photo-upload {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 15px 0;
+            cursor: pointer;
+        }
+        .photo-preview {
+            max-width: 100%;
+            max-height: 300px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
     </style>
 </head>
 <body>
@@ -351,6 +385,10 @@
                             <span class="label">Персонаж:</span>
                             <span class="value" id="userCharacter">-</span>
                         </div>
+                        <div class="user-info">
+                            <span class="label">Приглашено:</span>
+                            <span class="value" id="userInvites">0 друзей</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -366,8 +404,20 @@
                 <button class="btn" onclick="showScreen('registrationScreen')">👥 Выбрать персонажа</button>
                 <button class="btn btn-secondary" onclick="showScreen('quizzesScreen')">📝 Пройти квиз</button>
                 <button class="btn btn-warning" onclick="showScreen('activitiesScreen')">📊 Мои активности</button>
-                <button class="btn btn-danger" onclick="submitWork()">📸 Отправить работу</button>
+                <button class="btn btn-info" onclick="showScreen('inviteScreen')">👥 Пригласить друга</button>
+                <button class="btn" onclick="showScreen('submitWorkScreen')">📸 Отправить работу</button>
                 <button class="btn" onclick="refreshData()">🔄 Обновить данные</button>
+            </div>
+
+            <!-- Секция приглашений -->
+            <div class="invite-section" id="inviteBonusSection" style="display: none;">
+                <h4 style="color: #2d3748; margin-bottom: 10px;">👥 Пригласите друзей!</h4>
+                <p style="color: #718096; font-size: 14px; margin-bottom: 10px;">
+                    За каждого приглашенного друга вы получаете <strong>+10⭐</strong>
+                </p>
+                <button class="btn btn-info" onclick="showScreen('inviteScreen')" style="padding: 12px; font-size: 16px;">
+                    📤 Пригласить друга
+                </button>
             </div>
         </div>
 
@@ -395,17 +445,6 @@
             </div>
         </div>
 
-        <!-- Экран персонажей -->
-        <div id="charactersScreen" class="screen">
-            <div class="card">
-                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
-                <h1>👥 Все персонажи</h1>
-                <div id="allCharactersList">
-                    <div class="loading">Загрузка персонажей...</div>
-                </div>
-            </div>
-        </div>
-
         <!-- Экран квизов -->
         <div id="quizzesScreen" class="screen">
             <div class="card">
@@ -424,6 +463,88 @@
                 <h1>📊 История активностей</h1>
                 <div id="activitiesList">
                     <div class="loading">Загрузка активностей...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран приглашений -->
+        <div id="inviteScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
+                <h1>👥 Пригласить друга</h1>
+                
+                <div class="invite-section">
+                    <h3 style="color: #2d3748; margin-bottom: 15px;">🎁 Получите +10⭐ за каждого друга!</h3>
+                    
+                    <p style="color: #718096; margin-bottom: 15px;">
+                        Поделитесь этой ссылкой с друзьями. Когда они зарегистрируются по вашей ссылке, вы получите бонус!
+                    </p>
+                    
+                    <div class="invite-link" id="inviteLink">
+                        Загрузка ссылки...
+                    </div>
+                    
+                    <button class="btn btn-info" onclick="copyInviteLink()" style="padding: 12px; font-size: 16px;">
+                        📋 Скопировать ссылку
+                    </button>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(102,126,234,0.05); border-radius: 8px;">
+                        <h4 style="color: #2d3748; margin-bottom: 10px;">📊 Ваша статистика:</h4>
+                        <p style="color: #718096; margin: 5px 0;">
+                            Приглашено друзей: <strong id="inviteCount">0</strong>
+                        </p>
+                        <p style="color: #718096; margin: 5px 0;">
+                            Получено звезд: <strong id="inviteStars">0⭐</strong>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран отправки работы -->
+        <div id="submitWorkScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
+                <h1>📸 Отправить работу</h1>
+                
+                <div style="margin-bottom: 20px;">
+                    <p style="color: #718096; text-align: center; margin-bottom: 15px;">
+                        Загрузите фото своей творческой работы и получите <strong>+3⭐</strong> после модерации
+                    </p>
+                    
+                    <div class="photo-upload" onclick="document.getElementById('photoInput').click()">
+                        <input type="file" id="photoInput" accept="image/*" style="display: none;" onchange="handlePhotoUpload(event)">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📷</div>
+                        <div style="color: #667eea; font-weight: 600; margin-bottom: 5px;">Нажмите чтобы загрузить фото</div>
+                        <div style="color: #718096; font-size: 14px;">Поддерживаются JPG, PNG, GIF</div>
+                    </div>
+                    
+                    <div id="photoPreview" style="display: none;">
+                        <img id="previewImage" class="photo-preview">
+                        <button class="btn btn-danger" onclick="clearPhoto()" style="padding: 10px; font-size: 16px; margin-top: 10px;">
+                            🗑️ Удалить фото
+                        </button>
+                    </div>
+                    
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label for="workDescription" style="display: block; margin-bottom: 8px; color: #4a5568; font-weight: 600;">
+                            Описание работы:
+                        </label>
+                        <textarea id="workDescription" placeholder="Опишите вашу работу..." 
+                                  style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px; min-height: 80px;"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="workTheme" style="display: block; margin-bottom: 8px; color: #4a5568; font-weight: 600;">
+                            Тема работы:
+                        </label>
+                        <input type="text" id="workTheme" placeholder="Например: Пейзаж, Портрет, Натюрморт..." 
+                               style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px;">
+                    </div>
+                    
+                    <button class="btn btn-success" onclick="submitPhotoWork()" id="submitWorkBtn" disabled style="margin-top: 20px;">
+                        📤 Отправить на модерацию
+                    </button>
                 </div>
             </div>
         </div>
@@ -457,6 +578,7 @@
         let currentQuiz = null;
         let quizAnswers = [];
         let currentQuestionIndex = 0;
+        let currentPhoto = null;
 
         const API_BASE_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000' 
@@ -522,14 +644,16 @@
             document.getElementById(screenId).classList.add('active');
             
             // Загружаем данные для экрана если нужно
-            if (screenId === 'charactersScreen') {
-                loadAllCharacters();
+            if (screenId === 'inviteScreen') {
+                loadInviteData();
             } else if (screenId === 'quizzesScreen') {
                 loadQuizzes();
             } else if (screenId === 'activitiesScreen') {
                 loadActivities();
             } else if (screenId === 'registrationScreen') {
                 resetRegistrationForm();
+            } else if (screenId === 'submitWorkScreen') {
+                resetWorkForm();
             }
         }
 
@@ -547,6 +671,15 @@
             document.querySelectorAll('.character-card').forEach(card => {
                 card.classList.remove('selected');
             });
+        }
+
+        // Сброс формы работы
+        function resetWorkForm() {
+            currentPhoto = null;
+            document.getElementById('workDescription').value = '';
+            document.getElementById('workTheme').value = '';
+            document.getElementById('photoPreview').style.display = 'none';
+            document.getElementById('submitWorkBtn').disabled = true;
         }
 
         // ==================== ПОЛЬЗОВАТЕЛЬ ====================
@@ -572,8 +705,10 @@
                 // Показываем приветственный блок если пользователь не зарегистрирован
                 if (!currentUser.is_registered) {
                     document.getElementById('welcomeBlock').style.display = 'block';
+                    document.getElementById('inviteBonusSection').style.display = 'none';
                 } else {
                     document.getElementById('welcomeBlock').style.display = 'none';
+                    document.getElementById('inviteBonusSection').style.display = 'block';
                 }
                 
                 hideLoading('userData');
@@ -595,6 +730,7 @@
             document.getElementById('userStatus').textContent = user.is_registered ? 'Зарегистрирован' : 'Не зарегистрирован';
             document.getElementById('userClass').textContent = user.class || 'Не выбран';
             document.getElementById('userCharacter').textContent = user.character_name || 'Не выбран';
+            document.getElementById('userInvites').textContent = `${user.invite_count || 0} друзей`;
 
             // Прогресс уровня
             updateLevelProgress(user.stars, user.level);
@@ -943,44 +1079,139 @@
             }
         }
 
-        // ==================== ПЕРСОНАЖИ ====================
+        // ==================== ПРИГЛАШЕНИЯ ====================
 
-        // Загрузка всех персонажей
-        async function loadAllCharacters() {
+        // Загрузка данных приглашений
+        async function loadInviteData() {
             try {
-                if (!charactersData) {
-                    await loadCharacters();
+                const userResponse = await fetch(`${API_BASE_URL}/api/users/${currentUserId}`);
+                const userData = await userResponse.json();
+                
+                if (userData.exists) {
+                    document.getElementById('inviteCount').textContent = userData.user.invite_count || 0;
+                    document.getElementById('inviteStars').textContent = `${(userData.user.invite_count || 0) * 10}⭐`;
                 }
                 
-                const allCharactersList = document.getElementById('allCharactersList');
-                allCharactersList.innerHTML = '';
+                // Генерируем ссылку приглашения
+                const inviteLink = `https://t.me/${(tg?.initDataUnsafe?.user?.username || 'your_bot')}?start=invite_${currentUserId}`;
+                document.getElementById('inviteLink').textContent = inviteLink;
                 
-                Object.keys(charactersData).forEach(className => {
-                    const classSection = document.createElement('div');
-                    classSection.innerHTML = `<h3 style="margin: 20px 0 10px 0; color: #4a5568;">${className}</h3>`;
-                    
-                    const classGrid = document.createElement('div');
-                    classGrid.className = 'character-grid';
-                    
-                    charactersData[className].forEach(character => {
-                        const characterCard = document.createElement('div');
-                        characterCard.className = 'character-card';
-                        characterCard.innerHTML = `
-                            <div class="character-name">${character.character_name}</div>
-                            <div class="character-desc">${character.description}</div>
-                            <div class="character-bonus">
-                                💫 ${getBonusDescription(character.bonus_type, character.bonus_value)}
-                            </div>
-                        `;
-                        classGrid.appendChild(characterCard);
-                    });
-                    
-                    classSection.appendChild(classGrid);
-                    allCharactersList.appendChild(classSection);
-                });
             } catch (error) {
-                console.error('❌ Error loading all characters:', error);
-                document.getElementById('allCharactersList').innerHTML = '<div class="error">Ошибка загрузки персонажей</div>';
+                console.error('❌ Error loading invite data:', error);
+                document.getElementById('inviteLink').textContent = 'Ошибка загрузки';
+            }
+        }
+
+        // Копирование ссылки приглашения
+        function copyInviteLink() {
+            const inviteLink = document.getElementById('inviteLink').textContent;
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(inviteLink).then(() => {
+                    showMessage('✅ Ссылка скопирована в буфер обмена!', 'success');
+                }).catch(err => {
+                    fallbackCopy(inviteLink);
+                });
+            } else {
+                fallbackCopy(inviteLink);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showMessage('✅ Ссылка скопирована в буфер обмена!', 'success');
+            } catch (err) {
+                showMessage('❌ Не удалось скопировать ссылку', 'error');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // ==================== ФОТО РАБОТЫ ====================
+
+        // Обработка загрузки фото
+        function handlePhotoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Проверяем тип файла
+            if (!file.type.match('image.*')) {
+                showMessage('❌ Пожалуйста, выберите изображение', 'error');
+                return;
+            }
+
+            // Проверяем размер файла (максимум 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showMessage('❌ Размер файла не должен превышать 5MB', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentPhoto = e.target.result;
+                document.getElementById('previewImage').src = currentPhoto;
+                document.getElementById('photoPreview').style.display = 'block';
+                document.getElementById('submitWorkBtn').disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Очистка фото
+        function clearPhoto() {
+            currentPhoto = null;
+            document.getElementById('photoInput').value = '';
+            document.getElementById('photoPreview').style.display = 'none';
+            document.getElementById('submitWorkBtn').disabled = true;
+        }
+
+        // Отправка фото работы
+        async function submitPhotoWork() {
+            if (!currentPhoto) {
+                showMessage('❌ Пожалуйста, загрузите фото работы', 'error');
+                return;
+            }
+
+            const description = document.getElementById('workDescription').value.trim();
+            const theme = document.getElementById('workTheme').value.trim();
+
+            if (!description) {
+                showMessage('❌ Пожалуйста, добавьте описание работы', 'error');
+                return;
+            }
+
+            try {
+                showMessage('⏳ Отправляем работу на модерацию...', 'loading');
+
+                const response = await fetch(`${API_BASE_URL}/api/webapp/submit-work`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: currentUserId,
+                        description: description,
+                        theme: theme,
+                        photoUrl: currentPhoto // В реальном приложении нужно загружать на сервер
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('✅ ' + result.message, 'success');
+                    resetWorkForm();
+                    showScreen('mainScreen');
+                } else {
+                    showMessage(`❌ Ошибка: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('❌ Work submission error:', error);
+                showMessage('Ошибка при отправке работы', 'error');
             }
         }
 
@@ -1024,44 +1255,11 @@
                 'registration': '📝 Регистрация',
                 'character_change': '👥 Смена персонажа',
                 'quiz': '📝 Квиз',
-                'photo_work': '📸 Фото работы'
+                'photo_work': '📸 Фото работы',
+                'comment': '💬 Комментарий',
+                'invitation': '👥 Приглашение друга'
             };
             return types[type] || type;
-        }
-
-        // ==================== РАБОТЫ ====================
-
-        // Отправить работу
-        async function submitWork() {
-            try {
-                showMessage('⏳ Отправляем работу...', 'loading');
-
-                const response = await fetch(`${API_BASE_URL}/api/webapp/submit-work`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        userId: currentUserId,
-                        description: 'Моя творческая работа'
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showMessage('🎉 ' + result.message, 'success');
-                    // Принудительно обновляем данные пользователя
-                    setTimeout(() => {
-                        loadUserData();
-                    }, 500);
-                } else {
-                    showMessage(`Ошибка: ${result.error}`, 'error');
-                }
-            } catch (error) {
-                console.error('❌ Work submission error:', error);
-                showMessage('Ошибка при отправке работы', 'error');
-            }
         }
 
         // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
