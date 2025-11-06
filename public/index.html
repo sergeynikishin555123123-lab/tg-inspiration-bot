@@ -6,7 +6,6 @@
     <title>Мастерская Вдохновения</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Существующие стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -699,20 +698,31 @@
                 const data = await response.json();
                 console.log('📦 User data received:', data);
 
-                currentUser = data.user;
-                displayUserData(currentUser);
-                
-                // Показываем приветственный блок если пользователь не зарегистрирован
-                if (!currentUser.is_registered) {
+                // ИСПРАВЛЕНИЕ: Правильно обрабатываем ответ
+                if (data.exists) {
+                    currentUser = data.user;
+                    displayUserData(currentUser);
+                    
+                    // Скрываем приветственный блок если пользователь зарегистрирован
+                    if (currentUser.is_registered) {
+                        document.getElementById('welcomeBlock').style.display = 'none';
+                        document.getElementById('inviteBonusSection').style.display = 'block';
+                    } else {
+                        document.getElementById('welcomeBlock').style.display = 'block';
+                        document.getElementById('inviteBonusSection').style.display = 'none';
+                    }
+                    
+                    hideLoading('userData');
+                    document.getElementById('userContent').style.display = 'block';
+                } else {
+                    // Новый пользователь
+                    currentUser = data.user;
+                    displayUserData(currentUser);
                     document.getElementById('welcomeBlock').style.display = 'block';
                     document.getElementById('inviteBonusSection').style.display = 'none';
-                } else {
-                    document.getElementById('welcomeBlock').style.display = 'none';
-                    document.getElementById('inviteBonusSection').style.display = 'block';
+                    hideLoading('userData');
+                    document.getElementById('userContent').style.display = 'block';
                 }
-                
-                hideLoading('userData');
-                document.getElementById('userContent').style.display = 'block';
                 
             } catch (error) {
                 console.error('❌ Error loading user data:', error);
