@@ -5,9 +5,7 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Используем базу в текущей директории
-const dbPath = join(process.cwd(), 'inspiration.db');
-
+const dbPath = join(process.cwd(), 'inspiration_v2.db');
 let db = null;
 
 export const initDatabase = () => {
@@ -19,7 +17,7 @@ export const initDatabase = () => {
     }
   });
 
-  // Таблица пользователей
+  // Таблица пользователей (расширенная)
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER UNIQUE NOT NULL,
@@ -34,7 +32,12 @@ export const initDatabase = () => {
     registration_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
     daily_commented BOOLEAN DEFAULT FALSE,
-    consecutive_days INTEGER DEFAULT 0
+    consecutive_days INTEGER DEFAULT 0,
+    invited_by INTEGER,
+    invite_count INTEGER DEFAULT 0,
+    last_bonus_claim DATETIME,
+    total_activities INTEGER DEFAULT 0,
+    settings TEXT DEFAULT '{}'
   )`);
 
   // Таблица персонажей
@@ -55,7 +58,9 @@ export const initDatabase = () => {
     activity_type TEXT NOT NULL,
     stars_earned REAL NOT NULL,
     description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    metadata TEXT DEFAULT '{}',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (user_id)
   )`);
 
   // Таблица квизов
@@ -81,7 +86,56 @@ export const initDatabase = () => {
     buttons TEXT,
     published_by INTEGER,
     published_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    is_published BOOLEAN DEFAULT FALSE
+    is_published BOOLEAN DEFAULT FALSE,
+    requires_action BOOLEAN DEFAULT FALSE,
+    action_type TEXT DEFAULT 'quiz'
+  )`);
+
+  // Таблица комментариев
+  db.run(`CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    post_id TEXT NOT NULL,
+    comment_text TEXT NOT NULL,
+    is_approved BOOLEAN DEFAULT FALSE,
+    stars_awarded BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (user_id)
+  )`);
+
+  // Таблица фото работ
+  db.run(`CREATE TABLE IF NOT EXISTS photo_works (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    photo_url TEXT NOT NULL,
+    description TEXT,
+    theme TEXT,
+    is_approved BOOLEAN DEFAULT FALSE,
+    stars_awarded BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (user_id)
+  )`);
+
+  // Таблица приглашений
+  db.run(`CREATE TABLE IF NOT EXISTS invitations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    inviter_id INTEGER NOT NULL,
+    invited_id INTEGER UNIQUE NOT NULL,
+    invited_username TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (inviter_id) REFERENCES users (user_id),
+    FOREIGN KEY (invited_id) REFERENCES users (user_id)
+  )`);
+
+  // Таблица админов
+  db.run(`CREATE TABLE IF NOT EXISTS admins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER UNIQUE NOT NULL,
+    username TEXT,
+    role TEXT DEFAULT 'moderator',
+    permissions TEXT DEFAULT '{}',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
   // Заполняем персонажей согласно ТЗ
@@ -196,68 +250,18 @@ export const initDatabase = () => {
     });
   }, 1000);
 
-  // Добавляем тестовые квизы
+  // Добавляем тестового админа
   setTimeout(() => {
-    db.get("SELECT COUNT(*) as count FROM quizzes", (err, row) => {
-      if (err) return console.error('Error checking quizzes:', err);
+    db.get("SELECT COUNT(*) as count FROM admins", (err, row) => {
+      if (err) return console.error('Error checking admins:', err);
       
-      if (row.count === 0) {
-        console.log('📝 Adding test quizzes...');
-        
-        const testQuizzes = [
-          {
-            title: "Основы живописи",
-            description: "Проверьте свои знания основ живописи",
-            questions: JSON.stringify([
-              {
-                question: "Кто написал картину 'Мона Лиза'?",
-                options: ["Винсент Ван Гог", "Леонардо да Винчи", "Пабло Пикассо", "Клод Моне"],
-                correctAnswer: 1
-              },
-              {
-                question: "Какие три основных цвета?",
-                options: ["Красный, синий, зеленый", "Красный, желтый, синий", "Черный, белый, серый", "Фиолетовый, оранжевый, зеленый"],
-                correctAnswer: 1
-              },
-              {
-                question: "Что такое акварель?",
-                options: ["Масляная краска", "Водорастворимая краска", "Акриловая краска", "Пастель"],
-                correctAnswer: 1
-              }
-            ]),
-            stars_reward: 2
-          },
-          {
-            title: "История искусства",
-            description: "Тест по истории мирового искусства",
-            questions: JSON.stringify([
-              {
-                question: "В какой стране зародился импрессионизм?",
-                options: ["Италия", "Франция", "Испания", "Германия"],
-                correctAnswer: 1
-              },
-              {
-                question: "Кто скульптор 'Давида'?",
-                options: ["Донателло", "Микеланджело", "Бернини", "Роден"],
-                correctAnswer: 1
-              }
-            ]),
-            stars_reward: 1
-          }
-        ];
-
-        const insertStmt = db.prepare(`INSERT INTO quizzes (title, description, questions, stars_reward) 
-                                      VALUES (?, ?, ?, ?)`);
-        
-        testQuizzes.forEach(quiz => {
-          insertStmt.run([quiz.title, quiz.description, quiz.questions, quiz.stars_reward]);
-        });
-        
-        insertStmt.finalize();
-        console.log('✅ Test quizzes added');
+      if (row.count === 0 && process.env.ADMIN_ID) {
+        db.run("INSERT INTO admins (user_id, username, role) VALUES (?, ?, ?)",
+          [process.env.ADMIN_ID, 'admin', 'superadmin']);
+        console.log('✅ Default admin added');
       }
     });
-  }, 1500);
+  }, 2000);
 };
 
 export const getDatabase = () => {
