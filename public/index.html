@@ -69,12 +69,12 @@
             color: #2d3748;
             font-weight: 600;
         }
-        .stars {
+        .sparks {
             font-size: 52px;
             font-weight: bold;
             text-align: center;
-            color: #f6ad55;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            color: #ffd700;
+            text-shadow: 0 2px 4px rgba(255,215,0,0.3);
             margin: 20px 0;
             padding: 10px;
         }
@@ -117,6 +117,10 @@
         }
         .btn-info {
             background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+        }
+        .btn-gold {
+            background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
+            color: #2d3748;
         }
         .welcome-section {
             background: rgba(102,126,234,0.1);
@@ -301,8 +305,8 @@
             color: #718096;
             font-size: 14px;
         }
-        .activity-stars {
-            color: #f6ad55;
+        .activity-sparks {
+            color: #ffd700;
             font-weight: 600;
         }
         .invite-section {
@@ -335,6 +339,54 @@
             margin: 10px 0;
             border-radius: 8px;
         }
+        .shop-item {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            transition: all 0.3s ease;
+        }
+        .shop-item:hover {
+            border-color: #ffd700;
+            transform: translateY(-2px);
+        }
+        .shop-item-title {
+            font-weight: 600;
+            font-size: 18px;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+        .shop-item-desc {
+            font-size: 14px;
+            color: #718096;
+            margin-bottom: 12px;
+        }
+        .shop-item-price {
+            font-size: 16px;
+            color: #ffd700;
+            font-weight: 600;
+            text-align: right;
+        }
+        .purchase-item {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            border-left: 4px solid #48bb78;
+        }
+        .purchase-title {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .purchase-date {
+            color: #718096;
+            font-size: 12px;
+        }
+        .spark-icon {
+            color: #ffd700;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -366,7 +418,7 @@
                             </span>
                         </div>
                         
-                        <div class="stars" id="starsCount">⭐ 0</div>
+                        <div class="sparks" id="sparksCount">✨ 0</div>
                         
                         <div class="progress-bar">
                             <div class="progress-fill" id="levelProgress" style="width: 0%"></div>
@@ -405,6 +457,7 @@
                 <button class="btn btn-warning" onclick="showScreen('activitiesScreen')">📊 Мои активности</button>
                 <button class="btn btn-info" onclick="showScreen('inviteScreen')">👥 Пригласить друга</button>
                 <button class="btn" onclick="showScreen('submitWorkScreen')">📸 Отправить работу</button>
+                <button class="btn btn-gold" onclick="showScreen('shopScreen')">🛒 Магазин</button>
                 <button class="btn" onclick="refreshData()">🔄 Обновить данные</button>
             </div>
 
@@ -412,7 +465,7 @@
             <div class="invite-section" id="inviteBonusSection" style="display: none;">
                 <h4 style="color: #2d3748; margin-bottom: 10px;">👥 Пригласите друзей!</h4>
                 <p style="color: #718096; font-size: 14px; margin-bottom: 10px;">
-                    За каждого приглашенного друга вы получаете <strong>+10⭐</strong>
+                    За каждого приглашенного друга вы получаете <strong>+10✨</strong>
                 </p>
                 <button class="btn btn-info" onclick="showScreen('inviteScreen')" style="padding: 12px; font-size: 16px;">
                     📤 Пригласить друга
@@ -473,7 +526,7 @@
                 <h1>👥 Пригласить друга</h1>
                 
                 <div class="invite-section">
-                    <h3 style="color: #2d3748; margin-bottom: 15px;">🎁 Получите +10⭐ за каждого друга!</h3>
+                    <h3 style="color: #2d3748; margin-bottom: 15px;">🎁 Получите +10✨ за каждого друга!</h3>
                     
                     <p style="color: #718096; margin-bottom: 15px;">
                         Поделитесь этой ссылкой с друзьями. Когда они зарегистрируются по вашей ссылке, вы получите бонус!
@@ -493,7 +546,7 @@
                             Приглашено друзей: <strong id="inviteCount">0</strong>
                         </p>
                         <p style="color: #718096; margin: 5px 0;">
-                            Получено звезд: <strong id="inviteStars">0⭐</strong>
+                            Получено искр: <strong id="inviteSparks">0✨</strong>
                         </p>
                     </div>
                 </div>
@@ -508,7 +561,7 @@
                 
                 <div style="margin-bottom: 20px;">
                     <p style="color: #718096; text-align: center; margin-bottom: 15px;">
-                        Загрузите фото своей творческой работы и получите <strong>+3⭐</strong> после модерации
+                        Загрузите фото своей творческой работы и получите <strong>+3✨</strong> после модерации
                     </p>
                     
                     <div class="photo-upload" onclick="document.getElementById('photoInput').click()">
@@ -544,6 +597,42 @@
                     <button class="btn btn-success" onclick="submitPhotoWork()" id="submitWorkBtn" disabled style="margin-top: 20px;">
                         📤 Отправить на модерацию
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран магазина -->
+        <div id="shopScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
+                <h1>🛒 Магазин</h1>
+                
+                <div style="margin-bottom: 20px; text-align: center;">
+                    <div class="sparks" id="shopSparksCount">✨ 0</div>
+                    <p style="color: #718096; font-size: 14px;">Ваш текущий баланс</p>
+                </div>
+
+                <div id="shopTabs" style="display: flex; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0;">
+                    <button class="tab-btn active" onclick="showShopTab('items')" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 3px solid #667eea; font-size: 16px; cursor: pointer;">
+                        🎁 Товары
+                    </button>
+                    <button class="tab-btn" onclick="showShopTab('purchases')" style="flex: 1; padding: 12px; background: none; border: none; font-size: 16px; cursor: pointer;">
+                        📦 Мои покупки
+                    </button>
+                </div>
+
+                <div id="shopItemsTab" class="shop-tab">
+                    <h3 style="color: #4a5568; margin-bottom: 15px;">🎁 Доступные товары</h3>
+                    <div id="shopItemsList">
+                        <div class="loading">Загрузка товаров...</div>
+                    </div>
+                </div>
+
+                <div id="shopPurchasesTab" class="shop-tab" style="display: none;">
+                    <h3 style="color: #4a5568; margin-bottom: 15px;">📦 История покупок</h3>
+                    <div id="purchasesList">
+                        <div class="loading">Загрузка покупок...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -653,6 +742,28 @@
                 resetRegistrationForm();
             } else if (screenId === 'submitWorkScreen') {
                 resetWorkForm();
+            } else if (screenId === 'shopScreen') {
+                loadShopData();
+            }
+        }
+
+        // Управление вкладками магазина
+        function showShopTab(tabName) {
+            // Скрываем все вкладки
+            document.querySelectorAll('.shop-tab').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.style.borderBottom = 'none';
+            });
+            
+            // Показываем выбранную вкладку
+            document.getElementById('shop' + tabName.charAt(0).toUpperCase() + tabName.slice(1) + 'Tab').style.display = 'block';
+            event.target.style.borderBottom = '3px solid #667eea';
+            
+            // Загружаем данные если нужно
+            if (tabName === 'purchases') {
+                loadPurchases();
             }
         }
 
@@ -698,7 +809,7 @@
                 const data = await response.json();
                 console.log('📦 User data received:', data);
 
-                // ИСПРАВЛЕНИЕ: Правильно обрабатываем ответ
+                // Правильно обрабатываем ответ
                 if (data.exists) {
                     currentUser = data.user;
                     displayUserData(currentUser);
@@ -736,18 +847,18 @@
             document.getElementById('userName').textContent = user.tg_first_name || 'Неизвестно';
             document.getElementById('userLevel').textContent = user.level;
             document.getElementById('levelBadge').textContent = user.level;
-            document.getElementById('starsCount').textContent = `⭐ ${user.stars}`;
+            document.getElementById('sparksCount').textContent = `✨ ${user.sparks}`;
             document.getElementById('userStatus').textContent = user.is_registered ? 'Зарегистрирован' : 'Не зарегистрирован';
             document.getElementById('userClass').textContent = user.class || 'Не выбран';
             document.getElementById('userCharacter').textContent = user.character_name || 'Не выбран';
             document.getElementById('userInvites').textContent = `${user.invite_count || 0} друзей`;
 
             // Прогресс уровня
-            updateLevelProgress(user.stars, user.level);
+            updateLevelProgress(user.sparks, user.level);
         }
 
         // Обновление прогресса уровня
-        function updateLevelProgress(stars, level) {
+        function updateLevelProgress(sparks, level) {
             const levelRanges = {
                 'Ученик': { min: 0, max: 50 },
                 'Искатель': { min: 50, max: 150 },
@@ -757,7 +868,7 @@
             };
             
             const range = levelRanges[level] || levelRanges['Ученик'];
-            const progress = Math.min(Math.max(((stars - range.min) / (range.max - range.min)) * 100, 0), 100);
+            const progress = Math.min(Math.max(((sparks - range.min) / (range.max - range.min)) * 100, 0), 100);
             document.getElementById('levelProgress').style.width = progress + '%';
         }
 
@@ -873,7 +984,7 @@
         // Описание бонусов
         function getBonusDescription(bonusType, bonusValue) {
             const bonuses = {
-                'percent_bonus': `+${bonusValue}% к звездам`,
+                'percent_bonus': `+${bonusValue}% к искрам`,
                 'forgiveness': 'Право на ошибку',
                 'random_gift': 'Случайный подарок',
                 'secret_advice': 'Секретные советы',
@@ -882,7 +993,7 @@
                 'weekly_surprise': 'Еженедельный сюрприз',
                 'mini_quest': 'Мини-квесты',
                 'quiz_hint': 'Подсказки в квизах',
-                'fact_star': 'Факт-звезды',
+                'fact_star': 'Факт-искры',
                 'streak_multiplier': 'Множитель за серию'
             };
             return bonuses[bonusType] || 'Особый бонус';
@@ -949,7 +1060,7 @@
                         quizElement.innerHTML = `
                             <div class="quiz-title">${quiz.title}</div>
                             <div class="quiz-desc">${quiz.description || 'Тестовый квиз'}</div>
-                            <div class="quiz-reward">🎯 Награда: ${quiz.stars_reward}⭐ (${quiz.questions.length} вопросов)</div>
+                            <div class="quiz-reward">🎯 Награда: ${quiz.sparks_reward}✨ (${quiz.questions.length} вопросов)</div>
                             <div style="margin-top: 12px;">
                                 <button class="btn" onclick="startQuiz(${quiz.id})" style="padding: 12px; font-size: 16px;">
                                     Начать квиз
@@ -1099,7 +1210,7 @@
                 
                 if (userData.exists) {
                     document.getElementById('inviteCount').textContent = userData.user.invite_count || 0;
-                    document.getElementById('inviteStars').textContent = `${(userData.user.invite_count || 0) * 10}⭐`;
+                    document.getElementById('inviteSparks').textContent = `${(userData.user.invite_count || 0) * 10}✨`;
                 }
                 
                 // Генерируем ссылку приглашения
@@ -1225,6 +1336,136 @@
             }
         }
 
+        // ==================== МАГАЗИН ====================
+
+        // Загрузка данных магазина
+        async function loadShopData() {
+            try {
+                // Обновляем баланс
+                const userResponse = await fetch(`${API_BASE_URL}/api/users/${currentUserId}`);
+                const userData = await userResponse.json();
+                
+                if (userData.exists) {
+                    document.getElementById('shopSparksCount').textContent = `✨ ${userData.user.sparks}`;
+                }
+                
+                // Загружаем товары
+                await loadShopItems();
+                
+            } catch (error) {
+                console.error('❌ Error loading shop data:', error);
+                showMessage('Ошибка загрузки магазина', 'error');
+            }
+        }
+
+        // Загрузка товаров
+        async function loadShopItems() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/webapp/shop/items`);
+                const items = await response.json();
+                
+                const shopItemsList = document.getElementById('shopItemsList');
+                shopItemsList.innerHTML = '';
+                
+                if (items.length > 0) {
+                    items.forEach(item => {
+                        const itemElement = document.createElement('div');
+                        itemElement.className = 'shop-item';
+                        itemElement.innerHTML = `
+                            <div class="shop-item-title">${item.title}</div>
+                            <div class="shop-item-desc">${item.description || 'Описание отсутствует'}</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <button class="btn" onclick="purchaseItem(${item.id})" style="padding: 10px 20px; font-size: 14px;">
+                                    Купить
+                                </button>
+                                <div class="shop-item-price">${item.price}✨</div>
+                            </div>
+                        `;
+                        shopItemsList.appendChild(itemElement);
+                    });
+                } else {
+                    shopItemsList.innerHTML = '<div style="text-align: center; padding: 20px; color: #718096;">🛒 Товары пока не добавлены</div>';
+                }
+            } catch (error) {
+                console.error('❌ Error loading shop items:', error);
+                document.getElementById('shopItemsList').innerHTML = '<div class="error">Ошибка загрузки товаров</div>';
+            }
+        }
+
+        // Загрузка покупок
+        async function loadPurchases() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/webapp/shop/purchases/${currentUserId}`);
+                const data = await response.json();
+                
+                const purchasesList = document.getElementById('purchasesList');
+                purchasesList.innerHTML = '';
+                
+                if (data.purchases && data.purchases.length > 0) {
+                    data.purchases.forEach(purchase => {
+                        const purchaseElement = document.createElement('div');
+                        purchaseElement.className = 'purchase-item';
+                        purchaseElement.innerHTML = `
+                            <div class="purchase-title">${purchase.title}</div>
+                            <div style="color: #718096; font-size: 14px; margin: 5px 0;">
+                                ${purchase.description || ''}
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div class="purchase-date">
+                                    ${new Date(purchase.purchased_at).toLocaleDateString('ru-RU')}
+                                </div>
+                                <div style="color: #48bb78; font-weight: 600;">
+                                    -${purchase.price_paid}✨
+                                </div>
+                            </div>
+                        `;
+                        purchasesList.appendChild(purchaseElement);
+                    });
+                } else {
+                    purchasesList.innerHTML = '<div style="text-align: center; padding: 20px; color: #718096;">📦 Покупок пока нет</div>';
+                }
+            } catch (error) {
+                console.error('❌ Error loading purchases:', error);
+                document.getElementById('purchasesList').innerHTML = '<div class="error">Ошибка загрузки покупок</div>';
+            }
+        }
+
+        // Покупка товара
+        async function purchaseItem(itemId) {
+            if (!confirm('Вы уверены, что хотите купить этот товар?')) {
+                return;
+            }
+
+            try {
+                showMessage('⏳ Оформляем покупку...', 'loading');
+
+                const response = await fetch(`${API_BASE_URL}/api/webapp/shop/purchase`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: currentUserId,
+                        itemId: itemId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('🎉 ' + result.message, 'success');
+                    // Обновляем данные
+                    loadShopData();
+                    loadUserData();
+                } else {
+                    showMessage(`❌ Ошибка: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('❌ Purchase error:', error);
+                showMessage('Ошибка при покупке', 'error');
+            }
+        }
+
         // ==================== АКТИВНОСТИ ====================
 
         // Загрузка активностей
@@ -1240,10 +1481,15 @@
                     data.activities.forEach(activity => {
                         const activityElement = document.createElement('div');
                         activityElement.className = 'activity-item';
+                        const sparksText = activity.sparks_earned >= 0 ? 
+                            `+${activity.sparks_earned}✨` : 
+                            `${activity.sparks_earned}✨`;
+                        const sparksColor = activity.sparks_earned >= 0 ? '#ffd700' : '#f56565';
+                        
                         activityElement.innerHTML = `
                             <div class="activity-type">${getActivityType(activity.activity_type)}</div>
                             <div class="activity-desc">${activity.description}</div>
-                            <div class="activity-stars">+${activity.stars_earned}⭐</div>
+                            <div class="activity-sparks" style="color: ${sparksColor}">${sparksText}</div>
                             <div style="font-size: 12px; color: #718096; margin-top: 5px;">
                                 ${new Date(activity.created_at).toLocaleString('ru-RU')}
                             </div>
@@ -1267,7 +1513,8 @@
                 'quiz': '📝 Квиз',
                 'photo_work': '📸 Фото работы',
                 'comment': '💬 Комментарий',
-                'invitation': '👥 Приглашение друга'
+                'invitation': '👥 Приглашение друга',
+                'purchase': '🛒 Покупка'
             };
             return types[type] || type;
         }
