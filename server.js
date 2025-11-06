@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3001; // Изменили на 3001
+const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(express.json());
@@ -27,9 +27,9 @@ if (!process.env.BOT_TOKEN) {
   process.exit(1);
 }
 
-console.log('🤖 Bot starting with token:', process.env.BOT_TOKEN.substring(0, 10) + '...');
+console.log('🤖 Bot starting...');
 
-// Инициализация бота с обработкой ошибок
+// Инициализация бота
 let bot;
 try {
   bot = new TelegramBot(process.env.BOT_TOKEN, {
@@ -41,26 +41,31 @@ try {
       }
     }
   });
-  
   console.log('✅ Bot initialized successfully');
 } catch (error) {
   console.error('❌ Error initializing bot:', error);
   process.exit(1);
 }
 
-// Импорт маршрутов и базы данных
-import { initDatabase } from './config/database.js';
-import userRoutes from './routes/users.js';
-import adminRoutes from './routes/admin.js';
-import webappRoutes from './routes/webapp.js';
-
-// Инициализация базы данных
-initDatabase();
-
-// Подключение маршрутов
-app.use('/api/users', userRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/webapp', webappRoutes);
+// Инициализация базы данных и маршрутов
+try {
+  const { initDatabase } = await import('./config/database.js');
+  initDatabase();
+  
+  // Импортируем маршруты
+  const userRoutes = (await import('./routes/users.js')).default;
+  const adminRoutes = (await import('./routes/admin.js')).default;
+  const webappRoutes = (await import('./routes/webapp.js')).default;
+  
+  // Подключаем маршруты
+  app.use('/api/users', userRoutes);
+  app.use('/api/admin', adminRoutes);
+  app.use('/api/webapp', webappRoutes);
+  
+  console.log('✅ Routes initialized');
+} catch (error) {
+  console.error('❌ Error initializing routes:', error);
+}
 
 // Базовые endpoint'ы
 app.get('/health', (req, res) => {
@@ -73,22 +78,12 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/api/status', (req, res) => {
-  res.json({
-    bot: 'active',
-    database: 'connected',
-    port: PORT,
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
-
 app.get('/', (req, res) => {
   res.json({
     message: '🎨 Мастерская Вдохновения - API',
     status: 'Работает',
     endpoints: {
       health: '/health',
-      status: '/api/status',
       user: '/api/users/:id',
       characters: '/api/webapp/characters'
     }
@@ -96,13 +91,10 @@ app.get('/', (req, res) => {
 });
 
 // Обработка команды /start
-bot.onText(/\/start/, async (msg) => {
+bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   const name = msg.from.first_name || 'Друг';
-  const userId = msg.from.id;
   
-  console.log(`👤 User ${userId} started bot`);
-
   const welcomeText = `🎨 Привет, ${name}! 
 
 Добро пожаловать в **Мастерскую Вдохновения**! 
@@ -111,107 +103,35 @@ bot.onText(/\/start/, async (msg) => {
 • 📚 Обучающие видео и задания
 • ⭐ Система уровней и звёзд
 • 🏆 Достижения и бонусы
-• 👥 Сообщество единомышленников
 
 Нажмите кнопку ниже чтобы открыть личный кабинет!`;
   
-  const keyboard = {
-    inline_keyboard: [[
-      {
-        text: "📱 Открыть Личный Кабинет",
-        web_app: { url: process.env.APP_URL || `http://localhost:${PORT}` }
-      }
-    ]]
-  };
-
   bot.sendMessage(chatId, welcomeText, {
     parse_mode: 'Markdown',
-    reply_markup: keyboard
+    reply_markup: {
+      inline_keyboard: [[
+        {
+          text: "📱 Открыть Личный Кабинет",
+          web_app: { url: process.env.APP_URL || `http://localhost:${PORT}` }
+        }
+      ]]
+    }
   }).catch(error => {
-    console.error('Error sending welcome message:', error);
+    console.error('Error sending message:', error);
   });
 });
 
-// Обработка callback кнопок
-bot.on('callback_query', async (callbackQuery) => {
-  const message = callbackQuery.message;
-  const data = callbackQuery.data;
-  const userId = callbackQuery.from.id;
-
-  console.log(`🔘 Callback from user ${userId}:`, data);
-
-  if (data === 'start_registration') {
-    const registrationText = `📝 **Регистрация в Мастерской Вдохновения**
-
-Для завершения регистрации откройте личный кабинет и выберите свой класс и персонажа!`;
-    
-    bot.editMessageText(registrationText, {
-      chat_id: message.chat.id,
-      message_id: message.message_id,
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: [[
-          {
-            text: "📱 Открыть Личный Кабинет",
-            web_app: { url: process.env.APP_URL || `http://localhost:${PORT}` }
-          }
-        ]]
-      }
-    }).catch(error => {
-      console.error('Error editing message:', error);
-    });
-  }
-});
-
-// Обработка обычных сообщений
-bot.on('message', (msg) => {
-  const chatId = msg.chat.id;
-  if (msg.text && !msg.text.startsWith('/')) {
-    bot.sendMessage(chatId, '💬 Используйте /start для начала работы или откройте личный кабинет через кнопку ниже! 😊', {
-      reply_markup: {
-        inline_keyboard: [[
-          {
-            text: "📱 Открыть Личный Кабинет",
-            web_app: { url: process.env.APP_URL || `http://localhost:${PORT}` }
-          }
-        ]]
-      }
-    }).catch(error => {
-      console.error('Error sending message:', error);
-    });
-  }
-});
-
-// Обработка ошибок бота
-bot.on('error', (error) => {
-  console.error('❌ Bot error:', error);
-});
-
-// Запуск сервера с обработкой ошибок
-const server = app.listen(PORT, '0.0.0.0', () => {
+// Запуск сервера
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 Health check: http://localhost:${PORT}/health`);
   console.log(`🤖 Bot: Active!`);
 }).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`❌ Port ${PORT} is already in use!`);
-    console.log('💡 Try one of these solutions:');
-    console.log('   1. Kill the process using port:', PORT);
-    console.log('   2. Change PORT in .env file');
-    console.log('   3. Wait a few minutes and try again');
+    console.log('💡 Try changing PORT in .env file');
   } else {
     console.error('❌ Server error:', err);
   }
   process.exit(1);
 });
-
-// Graceful shutdown
-process.on('SIGINT', () => {
-  console.log('🛑 Shutting down gracefully...');
-  server.close(() => {
-    console.log('✅ Server closed');
-    process.exit(0);
-  });
-});
-
-export default app;
