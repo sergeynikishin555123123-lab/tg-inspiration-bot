@@ -6,15 +6,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
 
-// Импортируем функции базы данных
-import { 
-  initializeDatabase, 
-  getUser, 
-  createUser, 
-  updateUser,
-  addStars 
-} from './database.js';
-
 // Конфигурация ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,7 +26,6 @@ if (fs.existsSync(staticPath)) {
   app.use(express.static(staticPath));
 } else {
   console.log('⚠️  Client build not found at:', staticPath);
-  console.log('📁 Current directory contents:', fs.readdirSync(__dirname));
 }
 
 // Инициализация бота
@@ -58,7 +48,6 @@ app.get('/health', async (req, res) => {
       message: '✅ Бот работает через long polling!',
       mode: 'polling',
       timestamp: new Date().toISOString(),
-      database: 'PostgreSQL',
       environment: process.env.NODE_ENV,
       client_build: fs.existsSync(staticPath) ? 'Exists' : 'Missing'
     };
@@ -74,13 +63,17 @@ app.get('/api/user/:userId', async (req, res) => {
     const { userId } = req.params;
     console.log(`📱 API Request for user: ${userId}`);
     
-    const user = await getUser(parseInt(userId));
+    // Имитация данных пользователя (временно без БД)
+    const mockUser = {
+      user_id: parseInt(userId),
+      tg_username: 'test_user',
+      tg_name: 'Test User',
+      stars: 15.5,
+      level: 'Ученик',
+      is_registered: false
+    };
     
-    if (!user) {
-      return res.json({ exists: false });
-    }
-    
-    res.json({ exists: true, user });
+    res.json({ exists: true, user: mockUser });
   } catch (error) {
     console.error('❌ API Error:', error);
     res.status(500).json({ error: error.message });
@@ -94,29 +87,15 @@ app.post('/api/user/register', async (req, res) => {
     
     console.log(`📝 Registration request for user ${userId}: ${userClass} - ${character}`);
     
-    const updateData = {
-      user_class: userClass,
-      character_name: character,
-      is_registered: true
+    // Имитация успешной регистрации
+    const mockResponse = {
+      success: true, 
+      message: 'Пользователь зарегистрирован',
+      starsAdded: 5
     };
     
-    const updatedUser = await updateUser(userId, updateData);
-    
-    if (updatedUser) {
-      // Начисляем звезды за регистрацию
-      await addStars(userId, 5, 'registration', 'Регистрация в системе');
-      
-      console.log(`✅ User ${userId} registered successfully`);
-      
-      res.json({ 
-        success: true, 
-        message: 'Пользователь зарегистрирован',
-        starsAdded: 5
-      });
-    } else {
-      console.log(`❌ User ${userId} not found for registration`);
-      res.status(400).json({ error: 'Пользователь не найден' });
-    }
+    console.log(`✅ User ${userId} registered successfully`);
+    res.json(mockResponse);
   } catch (error) {
     console.error('❌ Registration error:', error);
     res.status(500).json({ error: error.message });
@@ -126,26 +105,114 @@ app.post('/api/user/register', async (req, res) => {
 // API для получения классов и персонажей
 app.get('/api/characters', async (req, res) => {
   try {
-    const { pool } = await import('./database.js');
-    const result = await pool.query('SELECT * FROM characters ORDER BY class, character_name');
-    console.log(`📊 Sent ${result.rows.length} characters to client`);
-    res.json(result.rows);
+    const characters = [
+      {
+        id: 1,
+        class: 'Художники',
+        character_name: 'Лука Цветной',
+        description: 'Рисует с детства, любит эксперименты с цветом',
+        bonus_type: 'percent_bonus',
+        bonus_value: '10'
+      },
+      {
+        id: 2,
+        class: 'Художники',
+        character_name: 'Марина Кисть',
+        description: 'Строгая, но добрая преподавательница академической живописи',
+        bonus_type: 'forgiveness',
+        bonus_value: '1'
+      },
+      {
+        id: 3,
+        class: 'Художники',
+        character_name: 'Феликс Штрих',
+        description: 'Экспериментатор, мастер быстрых зарисовок',
+        bonus_type: 'random_bonus',
+        bonus_value: '1-3'
+      },
+      {
+        id: 4,
+        class: 'Стилисты',
+        character_name: 'Эстелла Моде',
+        description: 'Бывший стилист, обучает восприятию образа',
+        bonus_type: 'percent_bonus',
+        bonus_value: '5'
+      },
+      {
+        id: 5,
+        class: 'Стилисты',
+        character_name: 'Роза Ателье',
+        description: 'Мастер практического шитья и образов',
+        bonus_type: 'secret_access',
+        bonus_value: 'biweekly'
+      },
+      {
+        id: 6,
+        class: 'Стилисты',
+        character_name: 'Гертруда Линия',
+        description: 'Ценит детали и силу аксессуаров',
+        bonus_type: 'series_bonus',
+        bonus_value: '1'
+      },
+      {
+        id: 7,
+        class: 'Мастера',
+        character_name: 'Тихон Творец',
+        description: 'Ремесленник, любит простые техники',
+        bonus_type: 'photo_bonus',
+        bonus_value: '1'
+      },
+      {
+        id: 8,
+        class: 'Мастера',
+        character_name: 'Агата Узор',
+        description: 'Любит неожиданные материалы и коллажи',
+        bonus_type: 'weekly_bonus',
+        bonus_value: '6'
+      },
+      {
+        id: 9,
+        class: 'Мастера',
+        character_name: 'Борис Клей',
+        description: 'Весёлый мастер импровизаций',
+        bonus_type: 'mini_quest',
+        bonus_value: '2'
+      },
+      {
+        id: 10,
+        class: 'Историки искусства',
+        character_name: 'Профессор Артёмий',
+        description: 'Экстра-любитель архивов и фактов',
+        bonus_type: 'hint',
+        bonus_value: '1'
+      },
+      {
+        id: 11,
+        class: 'Историки искусства',
+        character_name: 'Соня Гравюра',
+        description: 'Рассказывает истории картин как сказки',
+        bonus_type: 'fact_star',
+        bonus_value: '1'
+      },
+      {
+        id: 12,
+        class: 'Историки искусства',
+        character_name: 'Михаил Эпоха',
+        description: 'Любит хронологию и сравнения эпох',
+        bonus_type: 'multiplier',
+        bonus_value: '2'
+      }
+    ];
+    
+    console.log(`📊 Sent ${characters.length} characters to client`);
+    res.json(characters);
   } catch (error) {
     console.error('❌ Characters API error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// API для проверки бота
-app.get('/api/bot-info', (req, res) => {
-  res.json({
-    bot_username: process.env.BOT_USERNAME,
-    webapp_url: process.env.APP_URL,
-    status: 'active'
-  });
-});
-
-// Serve React App for all other routes - только если сборка существует
+// Serve React App for all other routes
 app.get('*', (req, res) => {
   if (fs.existsSync(staticPath)) {
     res.sendFile(path.join(staticPath, 'index.html'));
@@ -174,26 +241,13 @@ bot.onText(/\/start/, async (msg) => {
   console.log(`👋 New user: ${name} (ID: ${userId})`);
   
   try {
-    // Создаем или получаем пользователя
-    let user = await getUser(userId);
-    if (!user) {
-      user = await createUser({
-        user_id: userId,
-        tg_username: username,
-        tg_name: name
-      });
-      console.log(`✅ Created new user: ${userId}`);
-    } else {
-      console.log(`✅ Found existing user: ${userId}`);
-    }
-    
     const welcomeText = `🎨 Привет, ${name}! 
 
 Добро пожаловать в **Мастерскую Вдохновения**! 
 
 ✨ Вот что вас ждет:
 • 📚 Обучающие видео и задания
-• ⭐ Система уровней и звёзд (сейчас: ${user?.stars || 0}⭐)
+• ⭐ Система уровней и звёзд
 • 🏆 Достижения и бонусы
 • 👥 Сообщество единомышленников
 
@@ -217,68 +271,21 @@ bot.onText(/\/start/, async (msg) => {
   }
 });
 
-// Обработчик callback queries (нажатия на кнопки)
-bot.on('callback_query', async (callbackQuery) => {
-  const message = callbackQuery.message;
-  const data = callbackQuery.data;
-  
-  try {
-    if (data === 'open_webapp') {
-      await bot.answerCallbackQuery(callbackQuery.id);
-      await bot.sendMessage(message.chat.id, 'Открываю личный кабинет...', {
-        reply_markup: {
-          inline_keyboard: [[
-            {
-              text: "📱 Открыть Личный Кабинет",
-              web_app: { url: process.env.APP_URL }
-            }
-          ]]
-        }
-      });
-    }
-  } catch (error) {
-    console.error('❌ Callback query error:', error);
-  }
-});
-
 // Обработчик обычных сообщений
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
-  const userId = msg.from.id;
   
-  // Игнорируем команды (они обрабатываются отдельно)
+  // Игнорируем команды
   if (msg.text && msg.text.startsWith('/')) {
-    return;
-  }
-  
-  // Игнорируем служебные сообщения
-  if (msg.web_app_data || msg.successful_payment) {
     return;
   }
   
   // Отвечаем на обычные сообщения
   if (msg.text) {
     try {
-      // Проверяем, зарегистрирован ли пользователь
-      const user = await getUser(userId);
-      
-      if (user && user.is_registered) {
-        await bot.sendMessage(chatId, `💬 ${msg.text}\n\nОтличное сообщение! 🎨\n\nИспользуйте кнопку ниже для доступа к личному кабинету.`, {
-          reply_markup: {
-            inline_keyboard: [[
-              {
-                text: "📱 Личный Кабинет",
-                web_app: { url: process.env.APP_URL }
-              }
-            ]]
-          }
-        });
-      } else {
-        await bot.sendMessage(chatId, `💬 ${msg.text}\n\nПривет! Нажмите /start чтобы начать работу с ботом! 😊`);
-      }
+      await bot.sendMessage(chatId, `💬 ${msg.text}\n\nПривет! Используйте /start для начала работы с ботом! 😊`);
     } catch (error) {
       console.error('❌ Message handling error:', error);
-      await bot.sendMessage(chatId, '😔 Произошла ошибка. Попробуйте команду /start');
     }
   }
 });
@@ -292,91 +299,16 @@ bot.on('polling_error', (error) => {
   console.error('❌ Telegram Polling Error:', error);
 });
 
-// Функция для проверки доступности базы данных
-async function checkDatabaseConnection() {
-  try {
-    const { pool } = await import('./database.js');
-    const client = await pool.connect();
-    console.log('✅ Database connection successful');
-    client.release();
-    return true;
-  } catch (error) {
-    console.error('❌ Database connection failed:', error);
-    return false;
-  }
-}
-
-// Функция запуска приложения
-async function startApp() {
-  try {
-    console.log('🚀 Starting Мастерская Вдохновения...');
-    console.log('📊 Environment:', process.env.NODE_ENV);
-    console.log('🌐 App URL:', process.env.APP_URL);
-    
-    // Проверяем подключение к базе данных
-    const dbConnected = await checkDatabaseConnection();
-    if (!dbConnected) {
-      console.log('⚠️  Continuing without database connection...');
-    }
-    
-    // Инициализируем базу данных
-    await initializeDatabase();
-    
-    // Запускаем сервер
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🎉 Server running on port ${PORT}`);
-      console.log(`📱 Mini App: ${process.env.APP_URL}`);
-      console.log(`🗄️ Database: ${dbConnected ? 'Connected' : 'Disconnected'}`);
-      console.log(`🤖 Bot: Active and waiting for messages!`);
-      console.log(`🔧 Health check: ${process.env.APP_URL}/health`);
-      
-      // Выводим информацию о клиентской сборке
-      if (fs.existsSync(staticPath)) {
-        console.log(`📁 Client build: Found at ${staticPath}`);
-      } else {
-        console.log(`⚠️  Client build: Not found - API only mode`);
-      }
-    });
-    
-  } catch (error) {
-    console.error('❌ Failed to start application:', error);
-    process.exit(1);
-  }
-}
-
-// Обработка graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('🛑 Shutting down gracefully...');
-  try {
-    bot.stopPolling();
-    console.log('✅ Bot polling stopped');
-    process.exit(0);
-  } catch (error) {
-    console.error('❌ Error during shutdown:', error);
-    process.exit(1);
+// Запускаем сервер
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🎉 Server running on port ${PORT}`);
+  console.log(`📱 Mini App: ${process.env.APP_URL}`);
+  console.log(`🤖 Bot: Active and waiting for messages!`);
+  console.log(`🔧 Health check: ${process.env.APP_URL}/health`);
+  
+  if (fs.existsSync(staticPath)) {
+    console.log(`📁 Client build: Found at ${staticPath}`);
+  } else {
+    console.log(`⚠️  Client build: Not found - API only mode`);
   }
 });
-
-process.on('SIGTERM', async () => {
-  console.log('🛑 Received SIGTERM, shutting down...');
-  try {
-    bot.stopPolling();
-    console.log('✅ Bot polling stopped');
-    process.exit(0);
-  } catch (error) {
-    console.error('❌ Error during shutdown:', error);
-    process.exit(1);
-  }
-});
-
-// Обработка необработанных исключений
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-// Запускаем приложение
-startApp();
