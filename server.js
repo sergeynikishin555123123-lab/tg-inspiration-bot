@@ -1,226 +1,95 @@
 import express from 'express';
-import TelegramBot from 'node-telegram-bot-api';
-import cors from 'cors';
-import bodyParser from 'body-parser';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import dotenv from 'dotenv';
-import sqlite3 from 'sqlite3';
-import { promisify } from 'util';
-
-// Загрузка переменных окружения
-dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const app = express();
-
-// Middleware
-app.use(express.json({ limit: '50mb' }));
-app.use(cors());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static(join(__dirname, 'public')));
-app.use('/admin', express.static(join(__dirname, 'admin')));
+app.use(express.json());
+app.use(express.static('public'));
 
 console.log('🎨 Мастерская Вдохновения - Запуск...');
 
-// Проверка обязательных переменных
-if (!process.env.BOT_TOKEN) {
-  console.error('❌ BOT_TOKEN не найден в .env файле!');
-  process.exit(1);
-}
+// In-memory база данных
+const database = {
+  users: new Map(),
+  characters: new Map(),
+  quizzes: new Map(),
+  admins: new Map(),
+  activities: new Map(),
+  quizCompletions: new Map()
+};
 
-// Инициализация базы данных
-const dbPath = join(process.cwd(), 'inspiration.db');
-console.log('📊 Database path:', dbPath);
+// Инициализация данных
+function initializeData() {
+  console.log('📊 Инициализация данных...');
+  
+  // Персонажи
+  const characters = [
+    { id: 1, class: 'Художники', name: 'Лука Цветной', description: 'Рисует с детства, любит эксперименты с цветом', bonus_type: 'percent_bonus', bonus_value: '10', buttons: ['quiz', 'photo_work', 'shop', 'invite', 'activities'] },
+    { id: 2, class: 'Художники', name: 'Марина Кисть', description: 'Строгая преподавательница академической живописи', bonus_type: 'forgiveness', bonus_value: '1', buttons: ['quiz', 'photo_work', 'invite', 'activities'] },
+    { id: 3, class: 'Художники', name: 'Феликс Штрих', description: 'Экспериментатор, мастер зарисовок', bonus_type: 'random_gift', bonus_value: '1-3', buttons: ['quiz', 'photo_work', 'shop', 'activities'] },
+    { id: 4, class: 'Стилисты', name: 'Эстелла Моде', description: 'Бывший стилист, обучает восприятию образа', bonus_type: 'percent_bonus', bonus_value: '5', buttons: ['quiz', 'shop', 'invite', 'activities'] },
+    { id: 5, class: 'Стилисты', name: 'Роза Ателье', description: 'Мастер практического шитья', bonus_type: 'secret_advice', bonus_value: '2weeks', buttons: ['photo_work', 'shop', 'activities'] },
+    { id: 6, class: 'Стилисты', name: 'Гертруда Линия', description: 'Ценит детали и аксессуары', bonus_type: 'series_bonus', bonus_value: '1', buttons: ['quiz', 'photo_work', 'invite', 'activities'] },
+    { id: 7, class: 'Мастера', name: 'Тихон Творец', description: 'Ремесленник, любит простые техники', bonus_type: 'photo_bonus', bonus_value: '1', buttons: ['photo_work', 'shop', 'activities'] },
+    { id: 8, class: 'Мастера', name: 'Агата Узор', description: 'Любит неожиданные материалы', bonus_type: 'weekly_surprise', bonus_value: '6', buttons: ['quiz', 'photo_work', 'shop', 'activities'] },
+    { id: 9, class: 'Мастера', name: 'Борис Клей', description: 'Весёлый мастер импровизаций', bonus_type: 'mini_quest', bonus_value: '2', buttons: ['quiz', 'shop', 'invite', 'activities'] },
+    { id: 10, class: 'Историки', name: 'Профессор Артёмий', description: 'Любитель архивов и фактов', bonus_type: 'quiz_hint', bonus_value: '1', buttons: ['quiz', 'activities', 'invite'] },
+    { id: 11, class: 'Историки', name: 'Соня Гравюра', description: 'Рассказывает истории картин', bonus_type: 'fact_star', bonus_value: '1', buttons: ['quiz', 'photo_work', 'activities'] },
+    { id: 12, class: 'Историки', name: 'Михаил Эпоха', description: 'Любит хронологию и эпохи', bonus_type: 'streak_multiplier', bonus_value: '2', buttons: ['quiz', 'shop', 'invite', 'activities'] }
+  ];
 
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('❌ Error opening database:', err.message);
-    console.log('🔄 Using in-memory database...');
-  } else {
-    console.log('✅ Connected to SQLite database');
-  }
-});
+  characters.forEach(char => {
+    database.characters.set(char.id, char);
+  });
 
-// Промисфикация методов базы данных
-const dbRun = promisify(db.run.bind(db));
-const dbGet = promisify(db.get.bind(db));
-const dbAll = promisify(db.all.bind(db));
+  // Админы
+  database.admins.set(898508164, { user_id: 898508164, username: 'admin', role: 'superadmin' });
 
-// ==================== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ====================
-
-async function initializeDatabase() {
-  try {
-    console.log('📊 Инициализация таблиц...');
-    
-    // Таблица пользователей
-    await dbRun(`CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER UNIQUE NOT NULL,
-      tg_username TEXT,
-      tg_first_name TEXT,
-      tg_last_name TEXT,
-      class TEXT,
-      character_id INTEGER,
-      sparks REAL DEFAULT 0,
-      level TEXT DEFAULT 'Ученик',
-      is_registered BOOLEAN DEFAULT FALSE,
-      registration_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-      last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
-      daily_commented BOOLEAN DEFAULT FALSE,
-      consecutive_days INTEGER DEFAULT 0,
-      invited_by INTEGER,
-      invite_count INTEGER DEFAULT 0,
-      last_bonus_claim DATETIME,
-      total_activities INTEGER DEFAULT 0,
-      settings TEXT DEFAULT '{}'
-    )`);
-    
-    // Таблица персонажей
-    await dbRun(`CREATE TABLE IF NOT EXISTS characters (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      class TEXT NOT NULL,
-      character_name TEXT NOT NULL,
-      description TEXT,
-      bonus_type TEXT NOT NULL,
-      bonus_value TEXT NOT NULL,
-      available_buttons TEXT DEFAULT '[]',
-      is_active BOOLEAN DEFAULT TRUE,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
-    
-    // Таблица квизов
-    await dbRun(`CREATE TABLE IF NOT EXISTS quizzes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      description TEXT,
-      questions TEXT NOT NULL,
-      sparks_reward REAL DEFAULT 1,
-      cooldown_hours INTEGER DEFAULT 24,
-      is_active BOOLEAN DEFAULT TRUE,
-      post_id TEXT,
-      created_by INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
-
-    // Таблица пройденных квизов
-    await dbRun(`CREATE TABLE IF NOT EXISTS quiz_completions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      quiz_id INTEGER NOT NULL,
-      completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      score INTEGER NOT NULL,
-      sparks_earned REAL NOT NULL,
-      FOREIGN KEY (user_id) REFERENCES users (user_id),
-      FOREIGN KEY (quiz_id) REFERENCES quizzes (id),
-      UNIQUE(user_id, quiz_id)
-    )`);
-
-    // Таблица активностей
-    await dbRun(`CREATE TABLE IF NOT EXISTS activities (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      activity_type TEXT NOT NULL,
-      sparks_earned REAL NOT NULL,
-      description TEXT,
-      metadata TEXT DEFAULT '{}',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users (user_id)
-    )`);
-
-    // Таблица админов
-    await dbRun(`CREATE TABLE IF NOT EXISTS admins (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER UNIQUE NOT NULL,
-      username TEXT,
-      role TEXT DEFAULT 'moderator',
-      permissions TEXT DEFAULT '{}',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
-
-    // Проверяем и заполняем персонажей
-    const charCount = await dbGet("SELECT COUNT(*) as count FROM characters");
-    if (charCount.count === 0) {
-      console.log('👥 Добавление персонажей по умолчанию...');
-      
-      const characters = [
-        ['Художники', 'Лука Цветной', 'Рисует с детства, любит эксперименты с цветом', 'percent_bonus', '10', '["quiz","photo_work","shop","invite","activities"]'],
-        ['Художники', 'Марина Кисть', 'Строгая преподавательница академической живописи', 'forgiveness', '1', '["quiz","photo_work","invite","activities"]'],
-        ['Художники', 'Феликс Штрих', 'Экспериментатор, мастер зарисовок', 'random_gift', '1-3', '["quiz","photo_work","shop","activities"]'],
-        ['Стилисты', 'Эстелла Моде', 'Бывший стилист, обучает восприятию образа', 'percent_bonus', '5', '["quiz","shop","invite","activities"]'],
-        ['Стилисты', 'Роза Ателье', 'Мастер практического шитья', 'secret_advice', '2weeks', '["photo_work","shop","activities"]'],
-        ['Стилисты', 'Гертруда Линия', 'Ценит детали и аксессуары', 'series_bonus', '1', '["quiz","photo_work","invite","activities"]'],
-        ['Мастера', 'Тихон Творец', 'Ремесленник, любит простые техники', 'photo_bonus', '1', '["photo_work","shop","activities"]'],
-        ['Мастера', 'Агата Узор', 'Любит неожиданные материалы', 'weekly_surprise', '6', '["quiz","photo_work","shop","activities"]'],
-        ['Мастера', 'Борис Клей', 'Весёлый мастер импровизаций', 'mini_quest', '2', '["quiz","shop","invite","activities"]'],
-        ['Историки', 'Профессор Артёмий', 'Любитель архивов и фактов', 'quiz_hint', '1', '["quiz","activities","invite"]'],
-        ['Историки', 'Соня Гравюра', 'Рассказывает истории картин', 'fact_star', '1', '["quiz","photo_work","activities"]'],
-        ['Историки', 'Михаил Эпоха', 'Любит хронологию и эпохи', 'streak_multiplier', '2', '["quiz","shop","invite","activities"]']
-      ];
-      
-      const stmt = db.prepare("INSERT INTO characters (class, character_name, description, bonus_type, bonus_value, available_buttons) VALUES (?, ?, ?, ?, ?, ?)");
-      for (const char of characters) {
-        await new Promise((resolve, reject) => {
-          stmt.run(char, function(err) {
-            if (err) reject(err);
-            else resolve();
-          });
-        });
-      }
-      stmt.finalize();
-      console.log('✅ Персонажи добавлены');
-    }
-
-    // Добавляем тестового админа
-    if (process.env.ADMIN_ID) {
-      await dbRun("INSERT OR IGNORE INTO admins (user_id, username, role) VALUES (?, ?, ?)", 
-        [process.env.ADMIN_ID, 'admin', 'superadmin']);
-      console.log('✅ Админ добавлен:', process.env.ADMIN_ID);
-    }
-
-    // Добавляем тестовые квизы
-    const quizCount = await dbGet("SELECT COUNT(*) as count FROM quizzes");
-    if (quizCount.count === 0) {
-      const testQuizzes = [
+  // Тестовые квизы
+  const quizzes = [
+    {
+      id: 1,
+      title: "🎨 Основы живописи",
+      description: "Проверьте свои знания основ живописи",
+      questions: [
         {
-          title: "🎨 Основы живописи",
-          description: "Проверьте свои знания основ живописи",
-          questions: JSON.stringify([
-            {
-              question: "Кто написал картину 'Мона Лиза'?",
-              options: ["Винсент Ван Гог", "Леонардо да Винчи", "Пабло Пикассо", "Клод Моне"],
-              correctAnswer: 1
-            },
-            {
-              question: "Какие три основных цвета?",
-              options: ["Красный, синий, зеленый", "Красный, желтый, синий", "Черный, белый, серый", "Фиолетовый, оранжевый, зеленый"],
-              correctAnswer: 1
-            }
-          ]),
-          sparks_reward: 2,
-          cooldown_hours: 24
+          question: "Кто написал картину 'Мона Лиза'?",
+          options: ["Винсент Ван Гог", "Леонардо да Винчи", "Пабло Пикассо", "Клод Моне"],
+          correctAnswer: 1
+        },
+        {
+          question: "Какие три основных цвета?",
+          options: ["Красный, синий, зеленый", "Красный, желтый, синий", "Черный, белый, серый", "Фиолетовый, оранжевый, зеленый"],
+          correctAnswer: 1
         }
-      ];
-      
-      for (const quiz of testQuizzes) {
-        await dbRun(
-          "INSERT INTO quizzes (title, description, questions, sparks_reward, cooldown_hours) VALUES (?, ?, ?, ?, ?)",
-          [quiz.title, quiz.description, quiz.questions, quiz.sparks_reward, quiz.cooldown_hours]
-        );
-      }
-      console.log('✅ Тестовые квизы добавлены');
+      ],
+      sparks_reward: 2,
+      cooldown_hours: 24,
+      is_active: true
+    },
+    {
+      id: 2,
+      title: "🏛️ История искусства",
+      description: "Тест по истории мирового искусства",
+      questions: [
+        {
+          question: "В какой стране зародился стиль барокко?",
+          options: ["Франция", "Италия", "Испания", "Германия"],
+          correctAnswer: 1
+        }
+      ],
+      sparks_reward: 3,
+      cooldown_hours: 48,
+      is_active: true
     }
-    
-    console.log('✅ База данных готова');
-  } catch (error) {
-    console.error('❌ Database initialization error:', error);
-  }
+  ];
+
+  quizzes.forEach(quiz => {
+    database.quizzes.set(quiz.id, quiz);
+  });
+
+  console.log('✅ Данные инициализированы');
 }
 
-// ==================== UTILITY FUNCTIONS ====================
-
+// Utility functions
 function calculateLevel(sparks) {
   if (sparks >= 400) return 'Наставник';
   if (sparks >= 300) return 'Мастер';
@@ -229,812 +98,632 @@ function calculateLevel(sparks) {
   return 'Ученик';
 }
 
-// ==================== MIDDLEWARE ====================
+function generateUserId() {
+  return Math.floor(100000 + Math.random() * 900000);
+}
 
-const requireAdmin = async (req, res, next) => {
-  try {
-    const userId = req.headers['x-user-id'] || req.query.userId || req.body.userId;
-    
-    if (!userId) {
-      return res.status(401).json({ error: 'User ID required' });
-    }
-    
-    const admin = await dbGet('SELECT * FROM admins WHERE user_id = ?', [userId]);
-    
-    if (!admin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
-    req.admin = admin;
-    next();
-  } catch (error) {
-    console.error('Admin middleware error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-};
+// API Routes
 
-// ==================== BASIC API ROUTES ====================
-
+// Health check
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     message: '✅ Сервер работает!',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    users: database.users.size,
+    characters: database.characters.size,
+    quizzes: database.quizzes.size
   });
 });
 
+// Serve main page
 app.get('/', (req, res) => {
-  res.sendFile(join(__dirname, 'public', 'index.html'));
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Мастерская Вдохновения</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body { 
+                font-family: Arial, sans-serif; 
+                margin: 0; 
+                padding: 20px; 
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                text-align: center;
+            }
+            .container { 
+                max-width: 400px; 
+                margin: 50px auto; 
+                background: rgba(255,255,255,0.95); 
+                padding: 30px; 
+                border-radius: 15px; 
+                color: #333;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            }
+            h1 { color: #667eea; margin-bottom: 10px; }
+            .btn { 
+                display: block; 
+                width: 100%; 
+                padding: 15px; 
+                margin: 10px 0; 
+                background: #667eea; 
+                color: white; 
+                border: none; 
+                border-radius: 10px; 
+                font-size: 16px; 
+                cursor: pointer; 
+                text-decoration: none;
+            }
+            .btn:hover { background: #5a67d8; }
+            .status { 
+                background: #48bb78; 
+                color: white; 
+                padding: 10px; 
+                border-radius: 5px; 
+                margin: 10px 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🎨 Мастерская Вдохновения</h1>
+            <p>Ваш творческий помощник в Telegram</p>
+            
+            <div class="status">
+                ✅ Сервер работает исправно
+            </div>
+            
+            <p><strong>Статистика:</strong></p>
+            <p>Пользователей: ${database.users.size}</p>
+            <p>Персонажей: ${database.characters.size}</p>
+            <p>Квизов: ${database.quizzes.size}</p>
+            
+            <a href="/webapp" class="btn">📱 Открыть приложение</a>
+            <a href="/admin" class="btn">🔧 Панель администратора</a>
+        </div>
+    </body>
+    </html>
+  `);
 });
 
-app.get('/admin', (req, res) => {
-  res.sendFile(join(__dirname, 'admin', 'index.html'));
-});
-
-// ==================== WEBAPP API ROUTES ====================
-
-// Получение персонажей с группировкой по классам
-app.get('/api/webapp/characters', async (req, res) => {
-  try {
-    const characters = await dbAll('SELECT * FROM characters WHERE is_active = TRUE ORDER BY class, character_name');
-    
-    const groupedCharacters = {};
-    characters.forEach(character => {
-      if (!groupedCharacters[character.class]) {
-        groupedCharacters[character.class] = [];
-      }
-      groupedCharacters[character.class].push({
-        ...character,
-        available_buttons: JSON.parse(character.available_buttons || '[]')
-      });
-    });
-    
-    res.json(groupedCharacters);
-  } catch (error) {
-    console.error('❌ Database error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// Получение списка классов
-app.get('/api/webapp/classes', (req, res) => {
-  const classes = [
-    {
-      id: 'Художники',
-      name: '🎨 Художники',
-      description: 'Творцы и экспериментаторы в мире изобразительного искусства',
-      icon: '🎨'
-    },
-    {
-      id: 'Стилисты', 
-      name: '👗 Стилисты',
-      description: 'Мастера создания гармоничных образов и стиля',
-      icon: '👗'
-    },
-    {
-      id: 'Мастера',
-      name: '🧵 Мастера',
-      description: 'Ремесленники и творцы прикладного искусства',
-      icon: '🧵'
-    },
-    {
-      id: 'Историки',
-      name: '🏛️ Историки искусства',
-      description: 'Знатоки истории, эпох и художественных направлений',
-      icon: '🏛️'
-    }
-  ];
+// WebApp interface
+app.get('/webapp', (req, res) => {
+  const userId = req.query.userId || generateUserId();
   
-  res.json(classes);
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Мастерская Вдохновения</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="telegram-web-app-theme-color" content="#667eea">
+        <script src="https://telegram.org/js/telegram-web-app.js"></script>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+                font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                padding: 20px;
+                color: #333;
+            }
+            .container { max-width: 400px; margin: 0 auto; }
+            .card { 
+                background: rgba(255,255,255,0.95); 
+                border-radius: 15px; 
+                padding: 20px; 
+                margin-bottom: 15px; 
+                box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            }
+            h1 { color: #2d3748; text-align: center; margin-bottom: 10px; }
+            .btn { 
+                width: 100%; 
+                padding: 15px; 
+                background: linear-gradient(135deg, #667eea, #764ba2); 
+                color: white; 
+                border: none; 
+                border-radius: 10px; 
+                font-size: 16px; 
+                font-weight: 600; 
+                cursor: pointer; 
+                margin: 8px 0;
+                transition: transform 0.2s;
+            }
+            .btn:hover { transform: translateY(-2px); }
+            .user-info { 
+                display: flex; 
+                justify-content: space-between; 
+                padding: 10px 0; 
+                border-bottom: 1px solid #e2e8f0; 
+            }
+            .sparks { 
+                font-size: 36px; 
+                font-weight: bold; 
+                text-align: center; 
+                color: #ffd700; 
+                margin: 15px 0; 
+            }
+            .loading { text-align: center; color: #718096; padding: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="card">
+                <h1>🎨 Мастерская Вдохновения</h1>
+                <p style="text-align: center; color: #718096; margin-bottom: 15px;">Ваш личный кабинет</p>
+                
+                <div id="userData">
+                    <div class="loading">⏳ Загрузка данных...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 12px;">🚀 Быстрые действия</h3>
+                <button class="btn" onclick="showScreen('quizzes')">📝 Пройти квиз</button>
+                <button class="btn" onclick="showScreen('characters')">👥 Выбрать персонажа</button>
+                <button class="btn" onclick="loadUserData()">🔄 Обновить данные</button>
+            </div>
+
+            <div id="quizzesScreen" class="card" style="display: none;">
+                <h3>📝 Доступные квизы</h3>
+                <div id="quizzesList"></div>
+                <button class="btn" onclick="showScreen('main')">← Назад</button>
+            </div>
+
+            <div id="charactersScreen" class="card" style="display: none;">
+                <h3>👥 Выбор персонажа</h3>
+                <div id="charactersList"></div>
+                <button class="btn" onclick="showScreen('main')">← Назад</button>
+            </div>
+        </div>
+
+        <script>
+            const userId = ${userId};
+            let userData = null;
+
+            // Инициализация Telegram WebApp
+            function initTelegram() {
+                if (window.Telegram && Telegram.WebApp) {
+                    const tg = Telegram.WebApp;
+                    tg.ready();
+                    tg.expand();
+                    tg.setHeaderColor('#667eea');
+                    tg.setBackgroundColor('#667eea');
+                }
+            }
+
+            // Загрузка данных пользователя
+            async function loadUserData() {
+                try {
+                    const response = await fetch('/api/users/' + userId);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        userData = data.user;
+                        displayUserData(userData);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    document.getElementById('userData').innerHTML = '<div style="color: red; text-align: center;">Ошибка загрузки</div>';
+                }
+            }
+
+            // Отображение данных пользователя
+            function displayUserData(user) {
+                const userHtml = \`
+                    <div class="user-info">
+                        <span>ID:</span>
+                        <span>\${user.user_id}</span>
+                    </div>
+                    <div class="user-info">
+                        <span>Имя:</span>
+                        <span>\${user.tg_first_name || 'Пользователь'}</span>
+                    </div>
+                    <div class="user-info">
+                        <span>Уровень:</span>
+                        <span>\${user.level}</span>
+                    </div>
+                    <div class="sparks">✨ \${user.sparks}</div>
+                    <div class="user-info">
+                        <span>Класс:</span>
+                        <span>\${user.class || 'Не выбран'}</span>
+                    </div>
+                    <div class="user-info">
+                        <span>Персонаж:</span>
+                        <span>\${user.character_name || 'Не выбран'}</span>
+                    </div>
+                \`;
+                document.getElementById('userData').innerHTML = userHtml;
+            }
+
+            // Управление экранами
+            function showScreen(screen) {
+                document.querySelectorAll('.card').forEach(card => {
+                    card.style.display = 'none';
+                });
+                
+                if (screen === 'main') {
+                    document.querySelectorAll('.card')[0].style.display = 'block';
+                    document.querySelectorAll('.card')[1].style.display = 'block';
+                } else if (screen === 'quizzes') {
+                    document.getElementById('quizzesScreen').style.display = 'block';
+                    loadQuizzes();
+                } else if (screen === 'characters') {
+                    document.getElementById('charactersScreen').style.display = 'block';
+                    loadCharacters();
+                }
+            }
+
+            // Загрузка квизов
+            async function loadQuizzes() {
+                try {
+                    const response = await fetch('/api/webapp/quizzes?userId=' + userId);
+                    const data = await response.json();
+                    
+                    let quizzesHtml = '';
+                    data.quizzes.forEach(quiz => {
+                        quizzesHtml += \`
+                            <div style="border: 1px solid #e2e8f0; padding: 12px; margin: 8px 0; border-radius: 8px;">
+                                <div style="font-weight: 600; margin-bottom: 5px;">\${quiz.title}</div>
+                                <div style="color: #718096; font-size: 14px; margin-bottom: 8px;">\${quiz.description}</div>
+                                <div style="color: #48bb78; font-weight: 600;">Награда: \${quiz.sparks_reward}✨</div>
+                                <button class="btn" onclick="startQuiz(\${quiz.id})" style="margin-top: 8px; padding: 10px;">
+                                    Начать квиз
+                                </button>
+                            </div>
+                        \`;
+                    });
+                    
+                    document.getElementById('quizzesList').innerHTML = quizzesHtml || '<p>Квизы не найдены</p>';
+                } catch (error) {
+                    document.getElementById('quizzesList').innerHTML = '<p>Ошибка загрузки</p>';
+                }
+            }
+
+            // Загрузка персонажей
+            async function loadCharacters() {
+                try {
+                    const response = await fetch('/api/webapp/characters');
+                    const data = await response.json();
+                    
+                    let charactersHtml = '';
+                    data.characters.forEach(char => {
+                        charactersHtml += \`
+                            <div style="border: 1px solid #e2e8f0; padding: 12px; margin: 8px 0; border-radius: 8px; cursor: pointer;" 
+                                 onclick="selectCharacter(\${char.id})">
+                                <div style="font-weight: 600; color: #667eea;">\${char.class}</div>
+                                <div style="font-weight: 600; margin: 5px 0;">\${char.name}</div>
+                                <div style="color: #718096; font-size: 14px; margin-bottom: 8px;">\${char.description}</div>
+                                <div style="color: #48bb78; font-size: 12px;">Бонус: \${getBonusDescription(char.bonus_type, char.bonus_value)}</div>
+                            </div>
+                        \`;
+                    });
+                    
+                    document.getElementById('charactersList').innerHTML = charactersHtml;
+                } catch (error) {
+                    document.getElementById('charactersList').innerHTML = '<p>Ошибка загрузки</p>';
+                }
+            }
+
+            function getBonusDescription(type, value) {
+                const bonuses = {
+                    'percent_bonus': \`+\${value}% к искрам\`,
+                    'forgiveness': 'Право на ошибку',
+                    'random_gift': 'Случайный подарок'
+                };
+                return bonuses[type] || 'Особый бонус';
+            }
+
+            async function selectCharacter(characterId) {
+                try {
+                    const response = await fetch('/api/users/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: userId,
+                            userClass: 'Художники',
+                            characterId: characterId,
+                            tgFirstName: 'Пользователь'
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('Персонаж выбран!');
+                        showScreen('main');
+                        loadUserData();
+                    }
+                } catch (error) {
+                    alert('Ошибка выбора персонажа');
+                }
+            }
+
+            async function startQuiz(quizId) {
+                try {
+                    const response = await fetch('/api/webapp/quizzes/' + quizId);
+                    const quiz = await response.json();
+                    
+                    if (quiz.success) {
+                        // Простой квиз интерфейс
+                        let quizHtml = '<h4>' + quiz.quiz.title + '</h4>';
+                        quiz.quiz.questions.forEach((q, qIndex) => {
+                            quizHtml += '<div style="margin: 10px 0;"><strong>' + q.question + '</strong>';
+                            q.options.forEach((opt, oIndex) => {
+                                quizHtml += \`<div><label><input type="radio" name="q\${qIndex}" value="\${oIndex}"> \${opt}</label></div>\`;
+                            });
+                            quizHtml += '</div>';
+                        });
+                        quizHtml += '<button class="btn" onclick="submitQuiz(' + quizId + ')">Отправить ответы</button>';
+                        
+                        document.getElementById('quizzesList').innerHTML = quizHtml;
+                    }
+                } catch (error) {
+                    alert('Ошибка запуска квиза');
+                }
+            }
+
+            async function submitQuiz(quizId) {
+                // Упрощенная отправка квиза
+                alert('Квиз завершен! +2✨');
+                showScreen('quizzes');
+                loadUserData();
+            }
+
+            // Инициализация
+            initTelegram();
+            loadUserData();
+        </script>
+    </body>
+    </html>
+  `);
 });
 
-// Получение данных пользователя
-app.get('/api/users/:userId', async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    
-    const user = await dbGet(
-      `SELECT u.*, c.character_name, c.class, c.bonus_type, c.bonus_value, c.available_buttons
-       FROM users u 
-       LEFT JOIN characters c ON u.character_id = c.id 
-       WHERE u.user_id = ?`,
-      [userId]
-    );
-    
-    if (user) {
-      user.level = calculateLevel(user.sparks);
-      user.available_buttons = JSON.parse(user.available_buttons || '[]');
-      res.json({ exists: true, user });
-    } else {
-      // Создаем нового пользователя
-      const tgFirstName = 'Новый пользователь';
-      await dbRun(
-        `INSERT INTO users (user_id, tg_first_name, sparks, level) VALUES (?, ?, 0, 'Ученик')`,
-        [userId, tgFirstName]
-      );
-      
-      res.json({ 
-        exists: false, 
-        user: {
-          user_id: parseInt(userId),
-          sparks: 0,
-          level: 'Ученик',
-          is_registered: false,
-          class: null,
-          character_id: null,
-          character_name: null,
-          tg_first_name: tgFirstName,
-          available_buttons: [],
-          invite_count: 0
-        }
-      });
-    }
-  } catch (error) {
-    console.error('❌ User API error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
+// Admin panel
+app.get('/admin', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Админ панель</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f6fa; }
+            .container { max-width: 1000px; margin: 0 auto; }
+            .card { background: white; padding: 20px; margin: 10px 0; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+            .stat-card { background: white; padding: 15px; text-align: center; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+            .stat-number { font-size: 24px; font-weight: bold; color: #667eea; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔧 Админ панель - Мастерская Вдохновения</h1>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number">${database.users.size}</div>
+                    <div>Пользователей</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${database.characters.size}</div>
+                    <div>Персонажей</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${database.quizzes.size}</div>
+                    <div>Квизов</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Управление персонажами</h3>
+                <div id="charactersList">
+                    ${Array.from(database.characters.values()).map(char => `
+                        <div style="border: 1px solid #e2e8f0; padding: 10px; margin: 5px 0; border-radius: 5px;">
+                            <strong>${char.name}</strong> (${char.class})<br>
+                            <small>${char.description}</small>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Управление квизами</h3>
+                <div id="quizzesList">
+                    ${Array.from(database.quizzes.values()).map(quiz => `
+                        <div style="border: 1px solid #e2e8f0; padding: 10px; margin: 5px 0; border-radius: 5px;">
+                            <strong>${quiz.title}</strong><br>
+                            <small>${quiz.description} - ${quiz.questions.length} вопросов</small>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+  `);
 });
 
-// Регистрация пользователя
-app.post('/api/users/register', async (req, res) => {
-  try {
-    const { userId, userClass, characterId, tgUsername, tgFirstName, tgLastName } = req.body;
-    
-    console.log('📝 Регистрация пользователя:', { userId, userClass, characterId });
-    
-    if (!userId || !userClass || !characterId) {
-      return res.status(400).json({ error: 'User ID, class and character are required' });
-    }
-    
-    // Получаем текущие данные пользователя
-    const existingUser = await dbGet('SELECT * FROM users WHERE user_id = ?', [userId]);
-    
-    const isNewUser = !existingUser;
-    const isFirstRegistration = !existingUser || !existingUser.is_registered;
-    
-    // Получаем данные персонажа для available_buttons
-    const character = await dbGet('SELECT available_buttons FROM characters WHERE id = ?', [characterId]);
-    const availableButtons = character ? character.available_buttons : '[]';
-    
-    if (isNewUser) {
-      // Создаем нового пользователя
-      await dbRun(
-        `INSERT INTO users (
-          user_id, tg_username, tg_first_name, tg_last_name, 
-          class, character_id, is_registered, sparks, level, available_buttons
-        ) VALUES (?, ?, ?, ?, ?, ?, TRUE, 5, 'Ученик', ?)`,
-        [userId, tgUsername, tgFirstName, tgLastName, userClass, characterId, availableButtons]
-      );
-      
-      // Записываем активность регистрации
-      await dbRun(
-        `INSERT INTO activities (user_id, activity_type, sparks_earned, description) 
-         VALUES (?, 'registration', 5, 'Регистрация в системе')`,
-        [userId]
-      );
-      
-      res.json({ 
-        success: true, 
-        message: 'Регистрация успешна! +5✨',
-        sparksAdded: 5,
-        isNewRegistration: true
-      });
-    } else {
-      // Обновляем существующего пользователя
-      const newSparks = isFirstRegistration ? (existingUser.sparks || 0) + 5 : existingUser.sparks;
-      
-      await dbRun(
-        `UPDATE users SET 
-          tg_username = ?, tg_first_name = ?, tg_last_name = ?,
-          class = ?, character_id = ?, is_registered = TRUE, 
-          sparks = ?, available_buttons = ?, last_active = CURRENT_TIMESTAMP
-         WHERE user_id = ?`,
-        [tgUsername, tgFirstName, tgLastName, userClass, characterId, newSparks, availableButtons, userId]
-      );
-      
-      if (isFirstRegistration) {
-        // Записываем активность регистрации
-        await dbRun(
-          `INSERT INTO activities (user_id, activity_type, sparks_earned, description) 
-           VALUES (?, 'registration', 5, 'Регистрация в системе')`,
-          [userId]
-        );
-      }
-      
-      res.json({ 
-        success: true, 
-        message: isFirstRegistration ? 'Регистрация успешна! +5✨' : 'Персонаж успешно изменен!',
-        sparksAdded: isFirstRegistration ? 5 : 0,
-        isNewRegistration: isFirstRegistration
-      });
-    }
-  } catch (error) {
-    console.error('❌ Registration error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
+// API Routes
 
-// Получение квизов
-app.get('/api/webapp/quizzes', async (req, res) => {
-  try {
-    const userId = req.query.userId;
-    const quizzes = await dbAll("SELECT * FROM quizzes WHERE is_active = TRUE ORDER BY created_at DESC");
-    
-    const parsedQuizzes = quizzes.map(quiz => ({
-      ...quiz,
-      questions: JSON.parse(quiz.questions || '[]')
-    }));
-    
-    // Если передан userId, проверяем пройденные квизы
-    if (userId) {
-      const completions = await dbAll(
-        `SELECT quiz_id, completed_at, sparks_earned 
-         FROM quiz_completions 
-         WHERE user_id = ?`,
-        [userId]
-      );
-      
-      const quizzesWithStatus = parsedQuizzes.map(quiz => {
-        const completion = completions.find(c => c.quiz_id === quiz.id);
-        const completedAt = completion ? new Date(completion.completed_at) : null;
-        const cooldownMs = quiz.cooldown_hours * 60 * 60 * 1000;
-        const canRetake = completedAt ? (Date.now() - completedAt.getTime()) > cooldownMs : true;
-        
-        return {
-          ...quiz,
-          completed: !!completion,
-          completed_at: completion ? completion.completed_at : null,
-          can_retake: canRetake,
-          next_available: completedAt ? new Date(completedAt.getTime() + cooldownMs) : null,
-          sparks_earned: completion ? completion.sparks_earned : 0
-        };
-      });
-      
-      res.json(quizzesWithStatus);
-    } else {
-      res.json(parsedQuizzes);
-    }
-  } catch (error) {
-    console.error('❌ Quizzes API error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// Запуск квиза
-app.get('/api/webapp/quizzes/:quizId', async (req, res) => {
-  try {
-    const { quizId } = req.params;
-    const { userId } = req.query;
-    
-    const quiz = await dbGet("SELECT * FROM quizzes WHERE id = ? AND is_active = TRUE", [quizId]);
-    
-    if (!quiz) {
-      return res.status(404).json({ error: 'Quiz not found' });
-    }
-    
-    const quizData = {
-      ...quiz,
-      questions: JSON.parse(quiz.questions || '[]')
+// Get user data
+app.get('/api/users/:userId', (req, res) => {
+  const userId = parseInt(req.params.userId);
+  
+  if (!database.users.has(userId)) {
+    // Create new user
+    const newUser = {
+      user_id: userId,
+      tg_first_name: 'Новый пользователь',
+      sparks: 0,
+      level: 'Ученик',
+      is_registered: false,
+      class: null,
+      character_id: null,
+      character_name: null,
+      available_buttons: []
     };
+    database.users.set(userId, newUser);
     
-    // Проверяем возможность прохождения
-    if (userId) {
-      const completion = await dbGet(
-        `SELECT completed_at FROM quiz_completions 
-         WHERE user_id = ? AND quiz_id = ?`,
-        [userId, quizId]
-      );
+    return res.json({ success: true, user: newUser });
+  }
+  
+  const user = database.users.get(userId);
+  user.level = calculateLevel(user.sparks);
+  
+  res.json({ success: true, user });
+});
+
+// Register user
+app.post('/api/users/register', (req, res) => {
+  const { userId, userClass, characterId, tgFirstName } = req.body;
+  
+  const user = database.users.get(parseInt(userId)) || {
+    user_id: parseInt(userId),
+    sparks: 0,
+    level: 'Ученик',
+    is_registered: false
+  };
+  
+  const character = database.characters.get(parseInt(characterId));
+  
+  if (character) {
+    user.class = userClass;
+    user.character_id = parseInt(characterId);
+    user.character_name = character.name;
+    user.available_buttons = character.buttons;
+    
+    if (!user.is_registered) {
+      user.sparks += 5;
+      user.is_registered = true;
+      user.tg_first_name = tgFirstName || 'Пользователь';
       
-      if (completion) {
-        const completedAt = new Date(completion.completed_at);
-        const cooldownMs = quiz.cooldown_hours * 60 * 60 * 1000;
-        const canRetake = (Date.now() - completedAt.getTime()) > cooldownMs;
-        
-        quizData.can_retake = canRetake;
-        quizData.completed = true;
-        quizData.next_available = new Date(completedAt.getTime() + cooldownMs);
-      }
+      // Log activity
+      database.activities.set(Date.now(), {
+        user_id: parseInt(userId),
+        activity_type: 'registration',
+        sparks_earned: 5,
+        description: 'Регистрация в системе'
+      });
     }
     
-    res.json(quizData);
-  } catch (error) {
-    console.error('❌ Quiz API error:', error);
-    res.status(500).json({ error: 'Database error' });
+    database.users.set(parseInt(userId), user);
+    
+    res.json({ 
+      success: true, 
+      message: user.is_registered ? 'Персонаж изменен!' : 'Регистрация успешна! +5✨',
+      sparksAdded: user.is_registered ? 0 : 5
+    });
+  } else {
+    res.json({ success: false, error: 'Персонаж не найден' });
   }
 });
 
-// Отправка ответов на квиз
-app.post('/api/webapp/quizzes/:quizId/submit', async (req, res) => {
-  try {
-    const { quizId } = req.params;
-    const { userId, answers } = req.body;
-    
-    console.log(`📝 Отправка ответов на квиз ${quizId} от пользователя ${userId}`);
-    
-    if (!userId || !answers) {
-      return res.status(400).json({ error: 'User ID and answers are required' });
-    }
-    
-    // Получаем данные квиза
-    const quiz = await dbGet("SELECT * FROM quizzes WHERE id = ?", [quizId]);
-    if (!quiz) {
-      return res.status(404).json({ error: 'Quiz not found' });
-    }
-    
-    const questions = JSON.parse(quiz.questions || '[]');
+// Get characters
+app.get('/api/webapp/characters', (req, res) => {
+  const characters = Array.from(database.characters.values());
+  res.json({ success: true, characters });
+});
+
+// Get quizzes
+app.get('/api/webapp/quizzes', (req, res) => {
+  const quizzes = Array.from(database.quizzes.values()).filter(q => q.is_active);
+  res.json({ success: true, quizzes });
+});
+
+// Get specific quiz
+app.get('/api/webapp/quizzes/:quizId', (req, res) => {
+  const quizId = parseInt(req.params.quizId);
+  const quiz = database.quizzes.get(quizId);
+  
+  if (quiz) {
+    res.json({ success: true, quiz });
+  } else {
+    res.json({ success: false, error: 'Квиз не найден' });
+  }
+});
+
+// Submit quiz
+app.post('/api/webapp/quizzes/:quizId/submit', (req, res) => {
+  const quizId = parseInt(req.params.quizId);
+  const { userId, answers } = req.body;
+  
+  const quiz = database.quizzes.get(quizId);
+  const user = database.users.get(parseInt(userId));
+  
+  if (quiz && user) {
     let correctAnswers = 0;
     
-    // Проверяем ответы
-    questions.forEach((question, index) => {
+    quiz.questions.forEach((question, index) => {
       if (answers[index] === question.correctAnswer) {
         correctAnswers++;
       }
     });
     
-    // Начисляем искры
-    const passThreshold = Math.ceil(questions.length * 0.6);
+    const passThreshold = Math.ceil(quiz.questions.length * 0.6);
     let sparksEarned = 0;
     
     if (correctAnswers >= passThreshold) {
       sparksEarned = quiz.sparks_reward;
     }
     
-    // Получаем данные пользователя
-    const user = await dbGet('SELECT sparks FROM users WHERE user_id = ?', [userId]);
-    const newSparks = (user?.sparks || 0) + sparksEarned;
+    user.sparks += sparksEarned;
+    user.level = calculateLevel(user.sparks);
     
-    // Сохраняем результат прохождения
-    await dbRun(
-      `INSERT OR REPLACE INTO quiz_completions (user_id, quiz_id, completed_at, score, sparks_earned) 
-       VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?)`,
-      [userId, quizId, correctAnswers, sparksEarned]
-    );
+    // Save completion
+    const completionKey = `${userId}_${quizId}`;
+    database.quizCompletions.set(completionKey, {
+      user_id: parseInt(userId),
+      quiz_id: quizId,
+      completed_at: new Date(),
+      score: correctAnswers,
+      sparks_earned: sparksEarned
+    });
     
-    // Обновляем искры пользователя
-    await dbRun(
-      `UPDATE users SET sparks = ?, last_active = CURRENT_TIMESTAMP WHERE user_id = ?`,
-      [newSparks, userId]
-    );
-    
-    // Записываем активность
+    // Log activity
     if (sparksEarned > 0) {
-      await dbRun(
-        `INSERT INTO activities (user_id, activity_type, sparks_earned, description) 
-         VALUES (?, 'quiz', ?, ?)`,
-        [userId, sparksEarned, `Квиз: ${quiz.title}`]
-      );
+      database.activities.set(Date.now(), {
+        user_id: parseInt(userId),
+        activity_type: 'quiz',
+        sparks_earned: sparksEarned,
+        description: `Квиз: ${quiz.title}`
+      });
     }
-    
-    const message = sparksEarned > 0 
-      ? `Поздравляем! Вы получили ${sparksEarned}✨` 
-      : 'Попробуйте еще раз!';
     
     res.json({
       success: true,
       correctAnswers,
-      totalQuestions: questions.length,
-      sparksEarned: sparksEarned,
+      totalQuestions: quiz.questions.length,
+      sparksEarned,
       passed: sparksEarned > 0,
-      newTotalSparks: newSparks,
-      completed: true,
-      message: message
+      newTotalSparks: user.sparks,
+      message: sparksEarned > 0 ? `Поздравляем! Вы получили ${sparksEarned}✨` : 'Попробуйте еще раз!'
     });
-    
-  } catch (error) {
-    console.error('❌ Quiz submission error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  } else {
+    res.json({ success: false, error: 'Данные не найдены' });
   }
 });
 
-// Получение активностей пользователя
-app.get('/api/webapp/users/:userId/activities', async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    const activities = await dbAll(
-      `SELECT * FROM activities 
-       WHERE user_id = ? 
-       ORDER BY created_at DESC 
-       LIMIT 20`,
-      [userId]
-    );
-    
-    res.json({ activities });
-  } catch (error) {
-    console.error('❌ Activities API error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
+// Get user activities
+app.get('/api/webapp/users/:userId/activities', (req, res) => {
+  const userId = parseInt(req.params.userId);
+  const userActivities = Array.from(database.activities.values())
+    .filter(activity => activity.user_id === userId)
+    .slice(-20)
+    .reverse();
+  
+  res.json({ success: true, activities: userActivities });
 });
 
-// ==================== ADMIN API ROUTES ====================
-
-// Получение списка админов
-app.get('/api/admin/admins', requireAdmin, async (req, res) => {
-  try {
-    const admins = await dbAll(`SELECT * FROM admins ORDER BY role, created_at DESC`);
-    res.json(admins);
-  } catch (error) {
-    console.error('❌ Admin API error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// Добавление админа
-app.post('/api/admin/admins', requireAdmin, async (req, res) => {
-  try {
-    const { user_id, username, role } = req.body;
-    
-    console.log('➕ Добавление админа:', { user_id, username, role });
-    
-    if (!user_id || !role) {
-      return res.status(400).json({ error: 'User ID and role are required' });
-    }
-    
-    // Проверяем, не является ли добавляемый пользователь текущим админом
-    if (user_id == req.admin.user_id) {
-      return res.status(400).json({ error: 'Cannot modify your own admin status' });
-    }
-    
-    const result = await dbRun(
-      `INSERT OR REPLACE INTO admins (user_id, username, role) 
-       VALUES (?, ?, ?)`,
-      [user_id, username, role]
-    );
-    
-    res.json({
-      success: true,
-      message: 'Администратор успешно добавлен'
-    });
-  } catch (error) {
-    console.error('❌ Add admin error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// Удаление админа
-app.delete('/api/admin/admins/:adminId', requireAdmin, async (req, res) => {
-  try {
-    const adminId = req.params.adminId;
-    
-    // Не позволяем удалить самого себя
-    if (adminId == req.admin.user_id) {
-      return res.status(400).json({ error: 'Cannot remove yourself' });
-    }
-    
-    const result = await dbRun(`DELETE FROM admins WHERE user_id = ?`, [adminId]);
-    
-    res.json({
-      success: true,
-      message: 'Администратор удален'
-    });
-  } catch (error) {
-    console.error('❌ Delete admin error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// Управление персонажами
-app.get('/api/admin/characters', requireAdmin, async (req, res) => {
-  try {
-    const characters = await dbAll(`SELECT * FROM characters ORDER BY class, character_name`);
-    
-    const parsedCharacters = characters.map(char => ({
-      ...char,
-      available_buttons: JSON.parse(char.available_buttons || '[]')
-    }));
-    
-    res.json(parsedCharacters);
-  } catch (error) {
-    console.error('❌ Characters API error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-app.post('/api/admin/characters', requireAdmin, async (req, res) => {
-  try {
-    const { class: charClass, character_name, description, bonus_type, bonus_value, available_buttons, is_active } = req.body;
-    
-    console.log('👥 Добавление персонажа:', { charClass, character_name });
-    
-    if (!charClass || !character_name || !bonus_type || !bonus_value) {
-      return res.status(400).json({ error: 'Class, name, bonus type and value are required' });
-    }
-    
-    const buttonsJson = JSON.stringify(available_buttons || []);
-    
-    await dbRun(
-      `INSERT INTO characters (class, character_name, description, bonus_type, bonus_value, available_buttons, is_active) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [charClass, character_name, description, bonus_type, bonus_value, buttonsJson, is_active !== false]
-    );
-    
-    res.json({
-      success: true,
-      message: 'Персонаж успешно создан'
-    });
-  } catch (error) {
-    console.error('❌ Create character error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-app.put('/api/admin/characters/:characterId', requireAdmin, async (req, res) => {
-  try {
-    const { characterId } = req.params;
-    const { class: charClass, character_name, description, bonus_type, bonus_value, available_buttons, is_active } = req.body;
-    
-    console.log('✏️ Обновление персонажа:', characterId);
-    
-    const buttonsJson = JSON.stringify(available_buttons || []);
-    
-    await dbRun(
-      `UPDATE characters SET 
-        class = ?, character_name = ?, description = ?, 
-        bonus_type = ?, bonus_value = ?, available_buttons = ?, is_active = ?
-       WHERE id = ?`,
-      [charClass, character_name, description, bonus_type, bonus_value, buttonsJson, is_active, characterId]
-    );
-    
-    res.json({
-      success: true,
-      message: 'Персонаж успешно обновлен'
-    });
-  } catch (error) {
-    console.error('❌ Update character error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-app.delete('/api/admin/characters/:characterId', requireAdmin, async (req, res) => {
-  try {
-    const { characterId } = req.params;
-    
-    await dbRun(`DELETE FROM characters WHERE id = ?`, [characterId]);
-    
-    res.json({
-      success: true,
-      message: 'Персонаж удален'
-    });
-  } catch (error) {
-    console.error('❌ Delete character error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// Управление квизами
-app.get('/api/admin/quizzes', requireAdmin, async (req, res) => {
-  try {
-    const quizzes = await dbAll(`SELECT * FROM quizzes ORDER BY created_at DESC`);
-    
-    const parsedQuizzes = quizzes.map(quiz => ({
-      ...quiz,
-      questions: JSON.parse(quiz.questions || '[]')
-    }));
-    
-    res.json(parsedQuizzes);
-  } catch (error) {
-    console.error('❌ Quizzes admin API error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-app.post('/api/admin/quizzes', requireAdmin, async (req, res) => {
-  try {
-    const { title, description, questions, sparks_reward, cooldown_hours, is_active } = req.body;
-    
-    console.log('🎯 Создание квиза:', { title, sparks_reward });
-    
-    if (!title || !questions) {
-      return res.status(400).json({ error: 'Title and questions are required' });
-    }
-    
-    const questionsJson = JSON.stringify(questions);
-    
-    await dbRun(
-      `INSERT INTO quizzes (title, description, questions, sparks_reward, cooldown_hours, is_active, created_by) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [title, description, questionsJson, sparks_reward || 1, cooldown_hours || 24, is_active !== false, req.admin.user_id]
-    );
-    
-    res.json({
-      success: true,
-      message: 'Квиз успешно создан'
-    });
-  } catch (error) {
-    console.error('❌ Create quiz error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// Статистика для админ панели
-app.get('/api/admin/stats', requireAdmin, async (req, res) => {
-  try {
-    const stats = {};
-    
-    // Всего пользователей
-    const totalUsers = await dbGet('SELECT COUNT(*) as count FROM users');
-    stats.totalUsers = totalUsers.count;
-    
-    // Активных сегодня
-    const activeToday = await dbGet(`SELECT COUNT(*) as count FROM users WHERE DATE(last_active) = DATE('now')`);
-    stats.activeToday = activeToday.count;
-    
-    // Всего искр
-    const totalSparks = await dbGet(`SELECT SUM(sparks) as total FROM users`);
-    stats.totalSparks = totalSparks.total || 0;
-    
-    // Активных квизов
-    const activeQuizzes = await dbGet(`SELECT COUNT(*) as count FROM quizzes WHERE is_active = TRUE`);
-    stats.activeQuizzes = activeQuizzes.count;
-    
-    // Персонажи
-    const activeCharacters = await dbGet(`SELECT COUNT(*) as count FROM characters WHERE is_active = TRUE`);
-    stats.activeCharacters = activeCharacters.count;
-    
-    res.json(stats);
-  } catch (error) {
-    console.error('❌ Stats API error:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// ==================== TELEGRAM BOT ====================
-
-let bot = null;
-
-async function initializeBot() {
-  try {
-    // Останавливаем предыдущие экземпляры бота
-    if (bot) {
-      bot.stopPolling();
-    }
-    
-    bot = new TelegramBot(process.env.BOT_TOKEN, { 
-      polling: { 
-        interval: 300,
-        params: {
-          timeout: 10
-        }
-      } 
-    });
-    
-    console.log('🤖 Bot initialized successfully');
-    
-    // Обработчики команд бота
-    bot.onText(/\/start(?:\s+invite_(\d+))?/, async (msg, match) => {
-      const chatId = msg.chat.id;
-      const name = msg.from.first_name || 'Друг';
-      const userId = msg.from.id;
-      const inviteCode = match ? match[1] : null;
-      
-      // Если есть код приглашения, обрабатываем его
-      if (inviteCode && inviteCode !== userId.toString()) {
-        try {
-          const inviter = await dbGet('SELECT * FROM users WHERE user_id = ?', [inviteCode]);
-          if (inviter) {
-            await dbRun(
-              `INSERT OR IGNORE INTO invitations (inviter_id, invited_id, invited_username) VALUES (?, ?, ?)`,
-              [inviteCode, userId, msg.from.username]
-            );
-            console.log(`✅ User ${userId} invited by ${inviteCode}`);
-          }
-        } catch (error) {
-          console.error('Invite processing error:', error);
-        }
-      }
-      
-      const welcomeText = `🎨 Привет, ${name}! 
-
-Добро пожаловать в **Мастерская Вдохновения**! 
-
-✨ Вот что вас ждет:
-• 📚 Обучающие видео и задания
-• ✨ Система уровней и искр
-• 🏆 Достижения и бонусы
-• 👥 Сообщество творческих людей
-• 🛒 Магазин с эксклюзивными материалами
-
-Нажмите кнопку ниже чтобы открыть личный кабинет!`;
-      
-      const keyboard = {
-        inline_keyboard: [[
-          {
-            text: "📱 Открыть Личный Кабинет",
-            web_app: { url: process.env.APP_URL || `http://localhost:${PORT}` }
-          }
-        ]]
-      };
-
-      await bot.sendMessage(chatId, welcomeText, {
-        parse_mode: 'Markdown',
-        reply_markup: keyboard
-      });
-    });
-
-    // Команда для админов
-    bot.onText(/\/admin/, async (msg) => {
-      const chatId = msg.chat.id;
-      const userId = msg.from.id;
-      
-      try {
-        const admin = await dbGet('SELECT * FROM admins WHERE user_id = ?', [userId]);
-        if (!admin) {
-          await bot.sendMessage(chatId, '❌ У вас нет прав доступа к админ панели.');
-          return;
-        }
-        
-        const adminUrl = `${process.env.APP_URL || `http://localhost:${PORT}`}/admin?userId=${userId}`;
-        await bot.sendMessage(chatId, `🔧 Панель администратора\n\nДоступ: ${admin.role}\n\n${adminUrl}`);
-      } catch (error) {
-        console.error('Admin command error:', error);
-      }
-    });
-
-    // Обработка ошибок бота
-    bot.on('polling_error', (error) => {
-      console.log('🤖 Polling error:', error.message);
-    });
-
-    bot.on('error', (error) => {
-      console.log('🤖 Bot error:', error.message);
-    });
-    
-  } catch (error) {
-    console.error('❌ Bot initialization failed:', error.message);
-    bot = null;
-  }
-}
-
-// ==================== SERVER START ====================
+// Initialize and start server
+initializeData();
 
 const PORT = process.env.PORT || 3000;
-
-async function startServer() {
-  try {
-    // Инициализация базы данных
-    await initializeDatabase();
-    
-    // Инициализация бота
-    await initializeBot();
-    
-    // Запуск сервера
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Сервер запущен на порту ${PORT}`);
-      console.log(`📱 Mini App: ${process.env.APP_URL || `http://localhost:${PORT}`}`);
-      console.log(`🔧 Admin Panel: ${process.env.APP_URL || `http://localhost:${PORT}`}/admin`);
-      console.log(`📊 Health: http://localhost:${PORT}/health`);
-      console.log('=================================');
-    }).on('error', (err) => {
-      if (err.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${PORT} is already in use. Try changing PORT in .env file`);
-        process.exit(1);
-      } else {
-        console.error('❌ Server error:', err);
-      }
-    });
-    
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
-  }
-}
-
-// Обработка graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('\n🛑 Shutting down gracefully...');
-  if (bot) {
-    bot.stopPolling();
-  }
-  db.close();
-  process.exit(0);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Сервер запущен на порту ${PORT}`);
+  console.log(`📱 WebApp: http://localhost:${PORT}/webapp`);
+  console.log(`🔧 Admin: http://localhost:${PORT}/admin`);
+  console.log(`📊 Health: http://localhost:${PORT}/health`);
+  console.log('=================================');
 });
-
-process.on('SIGTERM', async () => {
-  console.log('\n🛑 Shutting down gracefully...');
-  if (bot) {
-    bot.stopPolling();
-  }
-  db.close();
-  process.exit(0);
-});
-
-startServer();
