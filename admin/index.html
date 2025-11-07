@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Админ панель - Мастерская Вдохновения</title>
     <style>
+        /* Стили остаются без изменений, они уже хорошо написаны */
         * {
             margin: 0;
             padding: 0;
@@ -124,13 +125,6 @@
         .btn-danger:hover {
             background: #e53e3e;
         }
-        .btn-gold {
-            background: #ffd700;
-            color: #2d3748;
-        }
-        .btn-gold:hover {
-            background: #e6c300;
-        }
         .table {
             width: 100%;
             border-collapse: collapse;
@@ -173,33 +167,6 @@
             color: #718096;
             font-size: 0.9em;
         }
-        .button-row {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-        .button-item {
-            background: #edf2f7;
-            padding: 8px 12px;
-            border-radius: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-        .button-text {
-            flex: 1;
-        }
-        .button-remove {
-            background: #f56565;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            padding: 2px 6px;
-            cursor: pointer;
-            margin-left: 10px;
-        }
         .message {
             padding: 10px;
             border-radius: 5px;
@@ -219,78 +186,6 @@
             text-align: center;
             padding: 20px;
             color: #718096;
-        }
-        .question-item {
-            background: #f7fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        .option-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-        .option-item input {
-            margin-right: 10px;
-        }
-        .shop-item {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        .shop-item-title {
-            font-weight: 600;
-            font-size: 18px;
-            color: #2d3748;
-            margin-bottom: 8px;
-        }
-        .shop-item-price {
-            color: #ffd700;
-            font-weight: 600;
-            font-size: 16px;
-        }
-        .tab-subnav {
-            display: flex;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #e2e8f0;
-            flex-wrap: wrap;
-        }
-        .tab-subnav-btn {
-            padding: 10px 20px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            white-space: nowrap;
-        }
-        .tab-subnav-btn.active {
-            border-bottom-color: #667eea;
-            color: #667eea;
-            font-weight: 600;
-        }
-        .quiz-card {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        .user-details {
-            background: #f7fafc;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        .character-card {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
         }
         .character-buttons {
             display: flex;
@@ -342,12 +237,8 @@
 
         <div class="nav-tabs">
             <div class="nav-tab active" data-tab="dashboard">📊 Дашборд</div>
-            <div class="nav-tab" data-tab="posts">📝 Публикации</div>
-            <div class="nav-tab" data-tab="quizzes">🎯 Квизы</div>
             <div class="nav-tab" data-tab="characters">👥 Персонажи</div>
-            <div class="nav-tab" data-tab="users">👤 Пользователи</div>
-            <div class="nav-tab" data-tab="moderation">🛡️ Модерация</div>
-            <div class="nav-tab" data-tab="shop">🛒 Магазин</div>
+            <div class="nav-tab" data-tab="quizzes">🎯 Квизы</div>
             <div class="nav-tab" data-tab="admins">🔧 Админы</div>
         </div>
 
@@ -375,10 +266,6 @@
                     <div class="stat-label">Всего искр</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="shopItems">0</div>
-                    <div class="stat-label">Товаров в магазине</div>
-                </div>
-                <div class="stat-card">
                     <div class="stat-number" id="activeQuizzes">0</div>
                     <div class="stat-label">Активных квизов</div>
                 </div>
@@ -387,342 +274,130 @@
                     <div class="stat-label">Активных персонажей</div>
                 </div>
             </div>
-
-            <div class="card">
-                <h3>📈 Быстрая статистика</h3>
-                <div id="quickStats">
-                    <div class="loading">Загрузка статистики...</div>
-                </div>
-            </div>
         </div>
 
-        <!-- Публикации -->
-        <div id="posts" class="tab-content">
+        <!-- Персонажи -->
+        <div id="characters" class="tab-content">
             <div class="card">
-                <h3>➕ Создать новую публикацию</h3>
-                <form id="createPostForm">
+                <h3>👥 Создать нового персонажа</h3>
+                <form id="createCharacterForm">
                     <div class="form-group">
-                        <label for="postTitle">Заголовок поста</label>
-                        <input type="text" id="postTitle" class="form-control" required>
+                        <label for="characterClass">Класс</label>
+                        <select id="characterClass" class="form-control" required>
+                            <option value="Художники">🎨 Художники</option>
+                            <option value="Стилисты">👗 Стилисты</option>
+                            <option value="Мастера">🧵 Мастера</option>
+                            <option value="Историки">🏛️ Историки</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label for="postContent">Текст поста</label>
-                        <textarea id="postContent" class="form-control" rows="4"></textarea>
+                        <label for="characterName">Имя персонажа</label>
+                        <input type="text" id="characterName" class="form-control" required>
                     </div>
                     <div class="form-group">
-                        <label for="postPhoto">Ссылка на фото</label>
-                        <input type="url" id="postPhoto" class="form-control" placeholder="https://example.com/photo.jpg">
+                        <label for="characterDescription">Описание персонажа</label>
+                        <textarea id="characterDescription" class="form-control" rows="3"></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="videoUrl">Ссылка на видео (YouTube/Vimeo)</label>
-                        <input type="url" id="videoUrl" class="form-control">
+                        <label for="characterBonusType">Тип бонуса</label>
+                        <select id="characterBonusType" class="form-control" required>
+                            <option value="percent_bonus">Процентный бонус</option>
+                            <option value="forgiveness">Право на ошибку</option>
+                            <option value="random_gift">Случайный подарок</option>
+                            <option value="secret_advice">Секретные советы</option>
+                            <option value="series_bonus">Бонус за серии</option>
+                            <option value="photo_bonus">Бонус за фото</option>
+                            <option value="weekly_surprise">Еженедельный сюрприз</option>
+                            <option value="mini_quest">Мини-квесты</option>
+                            <option value="quiz_hint">Подсказки в квизах</option>
+                            <option value="fact_star">Факт-искры</option>
+                            <option value="streak_multiplier">Множитель за серию</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label>Кнопки действия</label>
-                        <div id="buttonsContainer">
-                            <!-- Кнопки будут добавляться здесь -->
+                        <label for="characterBonusValue">Значение бонуса</label>
+                        <input type="text" id="characterBonusValue" class="form-control" required placeholder="10, 1-3, 2weeks и т.д.">
+                    </div>
+                    <div class="form-group">
+                        <label>Доступные кнопки для персонажа</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="btnQuiz" value="quiz" checked>
+                                <label for="btnQuiz">📝 Квизы</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="btnPhotoWork" value="photo_work" checked>
+                                <label for="btnPhotoWork">📸 Фото работы</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="btnShop" value="shop" checked>
+                                <label for="btnShop">🛒 Магазин</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="btnInvite" value="invite" checked>
+                                <label for="btnInvite">👥 Пригласить друга</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="btnActivities" value="activities" checked>
+                                <label for="btnActivities">📊 Активности</label>
+                            </div>
                         </div>
-                        <button type="button" class="btn" onclick="addButton()" style="margin-top: 10px;">
-                            ➕ Добавить кнопку
-                        </button>
                     </div>
                     <div class="form-group">
                         <label>
-                            <input type="checkbox" id="requiresAction" onchange="toggleActionType()">
-                            Требует действия (квиз/опрос)
+                            <input type="checkbox" id="characterActive" checked> Активный персонаж
                         </label>
                     </div>
-                    <div class="form-group" id="actionTypeGroup" style="display: none;">
-                        <label for="actionType">Тип действия</label>
-                        <select id="actionType" class="form-control">
-                            <option value="quiz">Квиз</option>
-                            <option value="survey">Опрос</option>
-                            <option value="photo_work">Фото работа</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-success">📤 Опубликовать в канал</button>
+                    <button type="submit" class="btn btn-success">✅ Создать персонажа</button>
                 </form>
             </div>
 
             <div class="card">
-                <h3>📋 Список публикаций</h3>
-                <div id="postsList">
-                    <div class="loading">Загрузка публикаций...</div>
+                <h3>👥 Все персонажи</h3>
+                <div id="charactersList">
+                    <div class="loading">Загрузка персонажей...</div>
                 </div>
             </div>
         </div>
 
         <!-- Квизы -->
         <div id="quizzes" class="tab-content">
-            <div class="tab-subnav">
-                <button class="tab-subnav-btn active" onclick="showQuizTab('create')">Создать квиз</button>
-                <button class="tab-subnav-btn" onclick="showQuizTab('list')">Все квизы</button>
-                <button class="tab-subnav-btn" onclick="showQuizTab('manage')">Управление</button>
-            </div>
-
-            <div id="quizCreateTab">
-                <div class="card">
-                    <h3>🎯 Создать новый квиз</h3>
-                    <form id="createQuizForm">
-                        <div class="form-group">
-                            <label for="quizTitle">Название квиза</label>
-                            <input type="text" id="quizTitle" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="quizDescription">Описание квиза</label>
-                            <textarea id="quizDescription" class="form-control" rows="3"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="quizSparks">Награда (искры)</label>
-                            <input type="number" id="quizSparks" class="form-control" value="2" min="0" step="0.5" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="quizCooldown">Время перепрохождения (часы)</label>
-                            <input type="number" id="quizCooldown" class="form-control" value="24" min="1" required>
-                        </div>
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="quizActive" checked> Активный квиз
-                            </label>
-                        </div>
-                        
-                        <h4>Вопросы</h4>
-                        <div id="questionsContainer">
-                            <!-- Вопросы будут добавляться здесь -->
-                        </div>
-                        <button type="button" class="btn" onclick="addQuestion()">➕ Добавить вопрос</button>
-                        
-                        <div style="margin-top: 20px;">
-                            <button type="submit" class="btn btn-success">✅ Создать квиз</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <div id="quizListTab" style="display: none;">
-                <div class="card">
-                    <h3>📝 Все квизы</h3>
-                    <div id="quizzesList">
-                        <div class="loading">Загрузка квизов...</div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="quizManageTab" style="display: none;">
-                <div class="card">
-                    <h3>⚙️ Управление квизами</h3>
-                    <div id="quizzesManageList">
-                        <div class="loading">Загрузка квизов для управления...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Персонажи -->
-        <div id="characters" class="tab-content">
-            <div class="tab-subnav">
-                <button class="tab-subnav-btn active" onclick="showCharacterTab('create')">Создать персонажа</button>
-                <button class="tab-subnav-btn" onclick="showCharacterTab('list')">Все персонажи</button>
-                <button class="tab-subnav-btn" onclick="showCharacterTab('manage')">Управление</button>
-            </div>
-
-            <div id="characterCreateTab">
-                <div class="card">
-                    <h3>👥 Создать нового персонажа</h3>
-                    <form id="createCharacterForm">
-                        <div class="form-group">
-                            <label for="characterClass">Класс</label>
-                            <select id="characterClass" class="form-control" required>
-                                <option value="Художники">🎨 Художники</option>
-                                <option value="Стилисты">👗 Стилисты</option>
-                                <option value="Мастера">🧵 Мастера</option>
-                                <option value="Историки">🏛️ Историки</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="characterName">Имя персонажа</label>
-                            <input type="text" id="characterName" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="characterDescription">Описание персонажа</label>
-                            <textarea id="characterDescription" class="form-control" rows="3"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="characterBonusType">Тип бонуса</label>
-                            <select id="characterBonusType" class="form-control" required>
-                                <option value="percent_bonus">Процентный бонус</option>
-                                <option value="forgiveness">Право на ошибку</option>
-                                <option value="random_gift">Случайный подарок</option>
-                                <option value="secret_advice">Секретные советы</option>
-                                <option value="series_bonus">Бонус за серии</option>
-                                <option value="photo_bonus">Бонус за фото</option>
-                                <option value="weekly_surprise">Еженедельный сюрприз</option>
-                                <option value="mini_quest">Мини-квесты</option>
-                                <option value="quiz_hint">Подсказки в квизах</option>
-                                <option value="fact_star">Факт-искры</option>
-                                <option value="streak_multiplier">Множитель за серию</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="characterBonusValue">Значение бонуса</label>
-                            <input type="text" id="characterBonusValue" class="form-control" required placeholder="10, 1-3, 2weeks и т.д.">
-                        </div>
-                        <div class="form-group">
-                            <label>Доступные кнопки для персонажа</label>
-                            <div class="checkbox-group">
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="btnQuiz" value="quiz" checked>
-                                    <label for="btnQuiz">📝 Квизы</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="btnPhotoWork" value="photo_work" checked>
-                                    <label for="btnPhotoWork">📸 Фото работы</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="btnShop" value="shop" checked>
-                                    <label for="btnShop">🛒 Магазин</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="btnInvite" value="invite" checked>
-                                    <label for="btnInvite">👥 Пригласить друга</label>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="btnActivities" value="activities" checked>
-                                    <label for="btnActivities">📊 Активности</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="characterActive" checked> Активный персонаж
-                            </label>
-                        </div>
-                        <button type="submit" class="btn btn-success">✅ Создать персонажа</button>
-                    </form>
-                </div>
-            </div>
-
-            <div id="characterListTab" style="display: none;">
-                <div class="card">
-                    <h3>👥 Все персонажи</h3>
-                    <div id="charactersList">
-                        <div class="loading">Загрузка персонажей...</div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="characterManageTab" style="display: none;">
-                <div class="card">
-                    <h3>⚙️ Управление персонажами</h3>
-                    <div id="charactersManageList">
-                        <div class="loading">Загрузка персонажей для управления...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Пользователи -->
-        <div id="users" class="tab-content">
             <div class="card">
-                <h3>🔍 Поиск пользователей</h3>
-                <div class="form-group">
-                    <input type="text" id="userSearch" class="form-control" placeholder="Поиск по ID, имени или username...">
-                </div>
+                <h3>🎯 Создать новый квиз</h3>
+                <form id="createQuizForm">
+                    <div class="form-group">
+                        <label for="quizTitle">Название квиза</label>
+                        <input type="text" id="quizTitle" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="quizDescription">Описание квиза</label>
+                        <textarea id="quizDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="quizSparks">Награда (искры)</label>
+                        <input type="number" id="quizSparks" class="form-control" value="2" min="0" step="0.5" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="quizCooldown">Время перепрохождения (часы)</label>
+                        <input type="number" id="quizCooldown" class="form-control" value="24" min="1" required>
+                    </div>
+                    
+                    <h4>Вопросы</h4>
+                    <div id="questionsContainer">
+                        <!-- Вопросы будут добавляться здесь -->
+                    </div>
+                    <button type="button" class="btn" onclick="addQuestion()">➕ Добавить вопрос</button>
+                    
+                    <div style="margin-top: 20px;">
+                        <button type="submit" class="btn btn-success">✅ Создать квиз</button>
+                    </div>
+                </form>
             </div>
+
             <div class="card">
-                <h3>👥 Все пользователи</h3>
-                <div id="usersList">
-                    <div class="loading">Загрузка пользователей...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Модерация -->
-        <div id="moderation" class="tab-content">
-            <div class="tab-subnav">
-                <button class="tab-subnav-btn active" onclick="showModerationTab('photos')">Фото работы</button>
-                <button class="tab-subnav-btn" onclick="showModerationTab('comments')">Комментарии</button>
-            </div>
-
-            <div id="moderationPhotosTab">
-                <div class="card">
-                    <h3>📸 Фото работы на модерации</h3>
-                    <div id="photoModeration">
-                        <div class="loading">Загрузка фото...</div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="moderationCommentsTab" style="display: none;">
-                <div class="card">
-                    <h3>💬 Комментарии на модерации</h3>
-                    <div id="commentModeration">
-                        <div class="loading">Загрузка комментариев...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Магазин -->
-        <div id="shop" class="tab-content">
-            <div class="tab-subnav">
-                <button class="tab-subnav-btn active" onclick="showShopTab('items')">Товары</button>
-                <button class="tab-subnav-btn" onclick="showShopTab('add')">Добавить товар</button>
-                <button class="tab-subnav-btn" onclick="showShopTab('manage')">Управление</button>
-            </div>
-
-            <div id="shopItemsTab">
-                <div class="card">
-                    <h3>🛒 Товары в магазине</h3>
-                    <div id="shopItemsList">
-                        <div class="loading">Загрузка товаров...</div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="shopAddTab" style="display: none;">
-                <div class="card">
-                    <h3>➕ Добавить товар</h3>
-                    <form id="addShopItemForm">
-                        <div class="form-group">
-                            <label for="itemTitle">Название товара</label>
-                            <input type="text" id="itemTitle" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="itemDescription">Описание товара</label>
-                            <textarea id="itemDescription" class="form-control" rows="3"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="itemType">Тип товара</label>
-                            <select id="itemType" class="form-control">
-                                <option value="video">Видео</option>
-                                <option value="ebook">Электронная книга</option>
-                                <option value="course">Курс</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="itemFileUrl">Ссылка на файл</label>
-                            <input type="url" id="itemFileUrl" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="itemPreviewUrl">Ссылка на превью (опционально)</label>
-                            <input type="url" id="itemPreviewUrl" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label for="itemPrice">Цена (искры)</label>
-                            <input type="number" id="itemPrice" class="form-control" required min="1" step="1">
-                        </div>
-                        <button type="submit" class="btn btn-success">➕ Добавить товар</button>
-                    </form>
-                </div>
-            </div>
-
-            <div id="shopManageTab" style="display: none;">
-                <div class="card">
-                    <h3>⚙️ Управление товарами</h3>
-                    <div id="shopManageList">
-                        <div class="loading">Загрузка товаров для управления...</div>
-                    </div>
+                <h3>📝 Все квизы</h3>
+                <div id="quizzesList">
+                    <div class="loading">Загрузка квизов...</div>
                 </div>
             </div>
         </div>
@@ -771,7 +446,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const currentAdminId = urlParams.get('userId');
 
-        let currentButtons = [];
         let currentQuestions = [];
 
         // ==================== ИНИЦИАЛИЗАЦИЯ ====================
@@ -805,7 +479,6 @@
 
         // ==================== НАВИГАЦИЯ ====================
 
-        // Навигация по вкладкам
         document.querySelectorAll('.nav-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -819,96 +492,16 @@
             });
         });
 
-        // Вкладки квизов
-        function showQuizTab(tabName) {
-            document.querySelectorAll('.tab-subnav-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('quizCreateTab').style.display = 'none';
-            document.getElementById('quizListTab').style.display = 'none';
-            document.getElementById('quizManageTab').style.display = 'none';
-            
-            event.target.classList.add('active');
-            document.getElementById('quiz' + tabName.charAt(0).toUpperCase() + tabName.slice(1) + 'Tab').style.display = 'block';
-            
-            if (tabName === 'list') {
-                loadQuizzesList();
-            } else if (tabName === 'manage') {
-                loadQuizzesManage();
-            }
-        }
-
-        // Вкладки персонажей
-        function showCharacterTab(tabName) {
-            document.querySelectorAll('.tab-subnav-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('characterCreateTab').style.display = 'none';
-            document.getElementById('characterListTab').style.display = 'none';
-            document.getElementById('characterManageTab').style.display = 'none';
-            
-            event.target.classList.add('active');
-            document.getElementById('character' + tabName.charAt(0).toUpperCase() + tabName.slice(1) + 'Tab').style.display = 'block';
-            
-            if (tabName === 'list') {
-                loadCharactersList();
-            } else if (tabName === 'manage') {
-                loadCharactersManage();
-            }
-        }
-
-        // Вкладки модерации
-        function showModerationTab(tabName) {
-            document.querySelectorAll('.tab-subnav-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('moderationPhotosTab').style.display = 'none';
-            document.getElementById('moderationCommentsTab').style.display = 'none';
-            
-            event.target.classList.add('active');
-            document.getElementById('moderation' + tabName.charAt(0).toUpperCase() + tabName.slice(1) + 'Tab').style.display = 'block';
-            
-            if (tabName === 'photos') {
-                loadPhotoModeration();
-            } else if (tabName === 'comments') {
-                loadCommentModeration();
-            }
-        }
-
-        // Вкладки магазина
-        function showShopTab(tabName) {
-            document.querySelectorAll('.tab-subnav-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('shopItemsTab').style.display = 'none';
-            document.getElementById('shopAddTab').style.display = 'none';
-            document.getElementById('shopManageTab').style.display = 'none';
-            
-            event.target.classList.add('active');
-            document.getElementById('shop' + tabName.charAt(0).toUpperCase() + tabName.slice(1) + 'Tab').style.display = 'block';
-            
-            if (tabName === 'items') {
-                loadShopItems();
-            } else if (tabName === 'manage') {
-                loadShopManage();
-            }
-        }
-
-        // Загрузка данных вкладки
         function loadTabData(tabName) {
             switch(tabName) {
                 case 'dashboard':
                     loadDashboard();
                     break;
-                case 'posts':
-                    loadPosts();
+                case 'characters':
+                    loadCharacters();
                     break;
                 case 'quizzes':
-                    // По умолчанию показываем создание квиза
-                    break;
-                case 'characters':
-                    // По умолчанию показываем создание персонажа
-                    break;
-                case 'users':
-                    loadUsers();
-                    break;
-                case 'moderation':
-                    loadPhotoModeration();
-                    break;
-                case 'shop':
-                    loadShopItems();
+                    loadQuizzes();
                     break;
                 case 'admins':
                     loadAdmins();
@@ -928,94 +521,46 @@
                 document.getElementById('totalPosts').textContent = data.totalPosts;
                 document.getElementById('pendingModeration').textContent = data.pendingModeration;
                 document.getElementById('totalSparks').textContent = data.totalSparks;
-                document.getElementById('shopItems').textContent = data.shopItems;
                 document.getElementById('activeQuizzes').textContent = data.activeQuizzes;
                 document.getElementById('activeCharacters').textContent = data.activeCharacters;
                 
-                // Быстрая статистика
-                const statsHtml = `
-                    <p>📊 Зарегистрировано сегодня: ${data.registeredToday}</p>
-                    <p>✨ Всего искр выдано: ${data.totalSparks}</p>
-                    <p>🎯 Активных квизов: ${data.activeQuizzes}</p>
-                    <p>👥 Активных персонажей: ${data.activeCharacters}</p>
-                    <p>🛒 Товаров в магазине: ${data.shopItems}</p>
-                `;
-                document.getElementById('quickStats').innerHTML = statsHtml;
             } catch (error) {
                 console.error('Error loading dashboard:', error);
                 showMessage('Ошибка загрузки дашборда', 'error');
             }
         }
 
-        // ==================== ПУБЛИКАЦИИ ====================
+        // ==================== ПЕРСОНАЖИ ====================
 
-        // Управление кнопками в форме
-        function addButton() {
-            const buttonId = Date.now();
-            currentButtons.push({ id: buttonId, text: '', url: '' });
-            renderButtons();
-        }
-
-        function removeButton(buttonId) {
-            currentButtons = currentButtons.filter(btn => btn.id !== buttonId);
-            renderButtons();
-        }
-
-        function updateButton(buttonId, field, value) {
-            const button = currentButtons.find(btn => btn.id === buttonId);
-            if (button) {
-                button[field] = value;
-            }
-        }
-
-        function renderButtons() {
-            const container = document.getElementById('buttonsContainer');
-            container.innerHTML = currentButtons.map(button => `
-                <div class="button-item">
-                    <div class="button-text">
-                        <input type="text" 
-                               placeholder="Текст кнопки" 
-                               value="${button.text}"
-                               onchange="updateButton(${button.id}, 'text', this.value)"
-                               style="margin-bottom: 5px; width: 100%; padding: 5px;">
-                        <input type="url" 
-                               placeholder="URL ссылки" 
-                               value="${button.url}"
-                               onchange="updateButton(${button.id}, 'url', this.value)"
-                               style="width: 100%; padding: 5px;">
-                    </div>
-                    <button type="button" class="button-remove" onclick="removeButton(${button.id})">×</button>
-                </div>
-            `).join('');
-        }
-
-        function toggleActionType() {
-            const actionGroup = document.getElementById('actionTypeGroup');
-            actionGroup.style.display = document.getElementById('requiresAction').checked ? 'block' : 'none';
-        }
-
-        // Создание поста
-        document.getElementById('createPostForm').addEventListener('submit', async (e) => {
+        // Создание персонажа
+        document.getElementById('createCharacterForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const postData = {
-                title: document.getElementById('postTitle').value,
-                content: document.getElementById('postContent').value,
-                photo_url: document.getElementById('postPhoto').value,
-                video_url: document.getElementById('videoUrl').value,
-                buttons: currentButtons,
-                requires_action: document.getElementById('requiresAction').checked,
-                action_type: document.getElementById('actionType').value
+            const selectedButtons = [];
+            if (document.getElementById('btnQuiz').checked) selectedButtons.push('quiz');
+            if (document.getElementById('btnPhotoWork').checked) selectedButtons.push('photo_work');
+            if (document.getElementById('btnShop').checked) selectedButtons.push('shop');
+            if (document.getElementById('btnInvite').checked) selectedButtons.push('invite');
+            if (document.getElementById('btnActivities').checked) selectedButtons.push('activities');
+
+            const characterData = {
+                class: document.getElementById('characterClass').value,
+                character_name: document.getElementById('characterName').value,
+                description: document.getElementById('characterDescription').value,
+                bonus_type: document.getElementById('characterBonusType').value,
+                bonus_value: document.getElementById('characterBonusValue').value,
+                available_buttons: selectedButtons,
+                is_active: document.getElementById('characterActive').checked
             };
 
             try {
-                const response = await fetch(`${API_BASE}/api/admin/posts`, {
+                const response = await fetch(`${API_BASE}/api/admin/characters`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        ...postData,
+                        ...characterData,
                         userId: currentAdminId
                     })
                 });
@@ -1023,70 +568,107 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    showMessage('✅ Пост успешно создан!', 'success');
-                    document.getElementById('createPostForm').reset();
-                    currentButtons = [];
-                    renderButtons();
-                    loadPosts();
+                    showMessage('✅ Персонаж успешно создан!', 'success');
+                    document.getElementById('createCharacterForm').reset();
+                    loadCharacters();
                 } else {
                     showMessage(`❌ Ошибка: ${result.error}`, 'error');
                 }
             } catch (error) {
-                console.error('Error creating post:', error);
-                showMessage('Ошибка при создании поста', 'error');
+                console.error('Error creating character:', error);
+                showMessage('Ошибка при создании персонажа', 'error');
             }
         });
 
-        // Загрузка постов
-        async function loadPosts() {
+        // Загрузка списка персонажей
+        async function loadCharacters() {
             try {
-                const response = await fetch(`${API_BASE}/api/admin/posts?userId=${currentAdminId}`);
-                const posts = await response.json();
+                const response = await fetch(`${API_BASE}/api/admin/characters?userId=${currentAdminId}`);
+                const characters = await response.json();
                 
-                const postsHtml = posts.map(post => `
+                const charactersHtml = characters.map(character => `
                     <div style="border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 10px; border-radius: 5px;">
-                        <h4>${post.title}</h4>
-                        <p>${post.content || 'Без текста'}</p>
-                        ${post.photo_url ? `<p>🖼️ Фото: ${post.photo_url}</p>` : ''}
-                        ${post.video_url ? `<p>🎥 Видео: ${post.video_url}</p>` : ''}
-                        ${post.requires_action ? `<p>🎯 Действие: ${post.action_type}</p>` : ''}
-                        <p><small>Опубликован: ${new Date(post.published_at).toLocaleString('ru-RU')}</small></p>
+                        <h4>${character.character_name} 
+                            <span class="status-badge ${character.is_active ? 'status-active' : 'status-inactive'}">
+                                ${character.is_active ? 'Активен' : 'Неактивен'}
+                            </span>
+                        </h4>
+                        <p><strong>Класс:</strong> ${character.class}</p>
+                        <p>${character.description}</p>
+                        <div class="character-buttons">
+                            ${character.available_buttons.map(btn => 
+                                `<span class="button-badge">${getButtonName(btn)}</span>`
+                            ).join('')}
+                        </div>
+                        <p><strong>Бонус:</strong> ${getBonusDescription(character.bonus_type, character.bonus_value)}</p>
                         <div class="button-row">
-                            <button class="btn btn-danger" onclick="deletePost('${post.post_id}')">Удалить</button>
-                            ${post.requires_action && post.action_type === 'quiz' ? `
-                                <button class="btn btn-warning" onclick="createQuizForPost('${post.post_id}')">Добавить квиз</button>
-                            ` : ''}
+                            <button class="btn btn-warning" onclick="editCharacter(${character.id})">✏️ Редактировать</button>
+                            <button class="btn btn-danger" onclick="deleteCharacter(${character.id})">🗑️ Удалить</button>
                         </div>
                     </div>
                 `).join('');
                 
-                document.getElementById('postsList').innerHTML = postsHtml || '<p>Нет публикаций</p>';
+                document.getElementById('charactersList').innerHTML = charactersHtml || '<p>Нет персонажей</p>';
             } catch (error) {
-                console.error('Error loading posts:', error);
-                document.getElementById('postsList').innerHTML = '<p>Ошибка загрузки</p>';
+                console.error('Error loading characters:', error);
+                document.getElementById('charactersList').innerHTML = '<p>Ошибка загрузки</p>';
             }
         }
 
-        // Удаление поста
-        async function deletePost(postId) {
-            if (!confirm('Удалить этот пост?')) return;
+        // Редактирование персонажа
+        async function editCharacter(characterId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/characters?userId=${currentAdminId}`);
+                const characters = await response.json();
+                const character = characters.find(c => c.id === characterId);
+                
+                if (!character) {
+                    showMessage('Персонаж не найден', 'error');
+                    return;
+                }
+
+                // Заполняем форму редактирования
+                document.getElementById('characterClass').value = character.class;
+                document.getElementById('characterName').value = character.character_name;
+                document.getElementById('characterDescription').value = character.description || '';
+                document.getElementById('characterBonusType').value = character.bonus_type;
+                document.getElementById('characterBonusValue').value = character.bonus_value;
+                document.getElementById('characterActive').checked = character.is_active;
+
+                // Устанавливаем кнопки
+                document.getElementById('btnQuiz').checked = character.available_buttons.includes('quiz');
+                document.getElementById('btnPhotoWork').checked = character.available_buttons.includes('photo_work');
+                document.getElementById('btnShop').checked = character.available_buttons.includes('shop');
+                document.getElementById('btnInvite').checked = character.available_buttons.includes('invite');
+                document.getElementById('btnActivities').checked = character.available_buttons.includes('activities');
+                
+                showMessage('Загружены данные персонажа для редактирования', 'success');
+            } catch (error) {
+                console.error('Error loading character for edit:', error);
+                showMessage('Ошибка загрузки персонажа', 'error');
+            }
+        }
+
+        // Удаление персонажа
+        async function deleteCharacter(characterId) {
+            if (!confirm('Удалить этого персонажа? Пользователи с этим персонажем будут переназначены.')) return;
             
             try {
-                const response = await fetch(`${API_BASE}/api/admin/posts/${postId}?userId=${currentAdminId}`, {
+                const response = await fetch(`${API_BASE}/api/admin/characters/${characterId}?userId=${currentAdminId}`, {
                     method: 'DELETE'
                 });
                 
                 const result = await response.json();
                 
                 if (result.success) {
-                    showMessage('✅ Пост удален', 'success');
-                    loadPosts();
+                    showMessage('✅ Персонаж удален', 'success');
+                    loadCharacters();
                 } else {
                     showMessage('❌ Ошибка удаления', 'error');
                 }
             } catch (error) {
-                console.error('Error deleting post:', error);
-                showMessage('Ошибка при удалении', 'error');
+                console.error('Error deleting character:', error);
+                showMessage('Ошибка при удалении персонажа', 'error');
             }
         }
 
@@ -1133,7 +715,7 @@
         function renderQuestions() {
             const container = document.getElementById('questionsContainer');
             container.innerHTML = currentQuestions.map(question => `
-                <div class="question-item">
+                <div style="border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 15px; border-radius: 5px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <h5>Вопрос</h5>
                         <button type="button" class="btn btn-danger" onclick="removeQuestion(${question.id})">🗑️</button>
@@ -1146,7 +728,7 @@
                     
                     <h6>Варианты ответов:</h6>
                     ${question.options.map((option, index) => `
-                        <div class="option-item">
+                        <div style="display: flex; align-items: center; margin-bottom: 5px;">
                             <input type="radio" 
                                    name="correct_${question.id}" 
                                    ${question.correctAnswer === index ? 'checked' : ''}
@@ -1191,7 +773,7 @@
                 questions: currentQuestions,
                 sparks_reward: parseFloat(document.getElementById('quizSparks').value),
                 cooldown_hours: parseInt(document.getElementById('quizCooldown').value),
-                is_active: document.getElementById('quizActive').checked
+                is_active: true
             };
 
             try {
@@ -1213,6 +795,7 @@
                     document.getElementById('createQuizForm').reset();
                     currentQuestions = [];
                     renderQuestions();
+                    loadQuizzes();
                 } else {
                     showMessage(`❌ Ошибка: ${result.error}`, 'error');
                 }
@@ -1223,13 +806,13 @@
         });
 
         // Загрузка списка квизов
-        async function loadQuizzesList() {
+        async function loadQuizzes() {
             try {
                 const response = await fetch(`${API_BASE}/api/admin/quizzes?userId=${currentAdminId}`);
                 const quizzes = await response.json();
                 
                 const quizzesHtml = quizzes.map(quiz => `
-                    <div class="quiz-card">
+                    <div style="border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 10px; border-radius: 5px;">
                         <h4>${quiz.title} 
                             <span class="status-badge ${quiz.is_active ? 'status-active' : 'status-inactive'}">
                                 ${quiz.is_active ? 'Активен' : 'Неактивен'}
@@ -1239,7 +822,10 @@
                         <p><strong>Вопросов:</strong> ${quiz.questions.length}</p>
                         <p><strong>Награда:</strong> ${quiz.sparks_reward}✨</p>
                         <p><strong>Перепрохождение:</strong> каждые ${quiz.cooldown_hours} часов</p>
-                        <p><small>Создан: ${new Date(quiz.created_at).toLocaleString('ru-RU')}</small></p>
+                        <div class="button-row">
+                            <button class="btn btn-warning" onclick="editQuiz(${quiz.id})">✏️ Редактировать</button>
+                            <button class="btn btn-danger" onclick="deleteQuiz(${quiz.id})">🗑️ Удалить</button>
+                        </div>
                     </div>
                 `).join('');
                 
@@ -1247,631 +833,6 @@
             } catch (error) {
                 console.error('Error loading quizzes:', error);
                 document.getElementById('quizzesList').innerHTML = '<p>Ошибка загрузки</p>';
-            }
-        }
-
-        // Загрузка квизов для управления
-        async function loadQuizzesManage() {
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/quizzes?userId=${currentAdminId}`);
-                const quizzes = await response.json();
-                
-                const quizzesHtml = quizzes.map(quiz => `
-                    <div class="quiz-card">
-                        <h4>${quiz.title}</h4>
-                        <p>${quiz.description || 'Без описания'}</p>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <p><strong>Вопросов:</strong> ${quiz.questions.length}</p>
-                                <p><strong>Награда:</strong> ${quiz.sparks_reward}✨</p>
-                                <p><strong>Статус:</strong> 
-                                    <span class="status-badge ${quiz.is_active ? 'status-active' : 'status-inactive'}">
-                                        ${quiz.is_active ? 'Активен' : 'Неактивен'}
-                                    </span>
-                                </p>
-                            </div>
-                            <div class="button-row">
-                                <button class="btn btn-warning" onclick="editQuiz(${quiz.id})">✏️ Редактировать</button>
-                                <button class="btn btn-danger" onclick="deleteQuiz(${quiz.id})">🗑️ Удалить</button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-                
-                document.getElementById('quizzesManageList').innerHTML = quizzesHtml || '<p>Нет квизов</p>';
-            } catch (error) {
-                console.error('Error loading quizzes for manage:', error);
-                document.getElementById('quizzesManageList').innerHTML = '<p>Ошибка загрузки</p>';
-            }
-        }
-
-        // Редактирование квиза
-        async function editQuiz(quizId) {
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/quizzes?userId=${currentAdminId}`);
-                const quizzes = await response.json();
-                const quiz = quizzes.find(q => q.id === quizId);
-                
-                if (!quiz) {
-                    showMessage('Квиз не найден', 'error');
-                    return;
-                }
-
-                // Заполняем форму редактирования
-                document.getElementById('quizTitle').value = quiz.title;
-                document.getElementById('quizDescription').value = quiz.description || '';
-                document.getElementById('quizSparks').value = quiz.sparks_reward;
-                document.getElementById('quizCooldown').value = quiz.cooldown_hours;
-                document.getElementById('quizActive').checked = quiz.is_active;
-                
-                // Загружаем вопросы
-                currentQuestions = quiz.questions;
-                renderQuestions();
-                
-                // Показываем вкладку создания
-                showQuizTab('create');
-                
-                showMessage('Загружены данные квиза для редактирования', 'success');
-            } catch (error) {
-                console.error('Error loading quiz for edit:', error);
-                showMessage('Ошибка загрузки квиза', 'error');
-            }
-        }
-
-        // Удаление квиза
-        async function deleteQuiz(quizId) {
-            if (!confirm('Удалить этот квиз? Все данные о прохождении будут потеряны.')) return;
-            
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/quizzes/${quizId}?userId=${currentAdminId}`, {
-                    method: 'DELETE'
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage('✅ Квиз удален', 'success');
-                    loadQuizzesManage();
-                } else {
-                    showMessage('❌ Ошибка удаления', 'error');
-                }
-            } catch (error) {
-                console.error('Error deleting quiz:', error);
-                showMessage('Ошибка при удалении квиза', 'error');
-            }
-        }
-
-        // ==================== ПЕРСОНАЖИ ====================
-
-        // Создание персонажа
-        document.getElementById('createCharacterForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const selectedButtons = [];
-            if (document.getElementById('btnQuiz').checked) selectedButtons.push('quiz');
-            if (document.getElementById('btnPhotoWork').checked) selectedButtons.push('photo_work');
-            if (document.getElementById('btnShop').checked) selectedButtons.push('shop');
-            if (document.getElementById('btnInvite').checked) selectedButtons.push('invite');
-            if (document.getElementById('btnActivities').checked) selectedButtons.push('activities');
-
-            const characterData = {
-                class: document.getElementById('characterClass').value,
-                character_name: document.getElementById('characterName').value,
-                description: document.getElementById('characterDescription').value,
-                bonus_type: document.getElementById('characterBonusType').value,
-                bonus_value: document.getElementById('characterBonusValue').value,
-                available_buttons: selectedButtons,
-                is_active: document.getElementById('characterActive').checked
-            };
-
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/characters`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        ...characterData,
-                        userId: currentAdminId
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showMessage('✅ Персонаж успешно создан!', 'success');
-                    document.getElementById('createCharacterForm').reset();
-                } else {
-                    showMessage(`❌ Ошибка: ${result.error}`, 'error');
-                }
-            } catch (error) {
-                console.error('Error creating character:', error);
-                showMessage('Ошибка при создании персонажа', 'error');
-            }
-        });
-
-        // Загрузка списка персонажей
-        async function loadCharactersList() {
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/characters?userId=${currentAdminId}`);
-                const characters = await response.json();
-                
-                const charactersHtml = characters.map(character => `
-                    <div class="character-card">
-                        <h4>${character.character_name} 
-                            <span class="status-badge ${character.is_active ? 'status-active' : 'status-inactive'}">
-                                ${character.is_active ? 'Активен' : 'Неактивен'}
-                            </span>
-                        </h4>
-                        <p><strong>Класс:</strong> ${character.class}</p>
-                        <p>${character.description}</p>
-                        <div class="character-buttons">
-                            ${character.available_buttons.map(btn => 
-                                `<span class="button-badge">${getButtonName(btn)}</span>`
-                            ).join('')}
-                        </div>
-                        <p><strong>Бонус:</strong> ${getBonusDescription(character.bonus_type, character.bonus_value)}</p>
-                    </div>
-                `).join('');
-                
-                document.getElementById('charactersList').innerHTML = charactersHtml || '<p>Нет персонажей</p>';
-            } catch (error) {
-                console.error('Error loading characters:', error);
-                document.getElementById('charactersList').innerHTML = '<p>Ошибка загрузки</p>';
-            }
-        }
-
-        // Загрузка персонажей для управления
-        async function loadCharactersManage() {
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/characters?userId=${currentAdminId}`);
-                const characters = await response.json();
-                
-                const charactersHtml = characters.map(character => `
-                    <div class="character-card">
-                        <h4>${character.character_name}</h4>
-                        <p><strong>Класс:</strong> ${character.class}</p>
-                        <div class="character-buttons">
-                            ${character.available_buttons.map(btn => 
-                                `<span class="button-badge">${getButtonName(btn)}</span>`
-                            ).join('')}
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-                            <div>
-                                <p><strong>Статус:</strong> 
-                                    <span class="status-badge ${character.is_active ? 'status-active' : 'status-inactive'}">
-                                        ${character.is_active ? 'Активен' : 'Неактивен'}
-                                    </span>
-                                </p>
-                            </div>
-                            <div class="button-row">
-                                <button class="btn btn-warning" onclick="editCharacter(${character.id})">✏️ Редактировать</button>
-                                <button class="btn btn-danger" onclick="deleteCharacter(${character.id})">🗑️ Удалить</button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-                
-                document.getElementById('charactersManageList').innerHTML = charactersHtml || '<p>Нет персонажей</p>';
-            } catch (error) {
-                console.error('Error loading characters for manage:', error);
-                document.getElementById('charactersManageList').innerHTML = '<p>Ошибка загрузки</p>';
-            }
-        }
-
-        // Редактирование персонажа
-        async function editCharacter(characterId) {
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/characters?userId=${currentAdminId}`);
-                const characters = await response.json();
-                const character = characters.find(c => c.id === characterId);
-                
-                if (!character) {
-                    showMessage('Персонаж не найден', 'error');
-                    return;
-                }
-
-                // Заполняем форму редактирования
-                document.getElementById('characterClass').value = character.class;
-                document.getElementById('characterName').value = character.character_name;
-                document.getElementById('characterDescription').value = character.description || '';
-                document.getElementById('characterBonusType').value = character.bonus_type;
-                document.getElementById('characterBonusValue').value = character.bonus_value;
-                document.getElementById('characterActive').checked = character.is_active;
-
-                // Устанавливаем кнопки
-                document.getElementById('btnQuiz').checked = character.available_buttons.includes('quiz');
-                document.getElementById('btnPhotoWork').checked = character.available_buttons.includes('photo_work');
-                document.getElementById('btnShop').checked = character.available_buttons.includes('shop');
-                document.getElementById('btnInvite').checked = character.available_buttons.includes('invite');
-                document.getElementById('btnActivities').checked = character.available_buttons.includes('activities');
-                
-                // Показываем вкладку создания
-                showCharacterTab('create');
-                
-                showMessage('Загружены данные персонажа для редактирования', 'success');
-            } catch (error) {
-                console.error('Error loading character for edit:', error);
-                showMessage('Ошибка загрузки персонажа', 'error');
-            }
-        }
-
-        // Удаление персонажа
-        async function deleteCharacter(characterId) {
-            if (!confirm('Удалить этого персонажа? Пользователи с этим персонажем будут переназначены.')) return;
-            
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/characters/${characterId}?userId=${currentAdminId}`, {
-                    method: 'DELETE'
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage('✅ Персонаж удален', 'success');
-                    loadCharactersManage();
-                } else {
-                    showMessage('❌ Ошибка удаления', 'error');
-                }
-            } catch (error) {
-                console.error('Error deleting character:', error);
-                showMessage('Ошибка при удалении персонажа', 'error');
-            }
-        }
-
-        // Вспомогательные функции для персонажей
-        function getButtonName(buttonKey) {
-            const buttonNames = {
-                'quiz': 'Квизы',
-                'photo_work': 'Фото',
-                'shop': 'Магазин',
-                'invite': 'Пригласить',
-                'activities': 'Активности'
-            };
-            return buttonNames[buttonKey] || buttonKey;
-        }
-
-        function getBonusDescription(bonusType, bonusValue) {
-            const bonuses = {
-                'percent_bonus': `+${bonusValue}% к искрам`,
-                'forgiveness': 'Право на ошибку',
-                'random_gift': 'Случайный подарок',
-                'secret_advice': 'Секретные советы',
-                'series_bonus': 'Бонус за серии',
-                'photo_bonus': 'Бонус за фото',
-                'weekly_surprise': 'Еженедельный сюрприз',
-                'mini_quest': 'Мини-квесты',
-                'quiz_hint': 'Подсказки в квизах',
-                'fact_star': 'Факт-искры',
-                'streak_multiplier': 'Множитель за серию'
-            };
-            return bonuses[bonusType] || 'Особый бонус';
-        }
-
-        // ==================== ПОЛЬЗОВАТЕЛИ ====================
-
-        // Загрузка пользователей
-        async function loadUsers() {
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/users?userId=${currentAdminId}`);
-                const users = await response.json();
-                
-                const usersHtml = users.map(user => `
-                    <tr>
-                        <td>${user.user_id}</td>
-                        <td>${user.tg_first_name} ${user.tg_last_name || ''}</td>
-                        <td>@${user.tg_username || 'нет'}</td>
-                        <td>${user.class || 'Не выбран'}</td>
-                        <td>${user.sparks} ✨</td>
-                        <td>${user.level}</td>
-                        <td>${new Date(user.last_active).toLocaleDateString('ru-RU')}</td>
-                        <td>
-                            <button class="btn" onclick="viewUserDetails(${user.user_id})">👁️</button>
-                        </td>
-                    </tr>
-                `).join('');
-                
-                document.getElementById('usersList').innerHTML = `
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Имя</th>
-                                <th>Username</th>
-                                <th>Класс</th>
-                                <th>Искры</th>
-                                <th>Уровень</th>
-                                <th>Активность</th>
-                                <th>Действия</th>
-                            </tr>
-                        </thead>
-                        <tbody>${usersHtml}</tbody>
-                    </table>
-                `;
-            } catch (error) {
-                console.error('Error loading users:', error);
-                document.getElementById('usersList').innerHTML = '<p>Ошибка загрузки пользователей</p>';
-            }
-        }
-
-        // Поиск пользователей
-        document.getElementById('userSearch').addEventListener('input', async (e) => {
-            const query = e.target.value.trim();
-            if (query.length < 2) {
-                loadUsers();
-                return;
-            }
-            
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/users/search?q=${encodeURIComponent(query)}&userId=${currentAdminId}`);
-                const users = await response.json();
-                
-                const usersHtml = users.map(user => `
-                    <tr>
-                        <td>${user.user_id}</td>
-                        <td>${user.tg_first_name} ${user.tg_last_name || ''}</td>
-                        <td>@${user.tg_username || 'нет'}</td>
-                        <td>${user.class || 'Не выбран'}</td>
-                        <td>${user.sparks} ✨</td>
-                        <td>${user.level}</td>
-                        <td>${new Date(user.last_active).toLocaleDateString('ru-RU')}</td>
-                        <td>
-                            <button class="btn" onclick="viewUserDetails(${user.user_id})">👁️</button>
-                        </td>
-                    </tr>
-                `).join('');
-                
-                document.getElementById('usersList').innerHTML = `
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Имя</th>
-                                <th>Username</th>
-                                <th>Класс</th>
-                                <th>Искры</th>
-                                <th>Уровень</th>
-                                <th>Активность</th>
-                                <th>Действия</th>
-                            </tr>
-                        </thead>
-                        <tbody>${usersHtml}</tbody>
-                    </table>
-                `;
-            } catch (error) {
-                console.error('Error searching users:', error);
-            }
-        });
-
-        // ==================== МОДЕРАЦИЯ ====================
-
-        // Загрузка фото на модерацию
-        async function loadPhotoModeration() {
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/moderation/photos?userId=${currentAdminId}`);
-                const photos = await response.json();
-                
-                const photosHtml = photos.map(photo => `
-                    <div style="border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 10px; border-radius: 5px;">
-                        <p><strong>Пользователь:</strong> ${photo.user_id} - ${photo.tg_first_name}</p>
-                        <p><strong>Описание:</strong> ${photo.description || 'Нет описания'}</p>
-                        <p><strong>Тема:</strong> ${photo.theme || 'Не указана'}</p>
-                        <img src="${photo.photo_url}" style="max-width: 200px; max-height: 200px; display: block; margin: 10px 0;">
-                        <div class="button-row">
-                            <button class="btn btn-success" onclick="approvePhoto(${photo.id})">✅ Одобрить (+3✨)</button>
-                            <button class="btn btn-danger" onclick="rejectPhoto(${photo.id})">❌ Отклонить</button>
-                        </div>
-                    </div>
-                `).join('');
-                
-                document.getElementById('photoModeration').innerHTML = photosHtml || '<p>Нет фото на модерации</p>';
-            } catch (error) {
-                console.error('Error loading photos:', error);
-                document.getElementById('photoModeration').innerHTML = '<p>Ошибка загрузки</p>';
-            }
-        }
-
-        // Загрузка комментариев на модерацию
-        async function loadCommentModeration() {
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/moderation/comments?userId=${currentAdminId}`);
-                const comments = await response.json();
-                
-                const commentsHtml = comments.map(comment => `
-                    <div style="border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 10px; border-radius: 5px;">
-                        <p><strong>Пользователь:</strong> ${comment.user_id} - ${comment.tg_first_name}</p>
-                        <p><strong>Пост:</strong> ${comment.post_id}</p>
-                        <p><strong>Комментарий:</strong> ${comment.comment_text}</p>
-                        <div class="button-row">
-                            <button class="btn btn-success" onclick="approveComment(${comment.id})">✅ Одобрить (+0.5✨)</button>
-                            <button class="btn btn-danger" onclick="rejectComment(${comment.id})">❌ Отклонить</button>
-                        </div>
-                    </div>
-                `).join('');
-                
-                document.getElementById('commentModeration').innerHTML = commentsHtml || '<p>Нет комментариев на модерации</p>';
-            } catch (error) {
-                console.error('Error loading comments:', error);
-                document.getElementById('commentModeration').innerHTML = '<p>Ошибка загрузки</p>';
-            }
-        }
-
-        // Одобрение фото
-        async function approvePhoto(photoId) {
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/moderation/photos/${photoId}/approve?userId=${currentAdminId}`, {
-                    method: 'POST'
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage('✅ Фото одобрено! Пользователь получил +3✨', 'success');
-                    loadPhotoModeration();
-                } else {
-                    showMessage('❌ Ошибка одобрения', 'error');
-                }
-            } catch (error) {
-                console.error('Error approving photo:', error);
-                showMessage('Ошибка при одобрении фото', 'error');
-            }
-        }
-
-        // Отклонение фото
-        async function rejectPhoto(photoId) {
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/moderation/photos/${photoId}/reject?userId=${currentAdminId}`, {
-                    method: 'POST'
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage('✅ Фото отклонено', 'success');
-                    loadPhotoModeration();
-                } else {
-                    showMessage('❌ Ошибка отклонения', 'error');
-                }
-            } catch (error) {
-                console.error('Error rejecting photo:', error);
-                showMessage('Ошибка при отклонении фото', 'error');
-            }
-        }
-
-        // Одобрение комментария
-        async function approveComment(commentId) {
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/moderation/comments/${commentId}/approve?userId=${currentAdminId}`, {
-                    method: 'POST'
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage('✅ Комментарий одобрен! Пользователь получил +0.5✨', 'success');
-                    loadCommentModeration();
-                } else {
-                    showMessage('❌ Ошибка одобрения', 'error');
-                }
-            } catch (error) {
-                console.error('Error approving comment:', error);
-                showMessage('Ошибка при одобрении комментария', 'error');
-            }
-        }
-
-        // Отклонение комментария
-        async function rejectComment(commentId) {
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/moderation/comments/${commentId}/reject?userId=${currentAdminId}`, {
-                    method: 'POST'
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage('✅ Комментарий отклонен', 'success');
-                    loadCommentModeration();
-                } else {
-                    showMessage('❌ Ошибка отклонения', 'error');
-                }
-            } catch (error) {
-                console.error('Error rejecting comment:', error);
-                showMessage('Ошибка при отклонении комментария', 'error');
-            }
-        }
-
-        // ==================== МАГАЗИН ====================
-
-        // Загрузка товаров
-        async function loadShopItems() {
-            try {
-                const response = await fetch(`${API_BASE}/api/webapp/shop/items`);
-                const items = await response.json();
-                
-                const itemsHtml = items.map(item => `
-                    <div class="shop-item">
-                        <div class="shop-item-title">${item.title}</div>
-                        <div style="color: #718096; margin-bottom: 8px;">${item.description || 'Описание отсутствует'}</div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #718096; font-size: 14px;">${item.type}</span>
-                            <div class="shop-item-price">${item.price}✨</div>
-                        </div>
-                    </div>
-                `).join('');
-                
-                document.getElementById('shopItemsList').innerHTML = itemsHtml || '<p>Товары пока не добавлены</p>';
-            } catch (error) {
-                console.error('Error loading shop items:', error);
-                document.getElementById('shopItemsList').innerHTML = '<p>Ошибка загрузки товаров</p>';
-            }
-        }
-
-        // Добавление товара
-        document.getElementById('addShopItemForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const itemData = {
-                title: document.getElementById('itemTitle').value,
-                description: document.getElementById('itemDescription').value,
-                type: document.getElementById('itemType').value,
-                file_url: document.getElementById('itemFileUrl').value,
-                preview_url: document.getElementById('itemPreviewUrl').value,
-                price: parseFloat(document.getElementById('itemPrice').value)
-            };
-
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/shop/items`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        ...itemData,
-                        userId: currentAdminId
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showMessage('✅ Товар успешно добавлен!', 'success');
-                    document.getElementById('addShopItemForm').reset();
-                    loadShopItems();
-                } else {
-                    showMessage(`❌ Ошибка: ${result.error}`, 'error');
-                }
-            } catch (error) {
-                console.error('Error adding shop item:', error);
-                showMessage('Ошибка при добавлении товара', 'error');
-            }
-        });
-
-        // Управление товарами
-        async function loadShopManage() {
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/shop/items?userId=${currentAdminId}`);
-                const items = await response.json();
-                
-                const itemsHtml = items.map(item => `
-                    <div class="shop-item">
-                        <div class="shop-item-title">${item.title}</div>
-                        <div style="color: #718096; margin-bottom: 8px;">${item.description || 'Описание отсутствует'}</div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #718096; font-size: 14px;">
-                                ${item.type} • ${item.is_active ? 'Активен' : 'Неактивен'} • ${item.price}✨
-                            </span>
-                            <div class="button-row">
-                                <button class="btn btn-warning" onclick="editShopItem(${item.id})">✏️</button>
-                                <button class="btn btn-danger" onclick="deleteShopItem(${item.id})">🗑️</button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-                
-                document.getElementById('shopManageList').innerHTML = itemsHtml || '<p>Товары пока не добавлены</p>';
-            } catch (error) {
-                console.error('Error loading shop manage items:', error);
-                document.getElementById('shopManageList').innerHTML = '<p>Ошибка загрузки</p>';
             }
         }
 
@@ -1979,6 +940,34 @@
         }
 
         // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
+
+        function getButtonName(buttonKey) {
+            const buttonNames = {
+                'quiz': 'Квизы',
+                'photo_work': 'Фото',
+                'shop': 'Магазин',
+                'invite': 'Пригласить',
+                'activities': 'Активности'
+            };
+            return buttonNames[buttonKey] || buttonKey;
+        }
+
+        function getBonusDescription(bonusType, bonusValue) {
+            const bonuses = {
+                'percent_bonus': `+${bonusValue}% к искрам`,
+                'forgiveness': 'Право на ошибку',
+                'random_gift': 'Случайный подарок',
+                'secret_advice': 'Секретные советы',
+                'series_bonus': 'Бонус за серии',
+                'photo_bonus': 'Бонус за фото',
+                'weekly_surprise': 'Еженедельный сюрприз',
+                'mini_quest': 'Мини-квесты',
+                'quiz_hint': 'Подсказки в квизах',
+                'fact_star': 'Факт-искры',
+                'streak_multiplier': 'Множитель за серию'
+            };
+            return bonuses[bonusType] || 'Особый бонус';
+        }
 
         function showMessage(message, type) {
             const messageArea = document.getElementById('messageArea');
