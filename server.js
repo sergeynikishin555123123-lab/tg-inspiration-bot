@@ -6,6 +6,10 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import dotenv from 'dotenv';
 import sqlite3 from 'sqlite3';
+import multer from 'multer';
+import fs from 'fs';
+import FormData from 'form-data';
+import axios from 'axios';
 
 dotenv.config();
 
@@ -15,13 +19,63 @@ const __dirname = dirname(__filename);
 const app = express();
 const db = new sqlite3.Database(':memory:');
 
+// Создаем папки для загрузок
+const uploadDirs = ['uploads', 'uploads/images', 'uploads/videos', 'uploads/temp'];
+uploadDirs.forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+
+// Настройка multer для загрузки файлов
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    let folder = 'uploads/temp/';
+    if (file.fieldname === 'photo') folder = 'uploads/images/';
+    if (file.fieldname === 'video') folder = 'uploads/videos/';
+    if (file.fieldname === 'commentPhoto') folder = 'uploads/images/';
+    cb(null, folder);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + '.' + file.originalname.split('.').pop());
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.fieldname === 'photo' || file.fieldname === 'commentPhoto') {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Только изображения разрешены!'), false);
+    }
+  } else if (file.fieldname === 'video') {
+    if (file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Только видео разрешены!'), false);
+    }
+  } else {
+    cb(null, true);
+  }
+};
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB максимум
+  }
+});
+
 app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use('/uploads', express.static(join(__dirname, 'uploads')));
 app.use(express.static(join(__dirname, 'public')));
 app.use('/admin', express.static(join(__dirname, 'admin')));
 
-console.log('🎨 Мастерская Вдохновения - Запуск интегрированной версии...');
+console.log('🎨 Мастерская Вдохновения - Запуск с загрузкой файлов...');
 
 // ==================== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ====================
 
@@ -153,8 +207,8 @@ db.serialize(() => {
     post_id TEXT UNIQUE,
     title TEXT NOT NULL,
     content TEXT,
-    photo_url TEXT,
-    video_url TEXT,
+    photo_path TEXT,
+    video_path TEXT,
     buttons TEXT,
     requires_action BOOLEAN DEFAULT FALSE,
     action_type TEXT,
@@ -171,6 +225,7 @@ db.serialize(() => {
     user_id INTEGER NOT NULL,
     post_id TEXT NOT NULL,
     comment_text TEXT NOT NULL,
+    photo_path TEXT,
     is_approved BOOLEAN DEFAULT FALSE,
     sparks_awarded BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -289,18 +344,9 @@ db.serialize(() => {
     '🎨 Урок акварели для начинающих',
     'Полный видеоурок по основам акварельной живописи. Изучите технику мокрым по мокрому, градиенты и создание текстур.',
     'video',
-    'https://example.com/videos/watercolor-basics.mp4',
-    'https://example.com/previews/watercolor-preview.jpg',
+    '/uploads/videos/watercolor-basics.mp4',
+    '/uploads/images/watercolor-preview.jpg',
     25,
-    process.env.ADMIN_ID
-  ]);
-  shopStmt.run([
-    '📚 Электронная книга "Основы композиции"',
-    'Подробное руководство по созданию гармоничных композиций в живописи и фотографии. 150 страниц полезной информации.',
-    'ebook',
-    'https://example.com/ebooks/composition-basics.pdf',
-    'https://example.com/previews/ebook-preview.jpg',
-    15,
     process.env.ADMIN_ID
   ]);
   shopStmt.finalize();
@@ -328,6 +374,43 @@ function awardSparks(userId, sparks, description, activityType = 'other', metada
     [userId, activityType, sparks, description, JSON.stringify(metadata)]);
 }
 
+// Функция для загрузки файла в Telegram
+async function uploadToTelegram(filePath, fileType = 'photo') {
+  try {
+    const formData = new FormData();
+    const fileStream = fs.createReadStream(filePath);
+    
+    formData.append('chat_id', process.env.CHANNEL_USERNAME);
+    
+    if (fileType === 'photo') {
+      formData.append('photo', fileStream);
+    } else if (fileType === 'video') {
+      formData.append('video', fileStream);
+    }
+    
+    const response = await axios.post(
+      `https://api.telegram.org/bot${process.env.BOT_TOKEN}/send${fileType.charAt(0).toUpperCase() + fileType.slice(1)}`,
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+        },
+      }
+    );
+    
+    if (response.data.ok) {
+      const fileId = fileType === 'photo' 
+        ? response.data.result.photo[response.data.result.photo.length - 1].file_id
+        : response.data.result.video.file_id;
+      
+      return fileId;
+    }
+  } catch (error) {
+    console.error('❌ Ошибка загрузки в Telegram:', error.message);
+    throw error;
+  }
+}
+
 // ==================== MIDDLEWARE ====================
 
 const requireAdmin = (req, res, next) => {
@@ -352,7 +435,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    version: '5.0.0'
+    version: '6.0.0'
   });
 });
 
@@ -362,6 +445,54 @@ app.get('/', (req, res) => {
 
 app.get('/admin', (req, res) => {
   res.sendFile(join(__dirname, 'admin', 'index.html'));
+});
+
+// ==================== FILE UPLOAD ROUTES ====================
+
+// Загрузка фото для комментария
+app.post('/api/upload/comment-photo', upload.single('commentPhoto'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Файл не загружен' });
+    }
+    
+    const fileUrl = `/uploads/images/${req.file.filename}`;
+    
+    res.json({
+      success: true,
+      filePath: fileUrl,
+      filename: req.file.filename
+    });
+  } catch (error) {
+    console.error('❌ Ошибка загрузки фото:', error);
+    res.status(500).json({ error: 'Ошибка загрузки файла' });
+  }
+});
+
+// Загрузка медиа для постов
+app.post('/api/upload/post-media', upload.fields([
+  { name: 'photo', maxCount: 1 },
+  { name: 'video', maxCount: 1 }
+]), (req, res) => {
+  try {
+    const result = {};
+    
+    if (req.files.photo) {
+      result.photoPath = `/uploads/images/${req.files.photo[0].filename}`;
+    }
+    
+    if (req.files.video) {
+      result.videoPath = `/uploads/videos/${req.files.video[0].filename}`;
+    }
+    
+    res.json({
+      success: true,
+      ...result
+    });
+  } catch (error) {
+    console.error('❌ Ошибка загрузки медиа:', error);
+    res.status(500).json({ error: 'Ошибка загрузки файлов' });
+  }
 });
 
 // ==================== WEBAPP API ====================
@@ -719,11 +850,12 @@ app.get('/api/webapp/posts', (req, res) => {
   });
 });
 
-// Отправка комментария к посту
-app.post('/api/webapp/comments', (req, res) => {
+// Отправка комментария к посту с фото
+app.post('/api/webapp/comments', upload.single('commentPhoto'), (req, res) => {
   const { userId, postId, commentText } = req.body;
+  const photoPath = req.file ? `/uploads/images/${req.file.filename}` : null;
   
-  console.log('💬 Отправка комментария к посту:', { userId, postId });
+  console.log('💬 Отправка комментария к посту:', { userId, postId, hasPhoto: !!photoPath });
   
   if (!userId || !postId || !commentText) {
     return res.status(400).json({ error: 'User ID, post ID and comment text are required' });
@@ -752,8 +884,8 @@ app.post('/api/webapp/comments', (req, res) => {
       }
       
       // Сохраняем комментарий
-      db.run(`INSERT INTO comments (user_id, post_id, comment_text) VALUES (?, ?, ?)`,
-        [userId, postId, commentText],
+      db.run(`INSERT INTO comments (user_id, post_id, comment_text, photo_path) VALUES (?, ?, ?, ?)`,
+        [userId, postId, commentText, photoPath],
         function(err) {
           if (err) return res.status(500).json({ error: 'Error saving comment' });
           
@@ -1212,17 +1344,18 @@ app.get('/api/admin/shop/items', requireAdmin, (req, res) => {
   });
 });
 
-app.post('/api/admin/shop/items', requireAdmin, (req, res) => {
-  const { title, description, type, file_url, preview_url, price } = req.body;
+app.post('/api/admin/shop/items', requireAdmin, upload.single('itemFile'), (req, res) => {
+  const { title, description, type, price } = req.body;
+  const fileUrl = req.file ? `/uploads/${req.file.fieldname === 'video' ? 'videos' : 'images'}/${req.file.filename}` : null;
   
   console.log('🛒 Добавление товара:', title);
   
-  if (!title || !file_url || !price) {
-    return res.status(400).json({ error: 'Title, file URL and price are required' });
+  if (!title || !fileUrl || !price) {
+    return res.status(400).json({ error: 'Title, file and price are required' });
   }
   
-  db.run(`INSERT INTO shop_items (title, description, type, file_url, preview_url, price, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [title, description, type, file_url, preview_url, price, req.admin.user_id],
+  db.run(`INSERT INTO shop_items (title, description, type, file_url, price, created_by) VALUES (?, ?, ?, ?, ?, ?)`,
+    [title, description, type, fileUrl, price, req.admin.user_id],
     function(err) {
       if (err) return res.status(500).json({ error: 'Error creating item' });
       
@@ -1279,8 +1412,11 @@ app.get('/api/admin/posts', requireAdmin, (req, res) => {
   });
 });
 
-app.post('/api/admin/posts', requireAdmin, (req, res) => {
-  const { title, content, photo_url, video_url, buttons, requires_action, action_type, action_target, allow_comments } = req.body;
+app.post('/api/admin/posts', requireAdmin, upload.fields([
+  { name: 'photo', maxCount: 1 },
+  { name: 'video', maxCount: 1 }
+]), async (req, res) => {
+  const { title, content, buttons, requires_action, action_type, action_target, allow_comments } = req.body;
   
   console.log('📝 Создание поста:', title);
   
@@ -1288,42 +1424,50 @@ app.post('/api/admin/posts', requireAdmin, (req, res) => {
     return res.status(400).json({ error: 'Title is required' });
   }
   
+  const photoPath = req.files.photo ? `/uploads/images/${req.files.photo[0].filename}` : null;
+  const videoPath = req.files.video ? `/uploads/videos/${req.files.video[0].filename}` : null;
+  
   const buttonsJson = JSON.stringify(buttons || []);
   
-  db.run(`INSERT INTO channel_posts (title, content, photo_url, video_url, buttons, requires_action, action_type, action_target, published_by, allow_comments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [title, content, photo_url, video_url, buttonsJson, requires_action, action_type, action_target, req.admin.user_id, allow_comments !== false],
-    function(err) {
-      if (err) return res.status(500).json({ error: 'Error creating post' });
-      
-      const postId = this.lastID;
-      
-      // Публикуем пост в канал
-      db.get('SELECT * FROM channel_posts WHERE id = ?', [postId], (err, post) => {
-        if (!err && post) {
-          publishToChannel(post).then(() => {
+  try {
+    db.run(`INSERT INTO channel_posts (title, content, photo_path, video_path, buttons, requires_action, action_type, action_target, published_by, allow_comments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [title, content, photoPath, videoPath, buttonsJson, requires_action, action_type, action_target, req.admin.user_id, allow_comments !== false],
+      async function(err) {
+        if (err) return res.status(500).json({ error: 'Error creating post' });
+        
+        const postId = this.lastID;
+        
+        // Публикуем пост в канал
+        db.get('SELECT * FROM channel_posts WHERE id = ?', [postId], async (err, post) => {
+          if (!err && post) {
+            try {
+              await publishToChannel(post);
+              res.json({
+                success: true,
+                message: 'Пост успешно создан и опубликован в канал!',
+                postId: postId
+              });
+            } catch (error) {
+              res.json({
+                success: true,
+                message: 'Пост создан, но возникла ошибка при публикации в канал',
+                postId: postId,
+                warning: error.message
+              });
+            }
+          } else {
             res.json({
               success: true,
-              message: 'Пост успешно создан и опубликован в канал!',
+              message: 'Пост успешно создан',
               postId: postId
             });
-          }).catch(error => {
-            res.json({
-              success: true,
-              message: 'Пост создан, но возникла ошибка при публикации в канал',
-              postId: postId,
-              warning: error.message
-            });
-          });
-        } else {
-          res.json({
-            success: true,
-            message: 'Пост успешно создан',
-            postId: postId
-          });
-        }
-      });
-    }
-  );
+          }
+        });
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка при создании поста' });
+  }
 });
 
 // Модерация комментариев
@@ -1548,14 +1692,20 @@ async function publishToChannel(post) {
     }
 
     let message;
-    if (post.photo_url) {
-      message = await bot.sendPhoto(channelId, post.photo_url, {
+    const fullAppUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+    
+    if (post.photo_path) {
+      // Создаем полный URL к фото
+      const photoUrl = `${fullAppUrl}${post.photo_path}`;
+      message = await bot.sendPhoto(channelId, photoUrl, {
         caption: caption,
         parse_mode: 'Markdown',
         reply_markup: keyboard
       });
-    } else if (post.video_url) {
-      message = await bot.sendVideo(channelId, post.video_url, {
+    } else if (post.video_path) {
+      // Создаем полный URL к видео
+      const videoUrl = `${fullAppUrl}${post.video_path}`;
+      message = await bot.sendVideo(channelId, videoUrl, {
         caption: caption,
         parse_mode: 'Markdown',
         reply_markup: keyboard
@@ -1660,6 +1810,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Сервер запущен на порту ${PORT}`);
   console.log(`📱 Mini App: ${process.env.APP_URL || `http://localhost:${PORT}`}`);
   console.log(`🔧 Admin Panel: ${process.env.APP_URL || `http://localhost:${PORT}`}/admin`);
+  console.log(`📢 Канал: ${process.env.CHANNEL_USERNAME}`);
   console.log('✅ Все системы работают');
   console.log('📊 Новая система начисления искр:');
   console.log('   🎯 Квиз (1 правильный ответ): 1 искра');
