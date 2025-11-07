@@ -28,6 +28,7 @@
         .btn-warning { background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); }
         .btn-info { background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); }
         .btn-gold { background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%); color: #2d3748; }
+        .btn-photo { background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%); }
         .sparks { 
             font-size: 42px; font-weight: bold; text-align: center; color: #ffd700; 
             text-shadow: 0 2px 4px rgba(255,215,0,0.3); margin: 15px 0; padding: 10px;
@@ -35,11 +36,11 @@
         .screen { display: none; }
         .active { display: block; }
         .back-btn { background: #718096; margin-bottom: 15px; }
-        .character-card, .quiz-card, .activity-item, .shop-item, .post-card, .marathon-card {
+        .character-card, .quiz-card, .activity-item, .shop-item, .post-card, .marathon-card, .photo-item {
             background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 15px;
             margin-bottom: 10px; cursor: pointer; transition: all 0.3s ease;
         }
-        .character-card:hover, .quiz-card:hover, .shop-item:hover, .post-card:hover, .marathon-card:hover { 
+        .character-card:hover, .quiz-card:hover, .shop-item:hover, .post-card:hover, .marathon-card:hover, .photo-item:hover { 
             border-color: #667eea; transform: translateY(-2px); 
         }
         .character-card.selected { border-color: #667eea; background: rgba(102,126,234,0.1); }
@@ -62,14 +63,14 @@
         .tab-btn { flex: 1; padding: 12px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; }
         .tab-btn.active { border-bottom-color: #667eea; color: #667eea; }
         .reward-info { background: rgba(255,215,0,0.1); border: 1px solid #ffd700; border-radius: 8px; padding: 10px; margin: 10px 0; }
-        .file-upload { 
-            background: #f7fafc; border: 2px dashed #cbd5e0; border-radius: 8px; padding: 20px; 
-            text-align: center; margin: 10px 0; cursor: pointer; transition: all 0.3s ease;
-        }
-        .file-upload:hover { border-color: #667eea; background: rgba(102,126,234,0.05); }
-        .file-upload.dragover { border-color: #667eea; background: rgba(102,126,234,0.1); }
-        .preview-image { max-width: 100%; max-height: 200px; border-radius: 8px; margin: 10px 0; }
-        .remove-photo { background: #f56565; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-left: 10px; }
+        .photo-upload-area { border: 2px dashed #667eea; border-radius: 12px; padding: 30px; text-align: center; margin: 15px 0; background: rgba(102,126,234,0.05); }
+        .photo-preview { max-width: 100%; max-height: 300px; border-radius: 8px; margin: 10px 0; display: none; }
+        .photo-status { padding: 8px; border-radius: 6px; margin: 5px 0; font-size: 14px; }
+        .photo-status.pending { background: #fef5e7; color: #d69e2e; border: 1px solid #faf089; }
+        .photo-status.approved { background: #f0fff4; color: #38a169; border: 1px solid #9ae6b4; }
+        .photo-status.rejected { background: #fed7d7; color: #e53e3e; border: 1px solid #feb2b2; }
+        .file-input { display: none; }
+        .photo-thumbnail { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; }
     </style>
 </head>
 <body>
@@ -150,9 +151,13 @@
                         <span>👥 Пригласить друга</span>
                         <span style="font-weight: 600; color: #ffd700;">+10✨</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                         <span>🏃 Участие в марафоне</span>
                         <span style="font-weight: 600; color: #ffd700;">+7✨</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>📸 Одобренное фото</span>
+                        <span style="font-weight: 600; color: #ffd700;">+5✨</span>
                     </div>
                 </div>
             </div>
@@ -284,23 +289,6 @@
                     
                     <textarea class="comment-input" id="postCommentText" placeholder="Напишите ваш отзыв о посте здесь..."></textarea>
                     
-                    <!-- Загрузка фото -->
-                    <div class="file-upload" id="photoUploadArea">
-                        <div style="font-size: 48px; margin-bottom: 10px;">📷</div>
-                        <p style="color: #718096; margin-bottom: 10px;">
-                            Перетащите сюда фото или нажмите для загрузки
-                        </p>
-                        <p style="color: #a0aec0; font-size: 14px;">
-                            Максимальный размер: 10MB. Форматы: JPG, PNG, GIF
-                        </p>
-                        <input type="file" id="commentPhotoInput" accept="image/*" style="display: none;">
-                    </div>
-                    
-                    <div id="photoPreview" style="display: none;">
-                        <img id="previewImage" class="preview-image">
-                        <button class="remove-photo" onclick="removePhoto()">❌ Удалить фото</button>
-                    </div>
-                    
                     <button class="btn btn-secondary" onclick="submitPostComment()" id="submitPostCommentBtn">
                         📤 Отправить на модерацию
                     </button>
@@ -309,6 +297,93 @@
                 <div id="postCommentsList" style="margin-top: 20px;">
                     <h4 style="margin-bottom: 15px;">💬 Другие отзывы:</h4>
                     <div class="loading">Загрузка комментариев...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран загрузки фото -->
+        <div id="photosScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
+                <h2 style="text-align: center; margin-bottom: 20px;">📸 Мои работы</h2>
+                
+                <div class="tab-nav">
+                    <button class="tab-btn active" onclick="showPhotosTab('upload')">📤 Загрузить фото</button>
+                    <button class="tab-btn" onclick="showPhotosTab('gallery')">🖼️ Моя галерея</button>
+                </div>
+
+                <div id="photosUploadTab" class="photos-tab">
+                    <div class="photo-upload-area" id="photoUploadArea">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📸</div>
+                        <h3 style="color: #2d3748; margin-bottom: 10px;">Загрузите вашу работу</h3>
+                        <p style="color: #718096; margin-bottom: 20px;">
+                            Покажите ваше творчество! После модерации вы получите <strong>+5✨</strong>
+                        </p>
+                        
+                        <input type="file" id="photoFileInput" class="file-input" accept="image/*">
+                        <button class="btn btn-photo" onclick="document.getElementById('photoFileInput').click()">
+                            📁 Выбрать фото
+                        </button>
+                        
+                        <img id="photoPreview" class="photo-preview" alt="Предпросмотр">
+                        
+                        <div style="margin-top: 15px;">
+                            <textarea class="comment-input" id="photoDescription" placeholder="Описание работы (необязательно)" style="min-height: 60px;"></textarea>
+                        </div>
+                        
+                        <button class="btn btn-secondary" onclick="uploadPhoto()" id="uploadPhotoBtn" style="display: none;">
+                            📤 Отправить на модерацию
+                        </button>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <h4 style="color: #2d3748; margin-bottom: 10px;">📋 Требования к фото:</h4>
+                        <ul style="color: #718096; padding-left: 20px; font-size: 14px;">
+                            <li>Формат: JPG, PNG, WebP</li>
+                            <li>Максимальный размер: 10MB</li>
+                            <li>Фото должно быть вашей работой</li>
+                            <li>Соответствовать тематике поста</li>
+                            <li>Качественное изображение</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div id="photosGalleryTab" class="photos-tab" style="display: none;">
+                    <h3 style="color: #4a5568; margin-bottom: 15px;">🖼️ История загрузок</h3>
+                    <div id="userPhotosList">
+                        <div class="loading">Загрузка фото...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран загрузки фото к посту -->
+        <div id="postPhotosScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('postsScreen')">← Назад</button>
+                <h2 id="postPhotosTitle" style="text-align: center; margin-bottom: 20px;">📸 Показать работу</h2>
+                
+                <div class="photo-upload-area">
+                    <div style="font-size: 48px; margin-bottom: 15px;">🎨</div>
+                    <h3 style="color: #2d3748; margin-bottom: 10px;">Покажите вашу работу к посту</h3>
+                    <p style="color: #718096; margin-bottom: 20px;">
+                        Загрузите фото вашей работы по теме поста. После модерации вы получите <strong>+5✨</strong>
+                    </p>
+                    
+                    <input type="file" id="postPhotoFileInput" class="file-input" accept="image/*">
+                    <button class="btn btn-photo" onclick="document.getElementById('postPhotoFileInput').click()">
+                        📁 Выбрать фото
+                    </button>
+                    
+                    <img id="postPhotoPreview" class="photo-preview" alt="Предпросмотр">
+                    
+                    <div style="margin-top: 15px;">
+                        <textarea class="comment-input" id="postPhotoDescription" placeholder="Описание вашей работы..." style="min-height: 80px;"></textarea>
+                    </div>
+                    
+                    <button class="btn btn-secondary" onclick="uploadPostPhoto()" id="uploadPostPhotoBtn" style="display: none;">
+                        📤 Отправить на модерацию
+                    </button>
                 </div>
             </div>
         </div>
@@ -382,7 +457,8 @@
         let quizAnswers = [];
         let currentQuestionIndex = 0;
         let currentPostId = null;
-        let commentPhotoFile = null;
+        let currentPhotoFile = null;
+        let currentPostPhotoFile = null;
 
         const API_BASE_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000' 
@@ -409,86 +485,23 @@
                 console.log('👤 Using test ID:', currentUserId);
             }
             
-            // Проверяем параметры URL для комментариев
+            // Проверяем параметры URL
             const urlParams = new URLSearchParams(window.location.hash.substring(1));
             const commentPostId = urlParams.get('postId');
-            if (commentPostId && urlParams.get('comment')) {
+            const photosPostId = urlParams.get('postId');
+            
+            if (urlParams.get('comment') && commentPostId) {
                 currentPostId = commentPostId;
                 showScreen('postCommentScreen');
                 loadPostComments(commentPostId);
+            } else if (urlParams.get('photos') && photosPostId) {
+                currentPostId = photosPostId;
+                showScreen('postPhotosScreen');
+                document.getElementById('postPhotosTitle').textContent = '📸 Показать работу к посту';
             }
             
             await loadUserData();
-            setupFileUpload();
             console.log('✅ Приложение инициализировано');
-        }
-
-        // Настройка загрузки файлов
-        function setupFileUpload() {
-            const uploadArea = document.getElementById('photoUploadArea');
-            const fileInput = document.getElementById('commentPhotoInput');
-            
-            // Клик по области загрузки
-            uploadArea.addEventListener('click', () => {
-                fileInput.click();
-            });
-            
-            // Обработка выбора файла
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    handlePhotoSelect(e.target.files[0]);
-                }
-            });
-            
-            // Drag and drop
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('dragover');
-            });
-            
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('dragover');
-            });
-            
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-                if (e.dataTransfer.files.length > 0) {
-                    handlePhotoSelect(e.dataTransfer.files[0]);
-                }
-            });
-        }
-
-        // Обработка выбора фото
-        function handlePhotoSelect(file) {
-            if (!file.type.startsWith('image/')) {
-                showMessage('❌ Пожалуйста, выберите изображение', 'error');
-                return;
-            }
-            
-            if (file.size > 10 * 1024 * 1024) {
-                showMessage('❌ Размер файла не должен превышать 10MB', 'error');
-                return;
-            }
-            
-            commentPhotoFile = file;
-            
-            // Показываем превью
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                document.getElementById('previewImage').src = e.target.result;
-                document.getElementById('photoPreview').style.display = 'block';
-                document.getElementById('photoUploadArea').style.display = 'none';
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // Удаление фото
-        function removePhoto() {
-            commentPhotoFile = null;
-            document.getElementById('photoPreview').style.display = 'none';
-            document.getElementById('photoUploadArea').style.display = 'block';
-            document.getElementById('commentPhotoInput').value = '';
         }
 
         // Загрузка данных пользователя
@@ -544,7 +557,8 @@
                 'shop': { text: '🛒 Магазин', screen: 'shopScreen', class: 'btn-gold' },
                 'invite': { text: '👥 Пригласить друга', screen: 'inviteScreen', class: 'btn-info' },
                 'activities': { text: '📊 Мои активности', screen: 'activitiesScreen', class: 'btn' },
-                'marathon': { text: '🏃 Марафоны', screen: 'marathonsScreen', class: 'btn-warning' }
+                'marathon': { text: '🏃 Марафоны', screen: 'marathonsScreen', class: 'btn-warning' },
+                'photos': { text: '📸 Мои работы', screen: 'photosScreen', class: 'btn-photo' }
             };
 
             // Добавляем кнопку постов канала всегда
@@ -581,11 +595,7 @@
             if (screenId === 'shopScreen') loadShopData();
             if (screenId === 'postsScreen') loadPosts();
             if (screenId === 'marathonsScreen') loadMarathons();
-            if (screenId === 'postCommentScreen') {
-                // Сбрасываем форму комментария
-                document.getElementById('postCommentText').value = '';
-                removePhoto();
-            }
+            if (screenId === 'photosScreen') loadUserPhotos();
         }
 
         // Управление вкладками магазина
@@ -602,6 +612,23 @@
             
             if (tabName === 'purchases') {
                 loadPurchases();
+            }
+        }
+
+        // Управление вкладками фото
+        function showPhotosTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelectorAll('.photos-tab').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            
+            event.target.classList.add('active');
+            document.getElementById('photos' + tabName.charAt(0).toUpperCase() + tabName.slice(1) + 'Tab').style.display = 'block';
+            
+            if (tabName === 'gallery') {
+                loadUserPhotos();
             }
         }
 
@@ -1062,22 +1089,22 @@
                     posts.forEach(post => {
                         const postElement = document.createElement('div');
                         postElement.className = 'post-card';
-                        let mediaInfo = '';
                         
-                        if (post.photo_path) {
-                            mediaInfo = `<div style="margin-bottom: 8px;"><img src="${API_BASE_URL}${post.photo_path}" style="max-width: 100%; border-radius: 8px;"></div>`;
-                        } else if (post.video_path) {
-                            mediaInfo = `<div style="margin-bottom: 8px;">🎥 <em>Есть видео</em></div>`;
+                        let actionButtons = '';
+                        if (post.allow_comments) {
+                            actionButtons += `<button class="btn btn-secondary" onclick="openPostComment('${post.post_id}', '${post.title}')" style="margin-bottom: 5px;">💬 Написать отзыв</button>`;
+                        }
+                        if (post.allow_photos) {
+                            actionButtons += `<button class="btn btn-photo" onclick="openPostPhotos('${post.post_id}', '${post.title}')">📸 Показать работу</button>`;
                         }
                         
                         postElement.innerHTML = `
                             <div style="font-weight: 600; margin-bottom: 8px;">${post.title}</div>
-                            ${mediaInfo}
                             <div style="color: #718096; margin-bottom: 8px;">${post.content || 'Без текста'}</div>
+                            ${post.photo_url ? `<div style="margin-bottom: 8px;">🖼️ <em>Есть фото</em></div>` : ''}
+                            ${post.video_url ? `<div style="margin-bottom: 8px;">🎥 <em>Есть видео</em></div>` : ''}
                             <div style="margin-top: 12px;">
-                                <button class="btn btn-secondary" onclick="openPostComment('${post.post_id}', '${post.title}')">
-                                    💬 Написать отзыв
-                                </button>
+                                ${actionButtons}
                             </div>
                         `;
                         postsList.appendChild(postElement);
@@ -1098,6 +1125,13 @@
             loadPostComments(postId);
         }
 
+        // Открытие загрузки фото к посту
+        function openPostPhotos(postId, postTitle) {
+            currentPostId = postId;
+            document.getElementById('postPhotosTitle').textContent = `📸 Показать работу: ${postTitle}`;
+            showScreen('postPhotosScreen');
+        }
+
         // Загрузка комментариев к посту
         async function loadPostComments(postId) {
             try {
@@ -1111,16 +1145,9 @@
                     data.comments.forEach(comment => {
                         const commentElement = document.createElement('div');
                         commentElement.className = 'activity-item';
-                        let photoHtml = '';
-                        
-                        if (comment.photo_path) {
-                            photoHtml = `<div style="margin: 10px 0;"><img src="${API_BASE_URL}${comment.photo_path}" style="max-width: 100%; border-radius: 8px;"></div>`;
-                        }
-                        
                         commentElement.innerHTML = `
                             <div style="font-weight: 600; margin-bottom: 5px;">${comment.tg_first_name}</div>
                             <div style="color: #718096; margin-bottom: 5px;">${comment.comment_text}</div>
-                            ${photoHtml}
                             <div style="color: #718096; font-size: 12px;">
                                 ${new Date(comment.created_at).toLocaleString('ru-RU')}
                             </div>
@@ -1157,18 +1184,14 @@
             try {
                 showMessage('⏳ Отправляем отзыв...', 'loading');
                 
-                const formData = new FormData();
-                formData.append('userId', currentUserId);
-                formData.append('postId', currentPostId);
-                formData.append('commentText', commentText);
-                
-                if (commentPhotoFile) {
-                    formData.append('commentPhoto', commentPhotoFile);
-                }
-                
                 const response = await fetch(`${API_BASE_URL}/api/webapp/comments`, {
                     method: 'POST',
-                    body: formData
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: currentUserId,
+                        postId: currentPostId,
+                        commentText: commentText
+                    })
                 });
                 
                 const result = await response.json();
@@ -1176,13 +1199,182 @@
                 if (result.success) {
                     showMessage('✅ ' + result.message, 'success');
                     document.getElementById('postCommentText').value = '';
-                    removePhoto();
                     loadPostComments(currentPostId);
                 } else {
                     showMessage(`❌ ${result.error}`, 'error');
                 }
             } catch (error) {
                 showMessage('Ошибка при отправке отзыва', 'error');
+            }
+        }
+
+        // Обработка выбора фото
+        document.getElementById('photoFileInput').addEventListener('change', function(e) {
+            handlePhotoSelect(e, 'photo');
+        });
+
+        document.getElementById('postPhotoFileInput').addEventListener('change', function(e) {
+            handlePhotoSelect(e, 'postPhoto');
+        });
+
+        function handlePhotoSelect(event, type) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Проверка типа файла
+            if (!file.type.startsWith('image/')) {
+                showMessage('Пожалуйста, выберите файл изображения', 'error');
+                return;
+            }
+
+            // Проверка размера файла (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                showMessage('Файл слишком большой. Максимальный размер: 10MB', 'error');
+                return;
+            }
+
+            if (type === 'photo') {
+                currentPhotoFile = file;
+                const preview = document.getElementById('photoPreview');
+                preview.src = URL.createObjectURL(file);
+                preview.style.display = 'block';
+                document.getElementById('uploadPhotoBtn').style.display = 'block';
+            } else {
+                currentPostPhotoFile = file;
+                const preview = document.getElementById('postPhotoPreview');
+                preview.src = URL.createObjectURL(file);
+                preview.style.display = 'block';
+                document.getElementById('uploadPostPhotoBtn').style.display = 'block';
+            }
+        }
+
+        // Загрузка фото
+        async function uploadPhoto() {
+            if (!currentPhotoFile) {
+                showMessage('Пожалуйста, выберите фото', 'error');
+                return;
+            }
+
+            try {
+                showMessage('⏳ Загружаем фото...', 'loading');
+                
+                const formData = new FormData();
+                formData.append('photo', currentPhotoFile);
+                formData.append('userId', currentUserId);
+                formData.append('description', document.getElementById('photoDescription').value);
+
+                const response = await fetch(`${API_BASE_URL}/api/webapp/photos/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('✅ ' + result.message, 'success');
+                    // Сброс формы
+                    document.getElementById('photoFileInput').value = '';
+                    document.getElementById('photoPreview').style.display = 'none';
+                    document.getElementById('photoDescription').value = '';
+                    document.getElementById('uploadPhotoBtn').style.display = 'none';
+                    currentPhotoFile = null;
+                    
+                    // Обновляем данные пользователя
+                    setTimeout(() => loadUserData(), 1000);
+                } else {
+                    showMessage(`❌ ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка при загрузке фото', 'error');
+            }
+        }
+
+        // Загрузка фото к посту
+        async function uploadPostPhoto() {
+            if (!currentPostPhotoFile) {
+                showMessage('Пожалуйста, выберите фото', 'error');
+                return;
+            }
+
+            if (!currentPostId) {
+                showMessage('Ошибка: не выбран пост', 'error');
+                return;
+            }
+
+            try {
+                showMessage('⏳ Загружаем фото...', 'loading');
+                
+                const formData = new FormData();
+                formData.append('photo', currentPostPhotoFile);
+                formData.append('userId', currentUserId);
+                formData.append('postId', currentPostId);
+                formData.append('description', document.getElementById('postPhotoDescription').value);
+
+                const response = await fetch(`${API_BASE_URL}/api/webapp/photos/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('✅ ' + result.message, 'success');
+                    // Сброс формы
+                    document.getElementById('postPhotoFileInput').value = '';
+                    document.getElementById('postPhotoPreview').style.display = 'none';
+                    document.getElementById('postPhotoDescription').value = '';
+                    document.getElementById('uploadPostPhotoBtn').style.display = 'none';
+                    currentPostPhotoFile = null;
+                    
+                    // Возвращаемся к постам
+                    setTimeout(() => showScreen('postsScreen'), 1500);
+                } else {
+                    showMessage(`❌ ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка при загрузке фото', 'error');
+            }
+        }
+
+        // Загрузка фото пользователя
+        async function loadUserPhotos() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/webapp/users/${currentUserId}/photos?status=all`);
+                const data = await response.json();
+                
+                const photosList = document.getElementById('userPhotosList');
+                photosList.innerHTML = '';
+                
+                if (data.photos && data.photos.length > 0) {
+                    data.photos.forEach(photo => {
+                        const photoElement = document.createElement('div');
+                        photoElement.className = 'photo-item';
+                        
+                        let statusBadge = '';
+                        if (photo.is_approved) {
+                            statusBadge = '<div class="photo-status approved">✅ Одобрено +5✨</div>';
+                        } else if (photo.is_rejected) {
+                            statusBadge = `<div class="photo-status rejected">❌ Отклонено: ${photo.rejection_reason || 'Не указана причина'}</div>`;
+                        } else {
+                            statusBadge = '<div class="photo-status pending">⏳ На модерации</div>';
+                        }
+                        
+                        photoElement.innerHTML = `
+                            <img src="${API_BASE_URL}${photo.photo_url}" class="photo-thumbnail" alt="Загруженная работа">
+                            <div style="font-weight: 600; margin-bottom: 5px;">${photo.post_title || 'Общая галерея'}</div>
+                            ${photo.description ? `<div style="color: #718096; margin-bottom: 5px;">${photo.description}</div>` : ''}
+                            ${statusBadge}
+                            <div style="color: #718096; font-size: 12px; margin-top: 5px;">
+                                ${new Date(photo.created_at).toLocaleString('ru-RU')}
+                            </div>
+                        `;
+                        photosList.appendChild(photoElement);
+                    });
+                } else {
+                    photosList.innerHTML = '<div class="error">У вас пока нет загруженных фото</div>';
+                }
+            } catch (error) {
+                document.getElementById('userPhotosList').innerHTML = '<div class="error">Ошибка загрузки фото</div>';
             }
         }
 
@@ -1281,7 +1473,7 @@
                             </div>
                             ${purchase.file_url ? `
                                 <div style="margin-top: 10px;">
-                                    <a href="${API_BASE_URL}${purchase.file_url}" target="_blank" style="color: #667eea; text-decoration: none;">
+                                    <a href="${purchase.file_url}" target="_blank" style="color: #667eea; text-decoration: none;">
                                         📥 Скачать файл
                                     </a>
                                 </div>
