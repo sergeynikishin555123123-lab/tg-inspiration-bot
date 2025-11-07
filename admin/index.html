@@ -89,6 +89,15 @@
         }
         input:checked + .toggle-slider { background-color: #667eea; }
         input:checked + .toggle-slider:before { transform: translateX(26px); }
+        .file-upload { 
+            background: #f7fafc; border: 2px dashed #cbd5e0; border-radius: 8px; padding: 20px; 
+            text-align: center; margin: 10px 0; cursor: pointer; transition: all 0.3s ease;
+        }
+        .file-upload:hover { border-color: #667eea; background: rgba(102,126,234,0.05); }
+        .file-upload.dragover { border-color: #667eea; background: rgba(102,126,234,0.1); }
+        .preview-media { max-width: 100%; max-height: 200px; border-radius: 8px; margin: 10px 0; }
+        .remove-media { background: #f56565; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-left: 10px; }
+        .upload-section { margin: 15px 0; }
     </style>
 </head>
 <body>
@@ -360,14 +369,25 @@
                             <option value="material">Материалы</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>Ссылка на файл:</label>
-                        <input type="url" id="itemFileUrl" class="form-control" required>
+                    
+                    <div class="upload-section">
+                        <label>Файл товара:</label>
+                        <div class="file-upload" id="itemFileUpload">
+                            <div style="font-size: 48px; margin-bottom: 10px;">📁</div>
+                            <p style="color: #718096; margin-bottom: 10px;">
+                                Перетащите файл сюда или нажмите для загрузки
+                            </p>
+                            <p style="color: #a0aec0; font-size: 14px;">
+                                Максимальный размер: 50MB
+                            </p>
+                            <input type="file" id="itemFileInput" style="display: none;">
+                        </div>
+                        <div id="itemFilePreview" style="display: none;">
+                            <span id="itemFileName"></span>
+                            <button type="button" class="remove-media" onclick="removeItemFile()">❌ Удалить</button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Ссылка на превью (опционально):</label>
-                        <input type="url" id="itemPreviewUrl" class="form-control">
-                    </div>
+                    
                     <div class="form-group">
                         <label>Цена (искры):</label>
                         <input type="number" id="itemPrice" class="form-control" value="10" min="1" step="1" required>
@@ -405,13 +425,43 @@
                         <label>Текст публикации:</label>
                         <textarea id="postContent" class="form-control" rows="5"></textarea>
                     </div>
-                    <div class="form-group">
-                        <label>Ссылка на фото (опционально):</label>
-                        <input type="url" id="postPhotoUrl" class="form-control">
+                    
+                    <!-- Загрузка фото -->
+                    <div class="upload-section">
+                        <label>Фото для поста:</label>
+                        <div class="file-upload" id="photoUploadArea">
+                            <div style="font-size: 48px; margin-bottom: 10px;">📷</div>
+                            <p style="color: #718096; margin-bottom: 10px;">
+                                Перетащите фото сюда или нажмите для загрузки
+                            </p>
+                            <p style="color: #a0aec0; font-size: 14px;">
+                                Максимальный размер: 10MB. Форматы: JPG, PNG, GIF
+                            </p>
+                            <input type="file" id="postPhotoInput" accept="image/*" style="display: none;">
+                        </div>
+                        <div id="photoPreview" style="display: none;">
+                            <img id="previewPhoto" class="preview-media">
+                            <button type="button" class="remove-media" onclick="removePhoto()">❌ Удалить фото</button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Ссылка на видео (опционально):</label>
-                        <input type="url" id="postVideoUrl" class="form-control">
+                    
+                    <!-- Загрузка видео -->
+                    <div class="upload-section">
+                        <label>Видео для поста:</label>
+                        <div class="file-upload" id="videoUploadArea">
+                            <div style="font-size: 48px; margin-bottom: 10px;">🎥</div>
+                            <p style="color: #718096; margin-bottom: 10px;">
+                                Перетащите видео сюда или нажмите для загрузки
+                            </p>
+                            <p style="color: #a0aec0; font-size: 14px;">
+                                Максимальный размер: 50MB. Форматы: MP4, MOV, AVI
+                            </p>
+                            <input type="file" id="postVideoInput" accept="video/*" style="display: none;">
+                        </div>
+                        <div id="videoPreview" style="display: none;">
+                            <video id="previewVideo" class="preview-media" controls></video>
+                            <button type="button" class="remove-media" onclick="removeVideo()">❌ Удалить видео</button>
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -567,6 +617,9 @@
 
         let currentQuestions = [];
         let availableQuizzes = [];
+        let postPhotoFile = null;
+        let postVideoFile = null;
+        let itemFile = null;
 
         // Инициализация админ панели
         async function initializeAdmin() {
@@ -606,6 +659,9 @@
                     document.getElementById('postActionSettings').style.display = this.checked ? 'block' : 'none';
                 });
 
+                // Настройка загрузки файлов
+                setupFileUploads();
+
                 // Загружаем данные для выпадающих списков
                 await loadClassesForSelect();
                 await loadQuizzesForSelect();
@@ -613,6 +669,126 @@
             } catch (error) {
                 showMessage('❌ Ошибка доступа к админ панели', 'error');
             }
+        }
+
+        // Настройка загрузки файлов
+        function setupFileUploads() {
+            // Загрузка фото для поста
+            setupFileUpload('postPhotoInput', 'photoUploadArea', handlePhotoSelect, 'photo');
+            
+            // Загрузка видео для поста
+            setupFileUpload('postVideoInput', 'videoUploadArea', handleVideoSelect, 'video');
+            
+            // Загрузка файлов для товаров
+            setupFileUpload('itemFileInput', 'itemFileUpload', handleItemFileSelect, 'file');
+        }
+
+        function setupFileUpload(inputId, areaId, handler, type) {
+            const input = document.getElementById(inputId);
+            const area = document.getElementById(areaId);
+            
+            area.addEventListener('click', () => input.click());
+            
+            input.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handler(e.target.files[0], type);
+                }
+            });
+            
+            // Drag and drop
+            area.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                area.classList.add('dragover');
+            });
+            
+            area.addEventListener('dragleave', () => {
+                area.classList.remove('dragover');
+            });
+            
+            area.addEventListener('drop', (e) => {
+                e.preventDefault();
+                area.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) {
+                    handler(e.dataTransfer.files[0], type);
+                }
+            });
+        }
+
+        function handlePhotoSelect(file, type) {
+            if (!file.type.startsWith('image/')) {
+                showMessage('❌ Пожалуйста, выберите изображение', 'error');
+                return;
+            }
+            
+            if (file.size > 10 * 1024 * 1024) {
+                showMessage('❌ Размер файла не должен превышать 10MB', 'error');
+                return;
+            }
+            
+            postPhotoFile = file;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('previewPhoto').src = e.target.result;
+                document.getElementById('photoPreview').style.display = 'block';
+                document.getElementById('photoUploadArea').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleVideoSelect(file, type) {
+            if (!file.type.startsWith('video/')) {
+                showMessage('❌ Пожалуйста, выберите видео', 'error');
+                return;
+            }
+            
+            if (file.size > 50 * 1024 * 1024) {
+                showMessage('❌ Размер файла не должен превышать 50MB', 'error');
+                return;
+            }
+            
+            postVideoFile = file;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('previewVideo').src = e.target.result;
+                document.getElementById('videoPreview').style.display = 'block';
+                document.getElementById('videoUploadArea').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleItemFileSelect(file, type) {
+            if (file.size > 50 * 1024 * 1024) {
+                showMessage('❌ Размер файла не должен превышать 50MB', 'error');
+                return;
+            }
+            
+            itemFile = file;
+            document.getElementById('itemFileName').textContent = file.name;
+            document.getElementById('itemFilePreview').style.display = 'block';
+            document.getElementById('itemFileUpload').style.display = 'none';
+        }
+
+        function removePhoto() {
+            postPhotoFile = null;
+            document.getElementById('photoPreview').style.display = 'none';
+            document.getElementById('photoUploadArea').style.display = 'block';
+            document.getElementById('postPhotoInput').value = '';
+        }
+
+        function removeVideo() {
+            postVideoFile = null;
+            document.getElementById('videoPreview').style.display = 'none';
+            document.getElementById('videoUploadArea').style.display = 'block';
+            document.getElementById('postVideoInput').value = '';
+        }
+
+        function removeItemFile() {
+            itemFile = null;
+            document.getElementById('itemFilePreview').style.display = 'none';
+            document.getElementById('itemFileUpload').style.display = 'block';
+            document.getElementById('itemFileInput').value = '';
         }
 
         // Загрузка данных вкладки
@@ -1031,21 +1207,29 @@
         async function createShopItem(e) {
             e.preventDefault();
             
-            const formData = {
-                title: document.getElementById('itemTitle').value,
-                description: document.getElementById('itemDescription').value,
-                type: document.getElementById('itemType').value,
-                file_url: document.getElementById('itemFileUrl').value,
-                preview_url: document.getElementById('itemPreviewUrl').value,
-                price: parseFloat(document.getElementById('itemPrice').value),
-                is_active: document.getElementById('itemActive').checked
-            };
+            if (!itemFile) {
+                showMessage('❌ Пожалуйста, загрузите файл товара', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('title', document.getElementById('itemTitle').value);
+            formData.append('description', document.getElementById('itemDescription').value);
+            formData.append('type', document.getElementById('itemType').value);
+            formData.append('price', document.getElementById('itemPrice').value);
+            formData.append('is_active', document.getElementById('itemActive').checked);
+            
+            // Определяем тип файла и добавляем в соответствующее поле
+            if (itemFile.type.startsWith('video/')) {
+                formData.append('video', itemFile);
+            } else {
+                formData.append('file', itemFile);
+            }
 
             try {
                 const response = await fetch(`${API_BASE}/api/admin/shop/items?userId=${currentAdminId}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
+                    body: formData
                 });
 
                 const result = await response.json();
@@ -1053,6 +1237,7 @@
                 if (result.success) {
                     showMessage('✅ Товар успешно добавлен!', 'success');
                     document.getElementById('createShopItemForm').reset();
+                    removeItemFile();
                     loadShopItems();
                 } else {
                     showMessage(`❌ Ошибка: ${result.error}`, 'error');
@@ -1087,28 +1272,37 @@
         async function createPost(e) {
             e.preventDefault();
             
+            if (!postPhotoFile && !postVideoFile) {
+                showMessage('❌ Пожалуйста, загрузите фото или видео для поста', 'error');
+                return;
+            }
+            
             const buttons = Array.from(document.querySelectorAll('input[name="postButtons"]:checked'))
                 .map(checkbox => checkbox.value);
             
-            const formData = {
-                title: document.getElementById('postTitle').value,
-                content: document.getElementById('postContent').value,
-                photo_url: document.getElementById('postPhotoUrl').value || null,
-                video_url: document.getElementById('postVideoUrl').value || null,
-                buttons: buttons,
-                requires_action: document.getElementById('postRequiresAction').checked,
-                action_type: document.getElementById('postRequiresAction').checked ? 
-                    document.getElementById('postActionType').value : null,
-                action_target: document.getElementById('postRequiresAction').checked ? 
-                    document.getElementById('postActionTarget').value : null,
-                allow_comments: document.getElementById('postAllowComments').checked
-            };
+            const formData = new FormData();
+            formData.append('title', document.getElementById('postTitle').value);
+            formData.append('content', document.getElementById('postContent').value);
+            formData.append('buttons', JSON.stringify(buttons));
+            formData.append('requires_action', document.getElementById('postRequiresAction').checked);
+            formData.append('action_type', document.getElementById('postRequiresAction').checked ? 
+                document.getElementById('postActionType').value : '');
+            formData.append('action_target', document.getElementById('postRequiresAction').checked ? 
+                document.getElementById('postActionTarget').value : '');
+            formData.append('allow_comments', document.getElementById('postAllowComments').checked);
+            
+            if (postPhotoFile) {
+                formData.append('photo', postPhotoFile);
+            }
+            
+            if (postVideoFile) {
+                formData.append('video', postVideoFile);
+            }
 
             try {
                 const response = await fetch(`${API_BASE}/api/admin/posts?userId=${currentAdminId}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
+                    body: formData
                 });
 
                 const result = await response.json();
@@ -1116,6 +1310,8 @@
                 if (result.success) {
                     showMessage('✅ ' + result.message, 'success');
                     document.getElementById('createPostForm').reset();
+                    removePhoto();
+                    removeVideo();
                     loadPosts();
                 } else {
                     showMessage(`❌ Ошибка: ${result.error}`, 'error');
@@ -1135,8 +1331,8 @@
                     <div class="post-card">
                         <h4>${post.title}</h4>
                         <p>${post.content || 'Без текста'}</p>
-                        ${post.photo_url ? `<p><strong>Фото:</strong> Есть</p>` : ''}
-                        ${post.video_url ? `<p><strong>Видео:</strong> Есть</p>` : ''}
+                        ${post.photo_path ? `<p><img src="${API_BASE}${post.photo_path}" style="max-width: 100%; border-radius: 8px;"></p>` : ''}
+                        ${post.video_path ? `<p><strong>Видео:</strong> Есть</p>` : ''}
                         <p><strong>Опубликован:</strong> ${post.is_published ? 'Да' : 'Нет'}</p>
                         <p><strong>Комментарии:</strong> ${post.allow_comments ? 'Разрешены' : 'Запрещены'}</p>
                         <p><strong>Действие:</strong> ${post.requires_action ? post.action_type : 'Нет'}</p>
@@ -1161,6 +1357,11 @@
                         <div style="background: white; padding: 10px; border-radius: 5px; margin: 10px 0;">
                             ${comment.comment_text}
                         </div>
+                        ${comment.photo_path ? `
+                            <div style="margin: 10px 0;">
+                                <img src="${API_BASE}${comment.photo_path}" style="max-width: 100%; border-radius: 8px;">
+                            </div>
+                        ` : ''}
                         <div style="color: #718096; font-size: 14px;">
                             ${new Date(comment.created_at).toLocaleString('ru-RU')}
                         </div>
