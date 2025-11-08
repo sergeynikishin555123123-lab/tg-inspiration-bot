@@ -1,4 +1,3 @@
-
 import express from 'express';
 import TelegramBot from 'node-telegram-bot-api';
 import cors from 'cors';
@@ -22,7 +21,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(join(__dirname, 'public')));
 app.use('/admin', express.static(join(__dirname, 'admin')));
 
-console.log('🎨 Мастерская Вдохновения - Запуск полной версии...');
+console.log('🎨 Мастерская Вдохновения - Запуск интегрированной версии...');
 
 // ==================== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ====================
 
@@ -56,7 +55,7 @@ db.serialize(() => {
     name TEXT NOT NULL UNIQUE,
     description TEXT,
     icon TEXT,
-    available_buttons TEXT DEFAULT '["quiz","photo_work","shop","invite","activities"]',
+    available_buttons TEXT DEFAULT '["quiz","shop","invite","activities","marathon"]',
     is_active BOOLEAN DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
@@ -69,7 +68,7 @@ db.serialize(() => {
     description TEXT,
     bonus_type TEXT NOT NULL,
     bonus_value TEXT NOT NULL,
-    available_buttons TEXT DEFAULT '["quiz","photo_work","shop","invite","activities"]',
+    available_buttons TEXT DEFAULT '["quiz","shop","invite","activities","marathon"]',
     is_active BOOLEAN DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (class_id) REFERENCES classes (id)
@@ -82,6 +81,7 @@ db.serialize(() => {
     description TEXT,
     questions TEXT NOT NULL,
     sparks_reward REAL DEFAULT 1,
+    perfect_reward REAL DEFAULT 5,
     cooldown_hours INTEGER DEFAULT 24,
     is_active BOOLEAN DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -94,7 +94,9 @@ db.serialize(() => {
     quiz_id INTEGER NOT NULL,
     completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     score INTEGER NOT NULL,
+    total_questions INTEGER NOT NULL,
     sparks_earned REAL NOT NULL,
+    perfect BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (user_id) REFERENCES users (user_id),
     FOREIGN KEY (quiz_id) REFERENCES quizzes (id),
     UNIQUE(user_id, quiz_id)
@@ -107,6 +109,7 @@ db.serialize(() => {
     activity_type TEXT NOT NULL,
     sparks_earned REAL NOT NULL,
     description TEXT,
+    metadata TEXT DEFAULT '{}',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
@@ -125,10 +128,11 @@ db.serialize(() => {
     title TEXT NOT NULL,
     description TEXT,
     type TEXT NOT NULL DEFAULT 'video',
-    file_url TEXT,
+    file_url TEXT NOT NULL,
     preview_url TEXT,
     price REAL NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
+    created_by INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
@@ -138,7 +142,9 @@ db.serialize(() => {
     user_id INTEGER NOT NULL,
     item_id INTEGER NOT NULL,
     price_paid REAL NOT NULL,
-    purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (user_id),
+    FOREIGN KEY (item_id) REFERENCES shop_items (id)
   )`);
 
   // Таблица постов канала
@@ -155,18 +161,20 @@ db.serialize(() => {
     action_target INTEGER,
     published_by INTEGER,
     published_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    is_published BOOLEAN DEFAULT FALSE
+    is_published BOOLEAN DEFAULT FALSE,
+    allow_comments BOOLEAN DEFAULT TRUE
   )`);
 
-  // Таблица комментариев (отзывов)
+  // Таблица комментариев (отзывов к постам)
   db.run(`CREATE TABLE comments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    post_id TEXT,
+    post_id TEXT NOT NULL,
     comment_text TEXT NOT NULL,
     is_approved BOOLEAN DEFAULT FALSE,
     sparks_awarded BOOLEAN DEFAULT FALSE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (user_id)
   )`);
 
   // Таблица приглашений
@@ -178,6 +186,32 @@ db.serialize(() => {
     is_active BOOLEAN DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(inviter_id, invited_id)
+  )`);
+
+  // Таблица марафонов/челленджей
+  db.run(`CREATE TABLE marathons (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    start_date DATETIME,
+    end_date DATETIME,
+    sparks_reward REAL DEFAULT 7,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  // Таблица участия в марафонах
+  db.run(`CREATE TABLE marathon_participations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    marathon_id INTEGER NOT NULL,
+    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    completed BOOLEAN DEFAULT FALSE,
+    completed_at DATETIME,
+    sparks_earned REAL DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users (user_id),
+    FOREIGN KEY (marathon_id) REFERENCES marathons (id),
+    UNIQUE(user_id, marathon_id)
   )`);
 
   // Заполняем классы (роли)
@@ -240,31 +274,40 @@ db.serialize(() => {
           correctAnswer: 1
         }
       ]),
-      sparks_reward: 2
-    },
-    {
-      title: "🏛️ История искусства",
-      description: "Тест по истории мирового искусства",
-      questions: JSON.stringify([
-        {
-          question: "В какой стране зародился стиль барокко?",
-          options: ["Франция", "Италия", "Испания", "Германия"],
-          correctAnswer: 1
-        }
-      ]),
-      sparks_reward: 3
+      sparks_reward: 1,
+      perfect_reward: 5
     }
   ];
   
-  const quizStmt = db.prepare("INSERT INTO quizzes (title, description, questions, sparks_reward) VALUES (?, ?, ?, ?)");
-  testQuizzes.forEach(quiz => quizStmt.run([quiz.title, quiz.description, quiz.questions, quiz.sparks_reward]));
+  const quizStmt = db.prepare("INSERT INTO quizzes (title, description, questions, sparks_reward, perfect_reward) VALUES (?, ?, ?, ?, ?)");
+  testQuizzes.forEach(quiz => quizStmt.run([quiz.title, quiz.description, quiz.questions, quiz.sparks_reward, quiz.perfect_reward]));
   quizStmt.finalize();
 
   // Добавляем тестовые товары
-  const shopStmt = db.prepare("INSERT INTO shop_items (title, description, type, file_url, preview_url, price) VALUES (?, ?, ?, ?, ?, ?)");
-  shopStmt.run(['🎨 Урок акварели', 'Видеоурок по основам акварели', 'video', 'https://example.com/video1.mp4', 'https://example.com/preview1.jpg', 15]);
-  shopStmt.run(['📚 Основы композиции', 'Как правильно составлять композицию', 'ebook', 'https://example.com/ebook1.pdf', 'https://example.com/preview2.jpg', 10]);
+  const shopStmt = db.prepare("INSERT INTO shop_items (title, description, type, file_url, preview_url, price, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
+  shopStmt.run([
+    '🎨 Урок акварели для начинающих',
+    'Полный видеоурок по основам акварельной живописи. Изучите технику мокрым по мокрому, градиенты и создание текстур.',
+    'video',
+    'https://example.com/videos/watercolor-basics.mp4',
+    'https://example.com/previews/watercolor-preview.jpg',
+    25,
+    process.env.ADMIN_ID
+  ]);
+  shopStmt.run([
+    '📚 Электронная книга "Основы композиции"',
+    'Подробное руководство по созданию гармоничных композиций в живописи и фотографии. 150 страниц полезной информации.',
+    'ebook',
+    'https://example.com/ebooks/composition-basics.pdf',
+    'https://example.com/previews/ebook-preview.jpg',
+    15,
+    process.env.ADMIN_ID
+  ]);
   shopStmt.finalize();
+
+  // Добавляем тестовый марафон
+  db.run(`INSERT INTO marathons (title, description, start_date, end_date, sparks_reward) VALUES (?, ?, ?, ?, ?)`,
+    ['7-дневный челлендж скетчинга', 'Рисуйте по одному скетчу в день в течение недели!', '2024-01-01', '2024-12-31', 7]);
   
   console.log('✅ База данных готова');
 });
@@ -277,6 +320,12 @@ function calculateLevel(sparks) {
   if (sparks >= 150) return 'Знаток';
   if (sparks >= 50) return 'Искатель';
   return 'Ученик';
+}
+
+function awardSparks(userId, sparks, description, activityType = 'other', metadata = {}) {
+  db.run(`UPDATE users SET sparks = sparks + ?, last_active = CURRENT_TIMESTAMP WHERE user_id = ?`, [sparks, userId]);
+  db.run(`INSERT INTO activities (user_id, activity_type, sparks_earned, description, metadata) VALUES (?, ?, ?, ?, ?)`,
+    [userId, activityType, sparks, description, JSON.stringify(metadata)]);
 }
 
 // ==================== MIDDLEWARE ====================
@@ -303,7 +352,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    version: '4.0.0'
+    version: '5.0.0'
   });
 });
 
@@ -400,19 +449,15 @@ app.post('/api/users/register', (req, res) => {
         }
         
         let message = 'Данные обновлены!';
-        let sparksAdded = 0;
         
         if (isNewUser) {
-          sparksAdded = 5;
-          db.run(`UPDATE users SET sparks = sparks + ? WHERE user_id = ?`, [sparksAdded, userId]);
-          db.run(`INSERT INTO activities (user_id, activity_type, sparks_earned, description) VALUES (?, 'registration', ?, 'Регистрация в системе')`, [userId, sparksAdded]);
-          message = 'Регистрация успешна! +5✨';
+          awardSparks(userId, 0, 'Регистрация в системе', 'registration');
+          message = 'Регистрация успешна!';
         }
         
         res.json({ 
           success: true, 
           message: message,
-          sparksAdded: sparksAdded,
           isNewRegistration: isNewUser
         });
       }
@@ -471,7 +516,7 @@ app.get('/api/webapp/quizzes', (req, res) => {
     }));
     
     if (userId) {
-      db.all(`SELECT quiz_id, completed_at FROM quiz_completions WHERE user_id = ?`, [userId], (err, completions) => {
+      db.all(`SELECT quiz_id, completed_at, score, total_questions, perfect FROM quiz_completions WHERE user_id = ?`, [userId], (err, completions) => {
         const quizzesWithStatus = parsedQuizzes.map(quiz => {
           const completion = completions.find(c => c.quiz_id === quiz.id);
           const completedAt = completion ? new Date(completion.completed_at) : null;
@@ -483,7 +528,10 @@ app.get('/api/webapp/quizzes', (req, res) => {
             completed: !!completion,
             completed_at: completion ? completion.completed_at : null,
             can_retake: canRetake,
-            next_available: completedAt ? new Date(completedAt.getTime() + cooldownMs) : null
+            next_available: completedAt ? new Date(completedAt.getTime() + cooldownMs) : null,
+            previous_score: completion ? completion.score : null,
+            previous_total: completion ? completion.total_questions : null,
+            perfect: completion ? completion.perfect : false
           };
         });
         res.json(quizzesWithStatus);
@@ -543,18 +591,30 @@ app.post('/api/webapp/quizzes/:quizId/submit', (req, res) => {
           }
         });
         
-        const passThreshold = Math.ceil(questions.length * 0.6);
-        const sparksEarned = correctAnswers >= passThreshold ? quiz.sparks_reward : 0;
+        const perfect = correctAnswers === questions.length;
+        let sparksEarned = 0;
+        
+        // Начисляем искры по новой системе
+        if (correctAnswers > 0) {
+          sparksEarned = quiz.sparks_reward; // 1 искра за любой правильный ответ
+        }
+        
+        if (perfect) {
+          sparksEarned += quiz.perfect_reward; // +5 искр за идеальное прохождение
+        }
         
         // Сохраняем результат
-        db.run(`INSERT OR REPLACE INTO quiz_completions (user_id, quiz_id, score, sparks_earned) VALUES (?, ?, ?, ?)`,
-          [userId, quizId, correctAnswers, sparksEarned]);
+        db.run(`INSERT OR REPLACE INTO quiz_completions (user_id, quiz_id, score, total_questions, sparks_earned, perfect) VALUES (?, ?, ?, ?, ?, ?)`,
+          [userId, quizId, correctAnswers, questions.length, sparksEarned, perfect]);
         
-        // Обновляем искры пользователя
+        // Начисляем искры
         if (sparksEarned > 0) {
-          db.run(`UPDATE users SET sparks = sparks + ? WHERE user_id = ?`, [sparksEarned, userId]);
-          db.run(`INSERT INTO activities (user_id, activity_type, sparks_earned, description) VALUES (?, 'quiz', ?, ?)`,
-            [userId, sparksEarned, `Квиз: ${quiz.title}`]);
+          awardSparks(userId, sparksEarned, `Квиз: ${quiz.title}`, 'quiz', {
+            quiz_id: quizId,
+            correct_answers: correctAnswers,
+            total_questions: questions.length,
+            perfect: perfect
+          });
         }
         
         res.json({
@@ -562,8 +622,13 @@ app.post('/api/webapp/quizzes/:quizId/submit', (req, res) => {
           correctAnswers,
           totalQuestions: questions.length,
           sparksEarned,
-          passed: sparksEarned > 0,
-          message: sparksEarned > 0 ? `Поздравляем! Вы получили ${sparksEarned}✨` : 'Попробуйте еще раз!'
+          perfect: perfect,
+          passed: correctAnswers > 0,
+          message: perfect ? 
+            `Идеально! Вы получили ${sparksEarned}✨ (${quiz.sparks_reward} + ${quiz.perfect_reward} за идеальный результат)` :
+            correctAnswers > 0 ? 
+              `Поздравляем! Вы получили ${sparksEarned}✨` : 
+              'Попробуйте еще раз!'
         });
       });
     }
@@ -573,8 +638,13 @@ app.post('/api/webapp/quizzes/:quizId/submit', (req, res) => {
 // Получение ссылки для приглашения
 app.get('/api/webapp/invite/:userId', (req, res) => {
   const userId = req.params.userId;
-  const channelUsername = process.env.CHANNEL_USERNAME || 'your_channel_username';
-  const inviteLink = `https://t.me/${channelUsername}?start=invite_${userId}`;
+  const channelUsername = process.env.CHANNEL_USERNAME;
+  
+  if (!channelUsername) {
+    return res.status(500).json({ error: 'Channel username not configured' });
+  }
+  
+  const inviteLink = `https://t.me/${channelUsername.replace('@', '')}?start=invite_${userId}`;
   
   res.json({
     success: true,
@@ -609,65 +679,113 @@ app.post('/api/webapp/invite', (req, res) => {
       function(err) {
         if (err) return res.status(500).json({ error: 'Error creating invitation' });
         
-        // Начисляем бонус пригласившему
-        const bonusSparks = 5;
-        db.run(`UPDATE users SET sparks = sparks + ?, invite_count = invite_count + 1 WHERE user_id = ?`, 
-          [bonusSparks, inviterId]);
+        // Начисляем бонус пригласившему - 10 искр за приглашение
+        awardSparks(inviterId, 10, 'Приглашение друга', 'invitation', {
+          invited_user_id: invitedId,
+          invited_username: invitedUsername
+        });
         
-        db.run(`INSERT INTO activities (user_id, activity_type, sparks_earned, description) VALUES (?, 'invitation', ?, 'Приглашение друга')`,
-          [inviterId, bonusSparks]);
+        // Обновляем счетчик приглашений
+        db.run(`UPDATE users SET invite_count = invite_count + 1 WHERE user_id = ?`, [inviterId]);
         
         res.json({
           success: true,
-          message: 'Друг приглашен! +5✨',
-          sparksEarned: bonusSparks
+          message: 'Друг приглашен! +10✨',
+          sparksEarned: 10
         });
       }
     );
   });
 });
 
-// Отправка комментария (отзыва)
+// Получение постов канала
+app.get('/api/webapp/posts', (req, res) => {
+  const { limit = 20, offset = 0 } = req.query;
+  
+  db.all(`
+    SELECT * FROM channel_posts 
+    WHERE is_published = TRUE 
+    ORDER BY published_at DESC 
+    LIMIT ? OFFSET ?
+  `, [limit, offset], (err, posts) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    
+    const parsedPosts = posts.map(post => ({
+      ...post,
+      buttons: JSON.parse(post.buttons || '[]')
+    }));
+    
+    res.json(parsedPosts);
+  });
+});
+
+// Отправка комментария к посту
 app.post('/api/webapp/comments', (req, res) => {
   const { userId, postId, commentText } = req.body;
   
-  console.log('💬 Отправка комментария от пользователя:', userId);
+  console.log('💬 Отправка комментария к посту:', { userId, postId });
   
-  if (!userId || !commentText) {
-    return res.status(400).json({ error: 'User ID and comment text are required' });
+  if (!userId || !postId || !commentText) {
+    return res.status(400).json({ error: 'User ID, post ID and comment text are required' });
   }
   
-  // Проверяем, комментировал ли сегодня пользователь
-  db.get(`SELECT * FROM comments WHERE user_id = ? AND DATE(created_at) = DATE('now') AND is_approved = TRUE`, 
-    [userId], (err, todayComment) => {
+  // Проверяем, комментировал ли сегодня пользователь этот пост
+  db.get(`SELECT * FROM comments WHERE user_id = ? AND post_id = ? AND DATE(created_at) = DATE('now')`, 
+    [userId, postId], (err, todayComment) => {
     if (err) return res.status(500).json({ error: 'Database error' });
     
     if (todayComment) {
-      return res.json({
-        success: true,
-        message: 'Комментарий отправлен на модерацию (бонус за сегодня уже получен)',
-        sparksAwarded: 0
-      });
+      return res.status(400).json({ error: 'Вы уже оставляли комментарий к этому посту сегодня' });
     }
     
-    // Сохраняем комментарий
-    db.run(`INSERT INTO comments (user_id, post_id, comment_text) VALUES (?, ?, ?)`,
-      [userId, postId, commentText],
-      function(err) {
-        if (err) return res.status(500).json({ error: 'Error saving comment' });
-        
-        res.json({
+    // Проверяем, комментировал ли вообще сегодня пользователь
+    db.get(`SELECT * FROM comments WHERE user_id = ? AND DATE(created_at) = DATE('now') AND is_approved = TRUE`, 
+      [userId], (err, dailyComment) => {
+      if (err) return res.status(500).json({ error: 'Database error' });
+      
+      if (dailyComment) {
+        return res.json({
           success: true,
-          message: 'Комментарий отправлен на модерацию! После одобрения вы получите +1✨',
-          sparksPotential: 1,
-          commentId: this.lastID
+          message: 'Комментарий отправлен на модерацию (бонус за сегодня уже получен)',
+          sparksAwarded: 0
         });
       }
-    );
+      
+      // Сохраняем комментарий
+      db.run(`INSERT INTO comments (user_id, post_id, comment_text) VALUES (?, ?, ?)`,
+        [userId, postId, commentText],
+        function(err) {
+          if (err) return res.status(500).json({ error: 'Error saving comment' });
+          
+          res.json({
+            success: true,
+            message: 'Комментарий отправлен на модерацию! После одобрения вы получите +1✨',
+            sparksPotential: 1,
+            commentId: this.lastID
+          });
+        }
+      );
+    });
   });
 });
 
-// Магазин
+// Получение комментариев к посту
+app.get('/api/webapp/posts/:postId/comments', (req, res) => {
+  const { postId } = req.params;
+  
+  db.all(`
+    SELECT c.*, u.tg_first_name, u.tg_username 
+    FROM comments c 
+    JOIN users u ON c.user_id = u.user_id 
+    WHERE c.post_id = ? AND c.is_approved = TRUE 
+    ORDER BY c.created_at DESC
+  `, [postId], (err, comments) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json({ comments });
+  });
+});
+
+// Магазин - получение товаров
 app.get('/api/webapp/shop/items', (req, res) => {
   db.all("SELECT * FROM shop_items WHERE is_active = TRUE ORDER BY price ASC", (err, items) => {
     if (err) return res.status(500).json({ error: 'Database error' });
@@ -718,18 +836,140 @@ app.post('/api/webapp/shop/purchase', (req, res) => {
               [userId, itemId, item.price], function(err) {
               if (err) return res.status(500).json({ error: 'Ошибка при сохранении покупки' });
               
-              db.run(`INSERT INTO activities (user_id, activity_type, sparks_earned, description) VALUES (?, 'purchase', ?, ?)`,
-                [userId, -item.price, `Покупка: ${item.title}`]);
+              awardSparks(userId, -item.price, `Покупка: ${item.title}`, 'purchase', {
+                item_id: itemId,
+                item_title: item.title
+              });
+              
+              // Отправляем уведомление в Telegram о покупке
+              sendPurchaseNotification(userId, item);
               
               res.json({
                 success: true,
-                message: 'Покупка успешно завершена!',
+                message: 'Покупка успешно завершена! Товар доступен в вашей библиотеке.',
                 item: item,
-                remainingSparks: user.sparks - item.price
+                remainingSparks: user.sparks - item.price,
+                purchaseId: this.lastID
               });
             });
           });
         });
+      });
+    });
+  });
+});
+
+// Получение покупок пользователя
+app.get('/api/webapp/shop/purchases/:userId', (req, res) => {
+  const userId = req.params.userId;
+  
+  db.all(`
+    SELECT p.*, si.title, si.description, si.type, si.file_url, si.preview_url
+    FROM purchases p 
+    JOIN shop_items si ON p.item_id = si.id 
+    WHERE p.user_id = ? 
+    ORDER BY p.purchased_at DESC
+  `, [userId], (err, purchases) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json({ purchases });
+  });
+});
+
+// Марафоны и челленджи
+app.get('/api/webapp/marathons', (req, res) => {
+  const userId = req.query.userId;
+  
+  db.all("SELECT * FROM marathons WHERE is_active = TRUE AND end_date > CURRENT_TIMESTAMP ORDER BY start_date DESC", (err, marathons) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    
+    if (userId) {
+      db.all(`SELECT marathon_id, joined_at, completed FROM marathon_participations WHERE user_id = ?`, [userId], (err, participations) => {
+        const marathonsWithStatus = marathons.map(marathon => {
+          const participation = participations.find(p => p.marathon_id === marathon.id);
+          return {
+            ...marathon,
+            participating: !!participation,
+            joined_at: participation ? participation.joined_at : null,
+            completed: participation ? participation.completed : false
+          };
+        });
+        res.json(marathonsWithStatus);
+      });
+    } else {
+      res.json(marathons);
+    }
+  });
+});
+
+// Участие в марафоне
+app.post('/api/webapp/marathons/:marathonId/join', (req, res) => {
+  const { marathonId } = req.params;
+  const { userId } = req.body;
+  
+  console.log(`🏃 Участие в марафоне ${marathonId} пользователем ${userId}`);
+  
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
+  }
+  
+  db.get('SELECT * FROM marathon_participations WHERE user_id = ? AND marathon_id = ?', [userId, marathonId], (err, existingParticipation) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    
+    if (existingParticipation) {
+      return res.status(400).json({ error: 'Вы уже участвуете в этом марафоне' });
+    }
+    
+    db.run(`INSERT INTO marathon_participations (user_id, marathon_id) VALUES (?, ?)`,
+      [userId, marathonId],
+      function(err) {
+        if (err) return res.status(500).json({ error: 'Error joining marathon' });
+        
+        res.json({
+          success: true,
+          message: 'Вы успешно присоединились к марафону!'
+        });
+      }
+    );
+  });
+});
+
+// Завершение марафона
+app.post('/api/webapp/marathons/:marathonId/complete', (req, res) => {
+  const { marathonId } = req.params;
+  const { userId } = req.body;
+  
+  console.log(`🎯 Завершение марафона ${marathonId} пользователем ${userId}`);
+  
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
+  }
+  
+  db.get('SELECT * FROM marathon_participations WHERE user_id = ? AND marathon_id = ?', [userId, marathonId], (err, participation) => {
+    if (err || !participation) {
+      return res.status(404).json({ error: 'Участие в марафоне не найдено' });
+    }
+    
+    if (participation.completed) {
+      return res.status(400).json({ error: 'Марафон уже завершен' });
+    }
+    
+    db.get('SELECT sparks_reward FROM marathons WHERE id = ?', [marathonId], (err, marathon) => {
+      if (err || !marathon) {
+        return res.status(404).json({ error: 'Марафон не найден' });
+      }
+      
+      // Начисляем 7 искр за участие в марафоне
+      db.run(`UPDATE marathon_participations SET completed = TRUE, completed_at = CURRENT_TIMESTAMP, sparks_earned = ? WHERE user_id = ? AND marathon_id = ?`,
+        [marathon.sparks_reward, userId, marathonId]);
+      
+      awardSparks(userId, marathon.sparks_reward, `Участие в марафоне: ${marathon.title}`, 'marathon', {
+        marathon_id: marathonId
+      });
+      
+      res.json({
+        success: true,
+        message: `Марафон завершен! Вы получили ${marathon.sparks_reward}✨`,
+        sparksEarned: marathon.sparks_reward
       });
     });
   });
@@ -755,12 +995,13 @@ app.get('/api/admin/stats', requireAdmin, (req, res) => {
     new Promise(resolve => db.get('SELECT COUNT(*) as count FROM characters WHERE is_active = TRUE', (err, row) => resolve(row.count))),
     new Promise(resolve => db.get('SELECT COUNT(*) as count FROM shop_items WHERE is_active = TRUE', (err, row) => resolve(row.count))),
     new Promise(resolve => db.get('SELECT SUM(sparks) as total FROM users', (err, row) => resolve(row.total || 0))),
-    new Promise(resolve => db.get('SELECT COUNT(*) as count FROM comments WHERE is_approved = FALSE', (err, row) => resolve(row.count)))
-  ]).then(([totalUsers, activeQuizzes, activeCharacters, shopItems, totalSparks, pendingComments]) => {
+    new Promise(resolve => db.get('SELECT COUNT(*) as count FROM comments WHERE is_approved = FALSE', (err, row) => resolve(row.count))),
+    new Promise(resolve => db.get('SELECT COUNT(*) as count FROM channel_posts WHERE is_published = TRUE', (err, row) => resolve(row.count)))
+  ]).then(([totalUsers, activeQuizzes, activeCharacters, shopItems, totalSparks, pendingComments, totalPosts]) => {
     res.json({
       totalUsers,
       activeToday: totalUsers,
-      totalPosts: 0,
+      totalPosts,
       pendingModeration: pendingComments,
       totalSparks,
       shopItems,
@@ -923,7 +1164,7 @@ app.get('/api/admin/quizzes', requireAdmin, (req, res) => {
 });
 
 app.post('/api/admin/quizzes', requireAdmin, (req, res) => {
-  const { title, description, questions, sparks_reward, cooldown_hours, is_active } = req.body;
+  const { title, description, questions, sparks_reward, perfect_reward, cooldown_hours, is_active } = req.body;
   
   console.log('🎯 Создание квиза:', title);
   
@@ -933,8 +1174,8 @@ app.post('/api/admin/quizzes', requireAdmin, (req, res) => {
   
   const questionsJson = JSON.stringify(questions);
   
-  db.run(`INSERT INTO quizzes (title, description, questions, sparks_reward, cooldown_hours, is_active) VALUES (?, ?, ?, ?, ?, ?)`,
-    [title, description, questionsJson, sparks_reward || 1, cooldown_hours || 24, is_active !== false],
+  db.run(`INSERT INTO quizzes (title, description, questions, sparks_reward, perfect_reward, cooldown_hours, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [title, description, questionsJson, sparks_reward || 1, perfect_reward || 5, cooldown_hours || 24, is_active !== false],
     function(err) {
       if (err) {
         console.error('❌ Error creating quiz:', err);
@@ -963,6 +1204,67 @@ app.delete('/api/admin/quizzes/:id', requireAdmin, (req, res) => {
   });
 });
 
+// Управление магазином
+app.get('/api/admin/shop/items', requireAdmin, (req, res) => {
+  db.all("SELECT * FROM shop_items ORDER BY created_at DESC", (err, items) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json(items);
+  });
+});
+
+app.post('/api/admin/shop/items', requireAdmin, (req, res) => {
+  const { title, description, type, file_url, preview_url, price } = req.body;
+  
+  console.log('🛒 Добавление товара:', title);
+  
+  if (!title || !file_url || !price) {
+    return res.status(400).json({ error: 'Title, file URL and price are required' });
+  }
+  
+  db.run(`INSERT INTO shop_items (title, description, type, file_url, preview_url, price, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [title, description, type, file_url, preview_url, price, req.admin.user_id],
+    function(err) {
+      if (err) return res.status(500).json({ error: 'Error creating item' });
+      
+      res.json({
+        success: true,
+        message: 'Товар успешно добавлен',
+        itemId: this.lastID
+      });
+    }
+  );
+});
+
+app.put('/api/admin/shop/items/:id', requireAdmin, (req, res) => {
+  const { id } = req.params;
+  const { title, description, type, file_url, preview_url, price, is_active } = req.body;
+  
+  db.run(`UPDATE shop_items SET title=?, description=?, type=?, file_url=?, preview_url=?, price=?, is_active=? WHERE id=?`,
+    [title, description, type, file_url, preview_url, price, is_active, id],
+    function(err) {
+      if (err) return res.status(500).json({ error: 'Database error' });
+      
+      res.json({
+        success: true,
+        message: 'Товар успешно обновлен'
+      });
+    }
+  );
+});
+
+app.delete('/api/admin/shop/items/:id', requireAdmin, (req, res) => {
+  const { id } = req.params;
+  
+  db.run(`DELETE FROM shop_items WHERE id = ?`, [id], function(err) {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    
+    res.json({
+      success: true,
+      message: 'Товар удален'
+    });
+  });
+});
+
 // Управление постами
 app.get('/api/admin/posts', requireAdmin, (req, res) => {
   db.all("SELECT * FROM channel_posts ORDER BY created_at DESC", (err, posts) => {
@@ -978,7 +1280,7 @@ app.get('/api/admin/posts', requireAdmin, (req, res) => {
 });
 
 app.post('/api/admin/posts', requireAdmin, (req, res) => {
-  const { title, content, photo_url, video_url, buttons, requires_action, action_type, action_target } = req.body;
+  const { title, content, photo_url, video_url, buttons, requires_action, action_type, action_target, allow_comments } = req.body;
   
   console.log('📝 Создание поста:', title);
   
@@ -988,15 +1290,37 @@ app.post('/api/admin/posts', requireAdmin, (req, res) => {
   
   const buttonsJson = JSON.stringify(buttons || []);
   
-  db.run(`INSERT INTO channel_posts (title, content, photo_url, video_url, buttons, requires_action, action_type, action_target, published_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [title, content, photo_url, video_url, buttonsJson, requires_action, action_type, action_target, req.admin.user_id],
+  db.run(`INSERT INTO channel_posts (title, content, photo_url, video_url, buttons, requires_action, action_type, action_target, published_by, allow_comments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [title, content, photo_url, video_url, buttonsJson, requires_action, action_type, action_target, req.admin.user_id, allow_comments !== false],
     function(err) {
       if (err) return res.status(500).json({ error: 'Error creating post' });
       
-      res.json({
-        success: true,
-        message: 'Пост успешно создан',
-        postId: this.lastID
+      const postId = this.lastID;
+      
+      // Публикуем пост в канал
+      db.get('SELECT * FROM channel_posts WHERE id = ?', [postId], (err, post) => {
+        if (!err && post) {
+          publishToChannel(post).then(() => {
+            res.json({
+              success: true,
+              message: 'Пост успешно создан и опубликован в канал!',
+              postId: postId
+            });
+          }).catch(error => {
+            res.json({
+              success: true,
+              message: 'Пост создан, но возникла ошибка при публикации в канал',
+              postId: postId,
+              warning: error.message
+            });
+          });
+        } else {
+          res.json({
+            success: true,
+            message: 'Пост успешно создан',
+            postId: postId
+          });
+        }
       });
     }
   );
@@ -1005,9 +1329,10 @@ app.post('/api/admin/posts', requireAdmin, (req, res) => {
 // Модерация комментариев
 app.get('/api/admin/comments', requireAdmin, (req, res) => {
   db.all(`
-    SELECT c.*, u.tg_first_name, u.tg_username 
+    SELECT c.*, u.tg_first_name, u.tg_username, cp.title as post_title
     FROM comments c 
     JOIN users u ON c.user_id = u.user_id 
+    LEFT JOIN channel_posts cp ON c.post_id = cp.post_id
     WHERE c.is_approved = FALSE 
     ORDER BY c.created_at DESC
   `, (err, comments) => {
@@ -1026,11 +1351,12 @@ app.post('/api/admin/comments/:id/approve', requireAdmin, (req, res) => {
       return res.status(400).json({ error: 'Comment already approved' });
     }
     
-    // Одобряем комментарий и начисляем искры
+    // Одобряем комментарий и начисляем 1 искру
     db.run(`UPDATE comments SET is_approved = TRUE, sparks_awarded = TRUE WHERE id = ?`, [id]);
-    db.run(`UPDATE users SET sparks = sparks + 1 WHERE user_id = ?`, [comment.user_id]);
-    db.run(`INSERT INTO activities (user_id, activity_type, sparks_earned, description) VALUES (?, 'comment', 1, 'Комментарий одобрен')`,
-      [comment.user_id]);
+    awardSparks(comment.user_id, 1, 'Комментарий к посту одобрен', 'comment', {
+      post_id: comment.post_id,
+      comment_id: id
+    });
     
     res.json({
       success: true,
@@ -1050,6 +1376,37 @@ app.post('/api/admin/comments/:id/reject', requireAdmin, (req, res) => {
       message: 'Комментарий отклонен и удален'
     });
   });
+});
+
+// Управление марафонами
+app.get('/api/admin/marathons', requireAdmin, (req, res) => {
+  db.all("SELECT * FROM marathons ORDER BY created_at DESC", (err, marathons) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json(marathons);
+  });
+});
+
+app.post('/api/admin/marathons', requireAdmin, (req, res) => {
+  const { title, description, start_date, end_date, sparks_reward } = req.body;
+  
+  console.log('🏃 Создание марафона:', title);
+  
+  if (!title) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+  
+  db.run(`INSERT INTO marathons (title, description, start_date, end_date, sparks_reward) VALUES (?, ?, ?, ?, ?)`,
+    [title, description, start_date, end_date, sparks_reward || 7],
+    function(err) {
+      if (err) return res.status(500).json({ error: 'Error creating marathon' });
+      
+      res.json({
+        success: true,
+        message: 'Марафон успешно создан',
+        marathonId: this.lastID
+      });
+    }
+  );
 });
 
 // Управление админами
@@ -1102,79 +1459,43 @@ app.delete('/api/admin/admins/:userId', requireAdmin, (req, res) => {
   });
 });
 
-// ==================== TELEGRAM BOT ====================
+// ==================== TELEGRAM BOT ФУНКЦИИ ====================
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
-// Обработка команды /start с приглашением
-bot.onText(/\/start(?:\s+invite_(\d+))?/, (msg, match) => {
-  const chatId = msg.chat.id;
-  const name = msg.from.first_name || 'Друг';
-  const userId = msg.from.id;
-  const inviteCode = match ? match[1] : null;
-  
-  let welcomeText = `🎨 Привет, ${name}!
-
-Добро пожаловать в **Мастерская Вдохновения**!
-
-✨ Откройте личный кабинет чтобы:
-• 🎯 Проходить квизы и получать искры
-• 👥 Выбрать своего персонажа  
-• 🛒 Покупать обучающие материалы
-• 📊 Отслеживать свой прогресс
-• 💬 Оставлять отзывы и получать награды
-• 👥 Приглашать друзей и получать бонусы
-
-Нажмите кнопку ниже чтобы начать!`;
-  
-  // Обработка приглашения
-  if (inviteCode && inviteCode !== userId.toString()) {
-    db.get('SELECT * FROM users WHERE user_id = ?', [inviteCode], (err, inviter) => {
-      if (!err && inviter) {
-        db.run(`INSERT OR IGNORE INTO invitations (inviter_id, invited_id, invited_username) VALUES (?, ?, ?)`,
-          [inviteCode, userId, msg.from.username],
-          function() {
-            if (this.changes > 0) {
-              db.run(`UPDATE users SET sparks = sparks + 5, invite_count = invite_count + 1 WHERE user_id = ?`, [inviteCode]);
-              db.run(`INSERT INTO activities (user_id, activity_type, sparks_earned, description) VALUES (?, 'invitation', 5, 'Приглашение друга')`, [inviteCode]);
-              console.log(`✅ User ${userId} invited by ${inviteCode}`);
-            }
-          }
-        );
-      }
-    });
-  }
-  
-  const keyboard = {
-    inline_keyboard: [[
-      {
-        text: "📱 Открыть Личный Кабинет",
-        web_app: { url: process.env.APP_URL || `http://localhost:3000` }
-      }
-    ]]
-  };
-
-  bot.sendMessage(chatId, welcomeText, {
-    parse_mode: 'Markdown',
-    reply_markup: keyboard
-  });
-});
-
-// Команда для админов
-bot.onText(/\/admin/, (msg) => {
-  const chatId = msg.chat.id;
-  const userId = msg.from.id;
-  
-  db.get('SELECT * FROM admins WHERE user_id = ?', [userId], (err, admin) => {
-    if (err || !admin) {
-      bot.sendMessage(chatId, '❌ У вас нет прав доступа к админ панели.');
-      return;
-    }
+// Функция отправки уведомления о покупке
+function sendPurchaseNotification(userId, item) {
+  db.get('SELECT * FROM users WHERE user_id = ?', [userId], (err, user) => {
+    if (err || !user) return;
     
-    const adminUrl = `${process.env.APP_URL || 'http://localhost:3000'}/admin?userId=${userId}`;
-    bot.sendMessage(chatId, `🔧 Панель администратора\n\nДоступ: ${admin.role}\n\n${adminUrl}`);
+    const message = `🎉 Поздравляем с покупкой!
+
+Вы приобрели: *${item.title}*
+
+📁 Тип: ${getItemTypeName(item.type)}
+💰 Стоимость: ${item.price}✨
+
+Ваш товар доступен в разделе "Мои покупки" в личном кабинете.
+
+Приятного использования! 🎨`;
+    
+    try {
+      bot.sendMessage(userId, message, { parse_mode: 'Markdown' });
+    } catch (error) {
+      console.log('Cannot send purchase notification:', error.message);
+    }
   });
-});
+}
+
+function getItemTypeName(type) {
+  const types = {
+    'video': 'Видеоурок',
+    'ebook': 'Электронная книга',
+    'course': 'Курс',
+    'material': 'Материалы'
+  };
+  return types[type] || type;
+}
 
 // Публикация постов в канал
 async function publishToChannel(post) {
@@ -1218,6 +1539,14 @@ async function publishToChannel(post) {
       web_app: { url: `${process.env.APP_URL || 'http://localhost:3000'}#invite` }
     }]);
 
+    // Добавляем кнопку "Написать отзыв" если разрешены комментарии
+    if (post.allow_comments) {
+      keyboard.inline_keyboard.push([{
+        text: "💬 Написать отзыв",
+        web_app: { url: `${process.env.APP_URL || 'http://localhost:3000'}#comment?postId=${post.post_id || post.id}` }
+      }]);
+    }
+
     let message;
     if (post.photo_url) {
       message = await bot.sendPhoto(channelId, post.photo_url, {
@@ -1245,8 +1574,83 @@ async function publishToChannel(post) {
     console.log('✅ Post published to channel:', post.title);
   } catch (error) {
     console.error('❌ Error publishing to channel:', error);
+    throw error;
   }
 }
+
+// Обработка команды /start с приглашением
+bot.onText(/\/start(?:\s+invite_(\d+))?/, (msg, match) => {
+  const chatId = msg.chat.id;
+  const name = msg.from.first_name || 'Друг';
+  const userId = msg.from.id;
+  const inviteCode = match ? match[1] : null;
+  
+  let welcomeText = `🎨 Привет, ${name}!
+
+Добро пожаловать в **Мастерская Вдохновения**!
+
+✨ Откройте личный кабинет чтобы:
+• 🎯 Проходить квизы и получать искры
+• 👥 Выбрать своего персонажа  
+• 🛒 Покупать обучающие материалы
+• 📊 Отслеживать свой прогресс
+• 💬 Оставлять отзывы и получать награды
+• 👥 Приглашать друзей и получать бонусы
+• 🏃 Участвовать в марафонах
+
+Нажмите кнопку ниже чтобы начать!`;
+  
+  // Обработка приглашения
+  if (inviteCode && inviteCode !== userId.toString()) {
+    db.get('SELECT * FROM users WHERE user_id = ?', [inviteCode], (err, inviter) => {
+      if (!err && inviter) {
+        db.run(`INSERT OR IGNORE INTO invitations (inviter_id, invited_id, invited_username) VALUES (?, ?, ?)`,
+          [inviteCode, userId, msg.from.username],
+          function() {
+            if (this.changes > 0) {
+              awardSparks(inviteCode, 10, 'Приглашение друга', 'invitation', {
+                invited_user_id: userId,
+                invited_username: msg.from.username
+              });
+              db.run(`UPDATE users SET invite_count = invite_count + 1 WHERE user_id = ?`, [inviteCode]);
+              console.log(`✅ User ${userId} invited by ${inviteCode}`);
+            }
+          }
+        );
+      }
+    });
+  }
+  
+  const keyboard = {
+    inline_keyboard: [[
+      {
+        text: "📱 Открыть Личный Кабинет",
+        web_app: { url: process.env.APP_URL || `http://localhost:3000` }
+      }
+    ]]
+  };
+
+  bot.sendMessage(chatId, welcomeText, {
+    parse_mode: 'Markdown',
+    reply_markup: keyboard
+  });
+});
+
+// Команда для админов
+bot.onText(/\/admin/, (msg) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+  
+  db.get('SELECT * FROM admins WHERE user_id = ?', [userId], (err, admin) => {
+    if (err || !admin) {
+      bot.sendMessage(chatId, '❌ У вас нет прав доступа к админ панели.');
+      return;
+    }
+    
+    const adminUrl = `${process.env.APP_URL || 'http://localhost:3000'}/admin?userId=${userId}`;
+    bot.sendMessage(chatId, `🔧 Панель администратора\n\nДоступ: ${admin.role}\n\n${adminUrl}`);
+  });
+});
 
 // ==================== SERVER START ====================
 
@@ -1257,6 +1661,12 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`📱 Mini App: ${process.env.APP_URL || `http://localhost:${PORT}`}`);
   console.log(`🔧 Admin Panel: ${process.env.APP_URL || `http://localhost:${PORT}`}/admin`);
   console.log('✅ Все системы работают');
+  console.log('📊 Новая система начисления искр:');
+  console.log('   🎯 Квиз (1 правильный ответ): 1 искра');
+  console.log('   ⭐ Идеальный квиз: +5 искр');
+  console.log('   💬 Комментарий к посту: 1 искра (1 раз в день)');
+  console.log('   👥 Приглашение друга: 10 искр');
+  console.log('   🏃 Участие в марафоне: 7 искр');
 }).on('error', (err) => {
   console.error('❌ Server error:', err);
 });
