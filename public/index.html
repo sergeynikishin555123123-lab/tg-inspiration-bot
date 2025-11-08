@@ -35,11 +35,13 @@
         .screen { display: none; }
         .active { display: block; }
         .back-btn { background: #718096; margin-bottom: 15px; }
-        .character-card, .quiz-card, .activity-item {
+        .character-card, .quiz-card, .activity-item, .shop-item, .post-card, .marathon-card {
             background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 15px;
             margin-bottom: 10px; cursor: pointer; transition: all 0.3s ease;
         }
-        .character-card:hover, .quiz-card:hover { border-color: #667eea; transform: translateY(-2px); }
+        .character-card:hover, .quiz-card:hover, .shop-item:hover, .post-card:hover, .marathon-card:hover { 
+            border-color: #667eea; transform: translateY(-2px); 
+        }
         .character-card.selected { border-color: #667eea; background: rgba(102,126,234,0.1); }
         .loading { text-align: center; color: #718096; padding: 20px; }
         .error { background: #fed7d7; color: #c53030; padding: 10px; border-radius: 8px; margin: 10px 0; text-align: center; }
@@ -53,6 +55,13 @@
         .comment-input { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px; min-height: 80px; margin-bottom: 10px; }
         .cooldown-info { background: #fed7d7; color: #c53030; padding: 8px; border-radius: 6px; margin: 8px 0; font-size: 14px; text-align: center; }
         .completed-badge { background: #48bb78; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 10px; }
+        .perfect-badge { background: #ffd700; color: #2d3748; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 5px; }
+        .shop-price { color: #ffd700; font-weight: 600; font-size: 18px; text-align: right; }
+        .purchase-item { border-left: 4px solid #48bb78; }
+        .tab-nav { display: flex; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; }
+        .tab-btn { flex: 1; padding: 12px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; }
+        .tab-btn.active { border-bottom-color: #667eea; color: #667eea; }
+        .reward-info { background: rgba(255,215,0,0.1); border: 1px solid #ffd700; border-radius: 8px; padding: 10px; margin: 10px 0; }
     </style>
 </head>
 <body>
@@ -108,18 +117,36 @@
             <div class="invite-section" id="inviteBonusSection" style="display: none;">
                 <h4 style="color: #2d3748; margin-bottom: 10px;">👥 Пригласите друзей!</h4>
                 <p style="color: #718096; font-size: 14px; margin-bottom: 10px;">
-                    За каждого приглашенного друга вы получаете <strong>+5✨</strong>
+                    За каждого приглашенного друга вы получаете <strong>+10✨</strong>
                 </p>
                 <button class="btn btn-info" onclick="showScreen('inviteScreen')">📤 Пригласить друга</button>
             </div>
 
-            <!-- Секция комментариев -->
-            <div class="card" id="commentSection" style="display: none;">
-                <h3 style="margin-bottom: 15px;">💬 Оставить отзыв</h3>
-                <p style="color: #718096; font-size: 14px; margin-bottom: 10px;">
-                    Поделитесь впечатлениями и получите <strong>+1✨</strong> после модерации
-                </p>
-                <button class="btn btn-secondary" onclick="showScreen('commentScreen')">📝 Написать отзыв</button>
+            <!-- Информация о наградах -->
+            <div class="card">
+                <h3 style="margin-bottom: 15px;">💫 Заработайте искры</h3>
+                <div class="reward-info">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>🎯 Пройти квиз (1 ответ)</span>
+                        <span style="font-weight: 600; color: #ffd700;">+1✨</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>⭐ Идеальный квиз</span>
+                        <span style="font-weight: 600; color: #ffd700;">+5✨</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>💬 Комментарий к посту</span>
+                        <span style="font-weight: 600; color: #ffd700;">+1✨</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>👥 Пригласить друга</span>
+                        <span style="font-weight: 600; color: #ffd700;">+10✨</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>🏃 Участие в марафоне</span>
+                        <span style="font-weight: 600; color: #ffd700;">+7✨</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -198,7 +225,7 @@
                 <h2 style="text-align: center; margin-bottom: 20px;">👥 Пригласить друга</h2>
                 
                 <div class="invite-section">
-                    <h3 style="color: #2d3748; margin-bottom: 15px;">🎁 Получите +5✨ за каждого друга!</h3>
+                    <h3 style="color: #2d3748; margin-bottom: 15px;">🎁 Получите +10✨ за каждого друга!</h3>
                     
                     <p style="color: #718096; margin-bottom: 15px;">
                         Поделитесь этой ссылкой с друзьями. Когда они присоединятся к нашему каналу по вашей ссылке, вы получите бонус!
@@ -225,28 +252,81 @@
             </div>
         </div>
 
-        <!-- Экран комментариев -->
-        <div id="commentScreen" class="screen">
+        <!-- Экран постов канала -->
+        <div id="postsScreen" class="screen">
             <div class="card">
                 <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
-                <h2 style="text-align: center; margin-bottom: 20px;">💬 Написать отзыв</h2>
+                <h2 style="text-align: center; margin-bottom: 20px;">📢 Последние публикации</h2>
+                <div id="postsList" class="loading">
+                    Загрузка постов...
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран комментариев к посту -->
+        <div id="postCommentScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('postsScreen')">← Назад</button>
+                <h2 id="postCommentTitle" style="text-align: center; margin-bottom: 20px;">💬 Отзыв к посту</h2>
                 
                 <div class="comment-section">
                     <p style="color: #718096; text-align: center; margin-bottom: 15px;">
-                        Поделитесь своими впечатлениями о проекте и получите <strong>+1✨</strong> после модерации
+                        Поделитесь впечатлениями о посте и получите <strong>+1✨</strong> после модерации
                     </p>
                     
-                    <textarea class="comment-input" id="commentText" placeholder="Напишите ваш отзыв здесь..."></textarea>
+                    <textarea class="comment-input" id="postCommentText" placeholder="Напишите ваш отзыв о посте здесь..."></textarea>
                     
-                    <button class="btn btn-secondary" onclick="submitComment()" id="submitCommentBtn">
+                    <button class="btn btn-secondary" onclick="submitPostComment()" id="submitPostCommentBtn">
                         📤 Отправить на модерацию
                     </button>
-                    
-                    <div style="margin-top: 15px; padding: 10px; background: rgba(102,126,234,0.05); border-radius: 8px;">
-                        <p style="color: #718096; font-size: 14px; margin: 0;">
-                            💡 <strong>Подсказка:</strong> Пишите развернутые отзывы о том, что вам понравилось, какие квизы были интересными, какие улучшения вы бы предложили.
-                        </p>
+                </div>
+
+                <div id="postCommentsList" style="margin-top: 20px;">
+                    <h4 style="margin-bottom: 15px;">💬 Другие отзывы:</h4>
+                    <div class="loading">Загрузка комментариев...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран магазина -->
+        <div id="shopScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
+                <h2 style="text-align: center; margin-bottom: 20px;">🛒 Магазин</h2>
+                
+                <div style="margin-bottom: 20px; text-align: center;">
+                    <div class="sparks" id="shopSparksCount">✨ 0</div>
+                    <p style="color: #718096; font-size: 14px;">Ваш текущий баланс</p>
+                </div>
+
+                <div class="tab-nav">
+                    <button class="tab-btn active" onclick="showShopTab('items')">🎁 Товары</button>
+                    <button class="tab-btn" onclick="showShopTab('purchases')">📦 Мои покупки</button>
+                </div>
+
+                <div id="shopItemsTab" class="shop-tab">
+                    <h3 style="color: #4a5568; margin-bottom: 15px;">🎁 Доступные товары</h3>
+                    <div id="shopItemsList">
+                        <div class="loading">Загрузка товаров...</div>
                     </div>
+                </div>
+
+                <div id="shopPurchasesTab" class="shop-tab" style="display: none;">
+                    <h3 style="color: #4a5568; margin-bottom: 15px;">📦 История покупок</h3>
+                    <div id="purchasesList">
+                        <div class="loading">Загрузка покупок...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран марафонов -->
+        <div id="marathonsScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
+                <h2 style="text-align: center; margin-bottom: 20px;">🏃 Марафоны и челленджи</h2>
+                <div id="marathonsList" class="loading">
+                    Загрузка марафонов...
                 </div>
             </div>
         </div>
@@ -276,6 +356,7 @@
         let currentQuiz = null;
         let quizAnswers = [];
         let currentQuestionIndex = 0;
+        let currentPostId = null;
 
         const API_BASE_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000' 
@@ -302,6 +383,15 @@
                 console.log('👤 Using test ID:', currentUserId);
             }
             
+            // Проверяем параметры URL для комментариев
+            const urlParams = new URLSearchParams(window.location.hash.substring(1));
+            const commentPostId = urlParams.get('postId');
+            if (commentPostId && urlParams.get('comment')) {
+                currentPostId = commentPostId;
+                showScreen('postCommentScreen');
+                loadPostComments(commentPostId);
+            }
+            
             await loadUserData();
             console.log('✅ Приложение инициализировано');
         }
@@ -322,12 +412,10 @@
                 if (currentUser.is_registered) {
                     document.getElementById('welcomeBlock').style.display = 'none';
                     document.getElementById('inviteBonusSection').style.display = 'block';
-                    document.getElementById('commentSection').style.display = 'block';
                     loadActionButtons(currentUser.available_buttons);
                 } else {
                     document.getElementById('welcomeBlock').style.display = 'block';
                     document.getElementById('inviteBonusSection').style.display = 'none';
-                    document.getElementById('commentSection').style.display = 'none';
                 }
                 
                 hideLoading('userData');
@@ -347,7 +435,8 @@
             document.getElementById('userClass').textContent = user.class || 'Не выбран';
             document.getElementById('userCharacter').textContent = user.character_name || 'Не выбран';
             document.getElementById('inviteCount').textContent = user.invite_count || 0;
-            document.getElementById('inviteSparks').textContent = `${(user.invite_count || 0) * 5}✨`;
+            document.getElementById('inviteSparks').textContent = `${(user.invite_count || 0) * 10}✨`;
+            document.getElementById('shopSparksCount').textContent = `✨ ${user.sparks}`;
         }
 
         // Загрузка кнопок действий
@@ -359,8 +448,16 @@
                 'quiz': { text: '📝 Пройти квиз', screen: 'quizzesScreen', class: 'btn-secondary' },
                 'shop': { text: '🛒 Магазин', screen: 'shopScreen', class: 'btn-gold' },
                 'invite': { text: '👥 Пригласить друга', screen: 'inviteScreen', class: 'btn-info' },
-                'activities': { text: '📊 Мои активности', screen: 'activitiesScreen', class: 'btn' }
+                'activities': { text: '📊 Мои активности', screen: 'activitiesScreen', class: 'btn' },
+                'marathon': { text: '🏃 Марафоны', screen: 'marathonsScreen', class: 'btn-warning' }
             };
+
+            // Добавляем кнопку постов канала всегда
+            const postsButton = document.createElement('button');
+            postsButton.className = 'btn btn-info';
+            postsButton.textContent = '📢 Последние посты';
+            postsButton.onclick = () => showScreen('postsScreen');
+            container.appendChild(postsButton);
 
             availableButtons.forEach(btnKey => {
                 if (buttons[btnKey]) {
@@ -386,6 +483,26 @@
             if (screenId === 'registrationScreen') loadRegistration();
             if (screenId === 'changeCharacterScreen') loadChangeCharacter();
             if (screenId === 'inviteScreen') loadInviteData();
+            if (screenId === 'shopScreen') loadShopData();
+            if (screenId === 'postsScreen') loadPosts();
+            if (screenId === 'marathonsScreen') loadMarathons();
+        }
+
+        // Управление вкладками магазина
+        function showShopTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelectorAll('.shop-tab').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            
+            event.target.classList.add('active');
+            document.getElementById('shop' + tabName.charAt(0).toUpperCase() + tabName.slice(1) + 'Tab').style.display = 'block';
+            
+            if (tabName === 'purchases') {
+                loadPurchases();
+            }
         }
 
         // Загрузка регистрации
@@ -632,7 +749,7 @@
                         
                         if (quiz.completed) {
                             if (quiz.can_retake) {
-                                additionalInfo = `<span class="completed-badge">Пройден</span> Можно пройти снова`;
+                                additionalInfo = `<span class="completed-badge">Пройден</span> ${quiz.perfect ? '<span class="perfect-badge">Идеально!</span>' : ''} Можно пройти снова`;
                             } else {
                                 additionalInfo = `<div class="cooldown-info">Пройден. Следующая попытка: ${new Date(quiz.next_available).toLocaleString('ru-RU')}</div>`;
                             }
@@ -640,9 +757,16 @@
                         
                         quizElement.className = 'quiz-card';
                         quizElement.innerHTML = `
-                            <div style="font-weight: 600; margin-bottom: 8px;">${quiz.title} ${quiz.completed && quiz.can_retake ? '<span class="completed-badge">Пройден</span>' : ''}</div>
+                            <div style="font-weight: 600; margin-bottom: 8px;">
+                                ${quiz.title} 
+                                ${quiz.completed && quiz.can_retake ? '<span class="completed-badge">Пройден</span>' : ''}
+                                ${quiz.perfect ? '<span class="perfect-badge">Идеально!</span>' : ''}
+                            </div>
                             <div style="color: #718096; margin-bottom: 8px;">${quiz.description || 'Описание отсутствует'}</div>
-                            <div style="color: #48bb78; margin-bottom: 8px;">Награда: ${quiz.sparks_reward}✨ (${quiz.questions.length} вопросов)</div>
+                            <div style="color: #48bb78; margin-bottom: 8px;">
+                                Награда: ${quiz.sparks_reward}✨ за любой ответ + ${quiz.perfect_reward}✨ за идеальный результат
+                                (${quiz.questions.length} вопросов)
+                            </div>
                             ${additionalInfo}
                             <div style="margin-top: 12px;">
                                 <button class="btn" onclick="startQuiz(${quiz.id})" 
@@ -774,7 +898,13 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    showMessage(`✅ ${result.message}`, 'success');
+                    if (result.perfect) {
+                        showMessage(`🎉 ${result.message}`, 'success');
+                    } else if (result.passed) {
+                        showMessage(`✅ ${result.message}`, 'success');
+                    } else {
+                        showMessage(`❌ ${result.message}`, 'error');
+                    }
                     showScreen('quizzesScreen');
                     setTimeout(() => loadQuizzes(), 1000);
                     setTimeout(() => loadUserData(), 1500);
@@ -819,9 +949,81 @@
             }
         }
 
-        // Отправка комментария
-        async function submitComment() {
-            const commentText = document.getElementById('commentText').value.trim();
+        // Загрузка постов канала
+        async function loadPosts() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/webapp/posts`);
+                const posts = await response.json();
+                
+                const postsList = document.getElementById('postsList');
+                postsList.innerHTML = '';
+                
+                if (posts.length > 0) {
+                    posts.forEach(post => {
+                        const postElement = document.createElement('div');
+                        postElement.className = 'post-card';
+                        postElement.innerHTML = `
+                            <div style="font-weight: 600; margin-bottom: 8px;">${post.title}</div>
+                            <div style="color: #718096; margin-bottom: 8px;">${post.content || 'Без текста'}</div>
+                            ${post.photo_url ? `<div style="margin-bottom: 8px;">🖼️ <em>Есть фото</em></div>` : ''}
+                            ${post.video_url ? `<div style="margin-bottom: 8px;">🎥 <em>Есть видео</em></div>` : ''}
+                            <div style="margin-top: 12px;">
+                                <button class="btn btn-secondary" onclick="openPostComment('${post.post_id}', '${post.title}')">
+                                    💬 Написать отзыв
+                                </button>
+                            </div>
+                        `;
+                        postsList.appendChild(postElement);
+                    });
+                } else {
+                    postsList.innerHTML = '<div class="error">Публикации пока не доступны</div>';
+                }
+            } catch (error) {
+                document.getElementById('postsList').innerHTML = '<div class="error">Ошибка загрузки постов</div>';
+            }
+        }
+
+        // Открытие комментариев к посту
+        function openPostComment(postId, postTitle) {
+            currentPostId = postId;
+            document.getElementById('postCommentTitle').textContent = `💬 Отзыв к посту: ${postTitle}`;
+            showScreen('postCommentScreen');
+            loadPostComments(postId);
+        }
+
+        // Загрузка комментариев к посту
+        async function loadPostComments(postId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/webapp/posts/${postId}/comments`);
+                const data = await response.json();
+                
+                const commentsList = document.getElementById('postCommentsList');
+                commentsList.innerHTML = '<h4 style="margin-bottom: 15px;">💬 Другие отзывы:</h4>';
+                
+                if (data.comments && data.comments.length > 0) {
+                    data.comments.forEach(comment => {
+                        const commentElement = document.createElement('div');
+                        commentElement.className = 'activity-item';
+                        commentElement.innerHTML = `
+                            <div style="font-weight: 600; margin-bottom: 5px;">${comment.tg_first_name}</div>
+                            <div style="color: #718096; margin-bottom: 5px;">${comment.comment_text}</div>
+                            <div style="color: #718096; font-size: 12px;">
+                                ${new Date(comment.created_at).toLocaleString('ru-RU')}
+                            </div>
+                        `;
+                        commentsList.appendChild(commentElement);
+                    });
+                } else {
+                    commentsList.innerHTML += '<div style="color: #718096; text-align: center; padding: 20px;">Пока нет отзывов</div>';
+                }
+            } catch (error) {
+                document.getElementById('postCommentsList').innerHTML = '<div class="error">Ошибка загрузки комментариев</div>';
+            }
+        }
+
+        // Отправка комментария к посту
+        async function submitPostComment() {
+            const commentText = document.getElementById('postCommentText').value.trim();
             
             if (!commentText) {
                 showMessage('Пожалуйста, напишите отзыв', 'error');
@@ -833,6 +1035,11 @@
                 return;
             }
             
+            if (!currentPostId) {
+                showMessage('Ошибка: не выбран пост', 'error');
+                return;
+            }
+            
             try {
                 showMessage('⏳ Отправляем отзыв...', 'loading');
                 
@@ -841,6 +1048,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         userId: currentUserId,
+                        postId: currentPostId,
                         commentText: commentText
                     })
                 });
@@ -849,13 +1057,225 @@
                 
                 if (result.success) {
                     showMessage('✅ ' + result.message, 'success');
-                    document.getElementById('commentText').value = '';
-                    showScreen('mainScreen');
+                    document.getElementById('postCommentText').value = '';
+                    loadPostComments(currentPostId);
                 } else {
                     showMessage(`❌ ${result.error}`, 'error');
                 }
             } catch (error) {
                 showMessage('Ошибка при отправке отзыва', 'error');
+            }
+        }
+
+        // Загрузка магазина
+        async function loadShopData() {
+            await loadShopItems();
+        }
+
+        // Загрузка товаров магазина
+        async function loadShopItems() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/webapp/shop/items`);
+                const items = await response.json();
+                
+                const itemsList = document.getElementById('shopItemsList');
+                itemsList.innerHTML = '';
+                
+                if (items.length > 0) {
+                    items.forEach(item => {
+                        const itemElement = document.createElement('div');
+                        itemElement.className = 'shop-item';
+                        itemElement.innerHTML = `
+                            <div style="font-weight: 600; margin-bottom: 8px;">${item.title}</div>
+                            <div style="color: #718096; margin-bottom: 8px;">${item.description || 'Описание отсутствует'}</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #718096; font-size: 14px;">${getItemTypeName(item.type)}</span>
+                                <div class="shop-price">${item.price}✨</div>
+                            </div>
+                            <button class="btn" onclick="purchaseItem(${item.id})" 
+                                ${currentUser.sparks < item.price ? 'disabled style="background: #a0aec0;"' : ''}>
+                                Купить
+                            </button>
+                        `;
+                        itemsList.appendChild(itemElement);
+                    });
+                } else {
+                    itemsList.innerHTML = '<div class="error">Товары пока не доступны</div>';
+                }
+            } catch (error) {
+                document.getElementById('shopItemsList').innerHTML = '<div class="error">Ошибка загрузки товаров</div>';
+            }
+        }
+
+        // Покупка товара
+        async function purchaseItem(itemId) {
+            try {
+                showMessage('⏳ Обрабатываем покупку...', 'loading');
+                
+                const response = await fetch(`${API_BASE_URL}/api/webapp/shop/purchase`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: currentUserId,
+                        itemId: itemId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ ' + result.message, 'success');
+                    loadUserData();
+                    loadShopItems();
+                } else {
+                    showMessage(`❌ ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка при покупке товара', 'error');
+            }
+        }
+
+        // Загрузка покупок
+        async function loadPurchases() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/webapp/shop/purchases/${currentUserId}`);
+                const data = await response.json();
+                
+                const purchasesList = document.getElementById('purchasesList');
+                purchasesList.innerHTML = '';
+                
+                if (data.purchases && data.purchases.length > 0) {
+                    data.purchases.forEach(purchase => {
+                        const purchaseElement = document.createElement('div');
+                        purchaseElement.className = 'purchase-item activity-item';
+                        purchaseElement.innerHTML = `
+                            <div style="font-weight: 600; margin-bottom: 5px;">${purchase.title}</div>
+                            <div style="color: #718096; margin-bottom: 5px;">${purchase.description || 'Без описания'}</div>
+                            <div style="color: #718096; font-size: 14px; margin-bottom: 5px;">
+                                📁 ${getItemTypeName(purchase.type)}
+                            </div>
+                            <div style="color: #f56565; font-weight: 600; margin-bottom: 5px;">
+                                -${purchase.price_paid}✨
+                            </div>
+                            <div style="color: #718096; font-size: 12px;">
+                                Куплено: ${new Date(purchase.purchased_at).toLocaleString('ru-RU')}
+                            </div>
+                            ${purchase.file_url ? `
+                                <div style="margin-top: 10px;">
+                                    <a href="${purchase.file_url}" target="_blank" style="color: #667eea; text-decoration: none;">
+                                        📥 Скачать файл
+                                    </a>
+                                </div>
+                            ` : ''}
+                        `;
+                        purchasesList.appendChild(purchaseElement);
+                    });
+                } else {
+                    purchasesList.innerHTML = '<div class="error">У вас пока нет покупок</div>';
+                }
+            } catch (error) {
+                document.getElementById('purchasesList').innerHTML = '<div class="error">Ошибка загрузки покупок</div>';
+            }
+        }
+
+        // Загрузка марафонов
+        async function loadMarathons() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/webapp/marathons?userId=${currentUserId}`);
+                const marathons = await response.json();
+                
+                const marathonsList = document.getElementById('marathonsList');
+                marathonsList.innerHTML = '';
+                
+                if (marathons.length > 0) {
+                    marathons.forEach(marathon => {
+                        const marathonElement = document.createElement('div');
+                        marathonElement.className = 'marathon-card';
+                        
+                        let buttonHtml = '';
+                        if (marathon.participating) {
+                            if (marathon.completed) {
+                                buttonHtml = `<button class="btn" disabled style="background: #48bb78;">✅ Завершено</button>`;
+                            } else {
+                                buttonHtml = `<button class="btn btn-success" onclick="completeMarathon(${marathon.id})">🎯 Завершить марафон</button>`;
+                            }
+                        } else {
+                            buttonHtml = `<button class="btn btn-warning" onclick="joinMarathon(${marathon.id})">🏃 Присоединиться</button>`;
+                        }
+                        
+                        marathonElement.innerHTML = `
+                            <div style="font-weight: 600; margin-bottom: 8px;">${marathon.title}</div>
+                            <div style="color: #718096; margin-bottom: 8px;">${marathon.description || 'Описание отсутствует'}</div>
+                            <div style="color: #48bb78; margin-bottom: 8px;">Награда: ${marathon.sparks_reward}✨</div>
+                            <div style="color: #718096; font-size: 14px; margin-bottom: 12px;">
+                                📅 До: ${new Date(marathon.end_date).toLocaleDateString('ru-RU')}
+                            </div>
+                            ${marathon.participating ? 
+                                `<div style="color: #667eea; margin-bottom: 8px;">✅ Вы участвуете</div>` : 
+                                ''
+                            }
+                            ${buttonHtml}
+                        `;
+                        marathonsList.appendChild(marathonElement);
+                    });
+                } else {
+                    marathonsList.innerHTML = '<div class="error">Марафоны пока не доступны</div>';
+                }
+            } catch (error) {
+                document.getElementById('marathonsList').innerHTML = '<div class="error">Ошибка загрузки марафонов</div>';
+            }
+        }
+
+        // Участие в марафоне
+        async function joinMarathon(marathonId) {
+            try {
+                showMessage('⏳ Присоединяемся к марафону...', 'loading');
+                
+                const response = await fetch(`${API_BASE_URL}/api/webapp/marathons/${marathonId}/join`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: currentUserId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ ' + result.message, 'success');
+                    loadMarathons();
+                } else {
+                    showMessage(`❌ ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка при присоединении к марафону', 'error');
+            }
+        }
+
+        // Завершение марафона
+        async function completeMarathon(marathonId) {
+            try {
+                showMessage('⏳ Завершаем марафон...', 'loading');
+                
+                const response = await fetch(`${API_BASE_URL}/api/webapp/marathons/${marathonId}/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: currentUserId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ ' + result.message, 'success');
+                    loadMarathons();
+                    loadUserData();
+                } else {
+                    showMessage(`❌ ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка при завершении марафона', 'error');
             }
         }
 
@@ -907,6 +1327,16 @@
                 'streak_multiplier': 'Множитель за серию'
             };
             return bonuses[bonusType] || 'Особый бонус';
+        }
+
+        function getItemTypeName(type) {
+            const types = {
+                'video': 'Видеоурок',
+                'ebook': 'Электронная книга',
+                'course': 'Курс',
+                'material': 'Материалы'
+            };
+            return types[type] || type;
         }
 
         function showLoading(containerId) {
