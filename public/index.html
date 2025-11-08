@@ -246,9 +246,180 @@
             </div>
         </div>
 
-        <!-- Остальные экраны (квизы, магазин, посты, марафоны и т.д.) -->
-        <!-- ... остальной код из предыдущей версии без изменений ... -->
+        <!-- Экран смены персонажа -->
+        <div id="changeCharacterScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
+                <h2 style="text-align: center; margin-bottom: 20px;">👥 Смена персонажа</h2>
+                
+                <div id="changeClassesList" class="loading">
+                    Загрузка классов...
+                </div>
+                
+                <div id="changeCharactersSection" style="display: none;">
+                    <h3 style="margin-bottom: 15px;">👥 Выберите нового персонажа:</h3>
+                    <div id="changeCharactersList">
+                        <!-- Персонажи загружаются здесь -->
+                    </div>
+                    <button class="btn" onclick="changeCharacter()" id="changeCharacterBtn" disabled>
+                        🔄 Сменить персонажа
+                    </button>
+                </div>
+            </div>
+        </div>
 
+        <!-- Экран квизов -->
+        <div id="quizzesScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
+                <h2 style="text-align: center; margin-bottom: 20px;">📝 Доступные квизы</h2>
+                
+                <div id="quizzesList" class="loading">
+                    Загрузка квизов...
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран прохождения квиза -->
+        <div id="quizScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('quizzesScreen')">← Назад</button>
+                <h2 id="quizTitle">Квиз</h2>
+                <div id="quizProgress" style="margin-bottom: 15px; color: #718096;"></div>
+                
+                <div id="quizContent">
+                    <!-- Вопросы загружаются здесь -->
+                </div>
+                
+                <button class="btn" onclick="submitQuiz()" id="submitQuizBtn" style="display: none;">✅ Отправить ответы</button>
+            </div>
+        </div>
+
+        <!-- Экран приглашений -->
+        <div id="inviteScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
+                <h2 style="text-align: center; margin-bottom: 20px;">👥 Пригласить друга</h2>
+                
+                <div class="invite-section">
+                    <h3 style="color: #2d3748; margin-bottom: 15px;">🎁 Получите +10✨ за каждого друга!</h3>
+                    <p style="color: #718096; margin-bottom: 15px;">
+                        Поделитесь этой ссылкой с друзьями. Когда они присоединятся к нашему каналу по вашей ссылке, вы получите бонус!
+                    </p>
+                    
+                    <div class="invite-link" id="inviteLink">
+                        Загрузка ссылки...
+                    </div>
+                    
+                    <button class="btn btn-info" onclick="copyInviteLink()">
+                        📋 Скопировать ссылку
+                    </button>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(102,126,234,0.05); border-radius: 8px;">
+                        <h4 style="color: #2d3748; margin-bottom: 10px;">📊 Ваша статистика:</h4>
+                        <p style="color: #718096; margin: 5px 0;">
+                            Приглашено друзей: <strong id="inviteCount">0</strong>
+                        </p>
+                        <p style="color: #718096; margin: 5px 0;">
+                            Получено искр: <strong id="inviteSparks">0✨</strong>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран магазина -->
+        <div id="shopScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
+                <h2 style="text-align: center; margin-bottom: 20px;">🛒 Магазин</h2>
+                
+                <div style="margin-bottom: 20px; text-align: center;">
+                    <div class="sparks" id="shopSparksCount">✨ 0</div>
+                    <p style="color: #718096; font-size: 14px;">Ваш текущий баланс</p>
+                </div>
+                
+                <div class="tab-nav">
+                    <button class="tab-btn active" onclick="showShopTab('items')">🎁 Товары</button>
+                    <button class="tab-btn" onclick="showShopTab('purchases')">📦 Мои покупки</button>
+                </div>
+                
+                <div id="shopItemsTab" class="shop-tab">
+                    <h3 style="color: #4a5568; margin-bottom: 15px;">🎁 Доступные товары</h3>
+                    <div id="shopItemsList">
+                        <div class="loading">Загрузка товаров...</div>
+                    </div>
+                </div>
+                
+                <div id="shopPurchasesTab" class="shop-tab" style="display: none;">
+                    <h3 style="color: #4a5568; margin-bottom: 15px;">📦 История покупок</h3>
+                    <div id="purchasesList">
+                        <div class="loading">Загрузка покупок...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран постов канала -->
+        <div id="postsScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
+                <h2 style="text-align: center; margin-bottom: 20px;">📢 Последние публикации</h2>
+                
+                <div id="postsList" class="loading">
+                    Загрузка постов...
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран комментариев к посту -->
+        <div id="postCommentScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('postsScreen')">← Назад</button>
+                <h2 id="postCommentTitle" style="text-align: center; margin-bottom: 20px;">💬 Отзыв к посту</h2>
+                
+                <div class="comment-section">
+                    <p style="color: #718096; text-align: center; margin-bottom: 15px;">
+                        Поделитесь впечатлениями о посте и получите <strong>+1✨</strong> после модерации
+                    </p>
+                    
+                    <textarea class="comment-input" id="postCommentText" placeholder="Напишите ваш отзыв о посте здесь..."></textarea>
+                    
+                    <button class="btn btn-secondary" onclick="submitPostComment()" id="submitPostCommentBtn">
+                        📤 Отправить на модерацию
+                    </button>
+                </div>
+                
+                <div id="postCommentsList" style="margin-top: 20px;">
+                    <h4 style="margin-bottom: 15px;">💬 Другие отзывы:</h4>
+                    <div class="loading">Загрузка комментариев...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран марафонов -->
+        <div id="marathonsScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
+                <h2 style="text-align: center; margin-bottom: 20px;">🏃 Марафоны и челленджи</h2>
+                
+                <div id="marathonsList" class="loading">
+                    Загрузка марафонов...
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран активностей -->
+        <div id="activitiesScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
+                <h2 style="text-align: center; margin-bottom: 20px;">📊 История активностей</h2>
+                
+                <div id="activitiesList" class="loading">
+                    Загрузка активностей...
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Область для сообщений -->
@@ -320,11 +491,15 @@
         async function loadUserData() {
             try {
                 showLoading('userData');
+                console.log('📱 Загрузка данных пользователя:', currentUserId);
+                
                 const response = await fetch(`${API_BASE_URL}/api/users/${currentUserId}`);
                 if (!response.ok) throw new Error('Network error');
                 
                 const data = await response.json();
                 currentUser = data.user;
+                console.log('✅ Данные пользователя получены:', currentUser);
+                
                 displayUserData(currentUser);
 
                 if (currentUser.is_registered) {
@@ -416,6 +591,7 @@
         // Загрузка фото работ пользователя
         async function loadMyPhotoWorks() {
             try {
+                console.log('🖼 Загрузка фото работ пользователя:', currentUserId);
                 const response = await fetch(`${API_BASE_URL}/api/webapp/user-photo-works/${currentUserId}`);
                 const data = await response.json();
                 const list = document.getElementById('myPhotoWorksList');
@@ -440,6 +616,7 @@
                     list.innerHTML = '<div class="error">У вас пока нет загруженных работ</div>';
                 }
             } catch (error) {
+                console.error('❌ Error loading photo works:', error);
                 document.getElementById('myPhotoWorksList').innerHTML = '<div class="error">Ошибка загрузки работ</div>';
             }
         }
@@ -465,6 +642,7 @@
                 document.getElementById('uploadPhotoBtn').disabled = true;
                 document.getElementById('uploadPhotoBtn').textContent = '⏳ Загрузка...';
 
+                console.log('📸 Отправка фото работы...');
                 const response = await fetch(`${API_BASE_URL}/api/webapp/upload-photo-work`, {
                     method: 'POST',
                     body: formData
@@ -473,13 +651,17 @@
                 const result = await response.json();
                 if (result.success) {
                     showMessage('✅ ' + result.message, 'success');
-                    document.getElementById('createPostForm').reset();
+                    // Сбрасываем форму
+                    document.getElementById('photoFile').value = '';
+                    document.getElementById('photoDescription').value = '';
+                    document.getElementById('photoTheme').value = '';
                     document.getElementById('photoPreview').style.display = 'none';
                     showScreen('mainScreen');
                 } else {
                     showMessage(`❌ ${result.error}`, 'error');
                 }
             } catch (error) {
+                console.error('❌ Error uploading photo:', error);
                 showMessage('Ошибка при загрузке фото', 'error');
             } finally {
                 document.getElementById('uploadPhotoBtn').disabled = false;
@@ -487,7 +669,184 @@
             }
         }
 
+        // Загрузка регистрации
+        async function loadRegistration() {
+            try {
+                console.log('📚 Загрузка классов для регистрации');
+                const response = await fetch(`${API_BASE_URL}/api/webapp/classes`);
+                const classes = await response.json();
+                const classesList = document.getElementById('classesList');
+                
+                classesList.innerHTML = '';
+                classes.forEach(cls => {
+                    const classBtn = document.createElement('button');
+                    classBtn.className = 'btn';
+                    classBtn.style.marginBottom = '10px';
+                    classBtn.innerHTML = `
+                        <div style="font-size: 24px; margin-bottom: 5px;">${cls.icon}</div>
+                        <div style="font-weight: 600;">${cls.name}</div>
+                        <div style="font-size: 14px; color: #718096; margin-top: 5px;">${cls.description}</div>
+                    `;
+                    classBtn.onclick = () => selectClass(cls);
+                    classesList.appendChild(classBtn);
+                });
+            } catch (error) {
+                console.error('❌ Error loading classes:', error);
+                document.getElementById('classesList').innerHTML = '<div class="error">Ошибка загрузки классов</div>';
+            }
+        }
+
+        // Выбор класса
+        async function selectClass(cls) {
+            selectedClass = cls;
+            selectedCharacter = null;
+            document.getElementById('completeBtn').disabled = true;
+
+            try {
+                console.log('👥 Загрузка персонажей для класса:', cls.name);
+                const response = await fetch(`${API_BASE_URL}/api/webapp/characters`);
+                charactersData = await response.json();
+                const charactersList = document.getElementById('charactersList');
+                
+                charactersList.innerHTML = '';
+                const classCharacters = charactersData[cls.name] || [];
+                classCharacters.forEach(character => {
+                    const card = document.createElement('div');
+                    card.className = 'character-card';
+                    card.onclick = () => selectCharacter(character);
+                    card.innerHTML = `
+                        <div style="font-weight: 600; margin-bottom: 5px;">${character.character_name}</div>
+                        <div style="color: #718096; font-size: 14px; margin-bottom: 5px;">${character.description}</div>
+                        <div style="color: #667eea; font-size: 12px;">Бонус: ${getBonusDescription(character.bonus_type, character.bonus_value)}</div>
+                    `;
+                    charactersList.appendChild(card);
+                });
+
+                document.getElementById('charactersSection').style.display = 'block';
+            } catch (error) {
+                console.error('❌ Error loading characters:', error);
+                document.getElementById('charactersList').innerHTML = '<div class="error">Ошибка загрузки персонажей</div>';
+            }
+        }
+
+        // Выбор персонажа
+        function selectCharacter(character) {
+            selectedCharacter = character;
+            document.querySelectorAll('.character-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            document.getElementById('completeBtn').disabled = false;
+        }
+
+        // Завершение регистрации
+        async function completeRegistration() {
+            if (!selectedClass || !selectedCharacter) {
+                showMessage('Пожалуйста, выберите класс и персонажа', 'error');
+                return;
+            }
+
+            try {
+                showMessage('⏳ Сохраняем выбор...', 'loading');
+                console.log('📝 Завершение регистрации:', { selectedClass: selectedClass.name, selectedCharacter: selectedCharacter.id });
+                
+                const response = await fetch(`${API_BASE_URL}/api/users/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: currentUserId,
+                        userClass: selectedClass.name,
+                        characterId: selectedCharacter.id,
+                        tgUsername: tg?.initDataUnsafe?.user?.username || '',
+                        tgFirstName: tg?.initDataUnsafe?.user?.first_name || 'Пользователь'
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showMessage('🎉 ' + result.message, 'success');
+                    showScreen('mainScreen');
+                    setTimeout(() => loadUserData(), 1000);
+                } else {
+                    showMessage(`Ошибка: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('❌ Error completing registration:', error);
+                showMessage('Ошибка при сохранении выбора', 'error');
+            }
+        }
+
+        // Загрузка квизов
+        async function loadQuizzes() {
+            try {
+                console.log('🎯 Загрузка квизов для пользователя:', currentUserId);
+                const response = await fetch(`${API_BASE_URL}/api/webapp/quizzes?userId=${currentUserId}`);
+                const quizzes = await response.json();
+                const quizzesList = document.getElementById('quizzesList');
+                
+                quizzesList.innerHTML = '';
+                if (quizzes.length > 0) {
+                    quizzes.forEach(quiz => {
+                        const quizElement = document.createElement('div');
+                        let additionalInfo = '';
+                        
+                        if (quiz.completed) {
+                            if (quiz.can_retake) {
+                                additionalInfo = `<span class="completed-badge">Пройден</span> ${quiz.perfect ? '<span class="perfect-badge">Идеально!</span>' : ''} Можно пройти снова`;
+                            } else {
+                                additionalInfo = `<div class="cooldown-info">Пройден. Следующая попытка: ${new Date(quiz.next_available).toLocaleString('ru-RU')}</div>`;
+                            }
+                        }
+                        
+                        quizElement.className = 'quiz-card';
+                        quizElement.innerHTML = `
+                            <div style="font-weight: 600; margin-bottom: 8px;">
+                                ${quiz.title}
+                                ${quiz.completed && quiz.can_retake ? '<span class="completed-badge">Пройден</span>' : ''}
+                                ${quiz.perfect ? '<span class="perfect-badge">Идеально!</span>' : ''}
+                            </div>
+                            <div style="color: #718096; margin-bottom: 8px;">${quiz.description || 'Описание отсутствует'}</div>
+                            <div style="color: #48bb78; margin-bottom: 8px;">
+                                Награда: ${quiz.sparks_reward}✨ за любой ответ + ${quiz.perfect_reward}✨ за идеальный результат
+                                (${quiz.questions.length} вопросов)
+                            </div>
+                            ${additionalInfo}
+                            <div style="margin-top: 12px;">
+                                <button class="btn" onclick="startQuiz(${quiz.id})"
+                                    ${!quiz.can_retake && quiz.completed ? 'disabled style="background: #a0aec0;"' : ''}>
+                                    ${quiz.completed ? 'Пройти снова' : 'Начать квиз'}
+                                </button>
+                            </div>
+                        `;
+                        quizzesList.appendChild(quizElement);
+                    });
+                } else {
+                    quizzesList.innerHTML = '<div class="error">Квизы пока не доступны</div>';
+                }
+            } catch (error) {
+                console.error('❌ Error loading quizzes:', error);
+                document.getElementById('quizzesList').innerHTML = '<div class="error">Ошибка загрузки квизов</div>';
+            }
+        }
+
         // Вспомогательные функции
+        function getBonusDescription(bonusType, bonusValue) {
+            const bonuses = {
+                'percent_bonus': `+${bonusValue}% к искрам`,
+                'forgiveness': 'Право на ошибку',
+                'random_gift': 'Случайный подарок',
+                'secret_advice': 'Секретные советы',
+                'series_bonus': 'Бонус за серии',
+                'photo_bonus': 'Бонус за фото',
+                'weekly_surprise': 'Еженедельный сюрприз',
+                'mini_quest': 'Мини-квесты',
+                'quiz_hint': 'Подсказки в квизах',
+                'fact_star': 'Факт-искры',
+                'streak_multiplier': 'Множитель за серию'
+            };
+            return bonuses[bonusType] || 'Особый бонус';
+        }
+
         function showLoading(containerId) {
             const container = document.getElementById(containerId);
             const loading = container.querySelector('.loading');
@@ -519,8 +878,8 @@
             showMessage('✅ Данные обновлены!', 'success');
         }
 
-        // Остальные функции (регистрация, квизы, магазин и т.д.)
-        // ... остальной JavaScript код из предыдущей версии без изменений ...
+        // Остальные функции для других экранов (квизы, магазин и т.д.)
+        // ... они будут аналогичны предыдущей версии, но с улучшенной обработкой ошибок
 
         // Запуск приложения
         document.addEventListener('DOMContentLoaded', initializeApp);
