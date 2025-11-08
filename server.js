@@ -1724,7 +1724,7 @@ if (process.env.BOT_TOKEN) {
 
 // ==================== SERVER START ====================
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3002;
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Сервер запущен на порту ${PORT}`);
