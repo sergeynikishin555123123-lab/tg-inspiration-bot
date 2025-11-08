@@ -1770,16 +1770,102 @@ if (process.env.BOT_TOKEN) {
   console.log('⚠️ Telegram Bot Token не указан, бот не запущен');
 }
 
+// ==================== ФУНКЦИЯ ОСВОБОЖДЕНИЯ ПОРТА ====================
+
+import { exec } from 'child_process';
+
+function killProcessOnPort(port) {
+  return new Promise((resolve) => {
+    console.log(`🔍 Проверяем порт ${port}...`);
+    
+    // Для Linux/Mac
+    if (process.platform !== 'win32') {
+      exec(`lsof -ti:${port}`, (err, stdout) => {
+        if (err || !stdout) {
+          console.log(`✅ Порт ${port} свободен`);
+          resolve(false);
+          return;
+        }
+        
+        const pids = stdout.trim().split('\n').filter(pid => pid);
+        if (pids.length === 0) {
+          console.log(`✅ Порт ${port} свободен`);
+          resolve(false);
+          return;
+        }
+        
+        console.log(`🛑 Найдены процессы на порту ${port}: ${pids.join(', ')}`);
+        
+        pids.forEach(pid => {
+          exec(`kill -9 ${pid}`, (killErr) => {
+            if (!killErr) {
+              console.log(`✅ Процесс ${pid} остановлен`);
+            } else {
+              console.log(`⚠️ Не удалось остановить процесс ${pid}`);
+            }
+          });
+        });
+        resolve(true);
+      });
+    } else {
+      // Для Windows
+      exec(`netstat -ano | findstr :${port}`, (err, stdout) => {
+        if (err || !stdout) {
+          console.log(`✅ Порт ${port} свободен`);
+          resolve(false);
+          return;
+        }
+        
+        const lines = stdout.split('\n').filter(line => line.includes(`:${port}`));
+        if (lines.length === 0) {
+          console.log(`✅ Порт ${port} свободен`);
+          resolve(false);
+          return;
+        }
+        
+        console.log(`🛑 Найдены процессы на порту ${port}`);
+        
+        lines.forEach(line => {
+          const match = line.trim().split(/\s+/);
+          if (match.length >= 5) {
+            const pid = match[4];
+            exec(`taskkill /PID ${pid} /F`, (killErr) => {
+              if (!killErr) {
+                console.log(`✅ Процесс ${pid} остановлен`);
+              } else {
+                console.log(`⚠️ Не удалось остановить процесс ${pid}`);
+              }
+            });
+          }
+        });
+        resolve(true);
+      });
+    }
+  });
+}
+
 // ==================== ЗАПУСК СЕРВЕРА ====================
 
 async function startServer() {
   try {
-    // Ищем свободный порт
     const startPort = parseInt(process.env.PORT) || 3000;
+    
+    console.log(`🚀 Запуск сервера...`);
+    
+    // Пытаемся освободить порт если он занят
+    const killed = await killProcessOnPort(startPort);
+    
+    // Ждем немного если что-то останавливали
+    if (killed) {
+      console.log('⏳ Ждем освобождения порта...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    
+    // Ищем свободный порт
     const PORT = await findFreePort(startPort, 50);
     
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Сервер запущен на порту ${PORT}`);
+      console.log(`🎉 Сервер запущен на порту ${PORT}`);
       console.log(`📱 Mini App: ${process.env.APP_URL || `http://localhost:${PORT}`}`);
       console.log(`🔧 Admin Panel: ${process.env.APP_URL || `http://localhost:${PORT}`}/admin`);
       console.log('✅ Все системы работают');
