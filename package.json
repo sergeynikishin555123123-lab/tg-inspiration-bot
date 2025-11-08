@@ -1,7 +1,7 @@
 {
   "name": "tg-inspiration-bot",
-  "version": "4.0.0",
-  "description": "Telegram bot with Mini App for inspiration workshop - Complete Version",
+  "version": "5.0.0",
+  "description": "Telegram bot with Mini App for inspiration workshop - Complete Integrated Version",
   "type": "module",
   "main": "server.js",
   "scripts": {
@@ -21,7 +21,9 @@
     "telegram",
     "bot",
     "mini-app",
-    "inspiration"
+    "inspiration",
+    "shop",
+    "channel"
   ],
   "author": "Мастерская Вдохновения",
   "license": "MIT"
