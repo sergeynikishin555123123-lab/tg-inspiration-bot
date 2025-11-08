@@ -36,8 +36,8 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, 'photo-' + uniqueSuffix + ext);
+    const ext = file.originalname.split('.').pop();
+    cb(null, 'photo-' + uniqueSuffix + '.' + ext);
   }
 });
 
@@ -694,7 +694,7 @@ app.post('/api/webapp/photos/upload', upload.single('photo'), async (req, res) =
   
   try {
     const photoPath = req.file.path;
-    const previewPath = join(previewsDir, 'preview-' + path.basename(photoPath));
+    const previewPath = join(previewsDir, 'preview-' + req.file.filename);
     
     // Создаем превью
     await createPreview(photoPath, previewPath);
@@ -739,8 +739,8 @@ app.get('/api/webapp/photos/:userId', (req, res) => {
     // Заменяем пути на URL
     const photosWithUrls = photos.map(photo => ({
       ...photo,
-      photo_url: `/uploads/photos/${path.basename(photo.photo_path)}`,
-      preview_url: `/uploads/previews/${path.basename(photo.photo_path).replace('photo-', 'preview-')}`
+      photo_url: `/uploads/photos/${photo.photo_path.split('/').pop()}`,
+      preview_url: `/uploads/previews/${photo.photo_path.split('/').pop().replace('photo-', 'preview-')}`
     }));
     
     res.json({ photos: photosWithUrls });
@@ -825,7 +825,7 @@ app.get('/api/webapp/posts', (req, res) => {
     const parsedPosts = posts.map(post => ({
       ...post,
       buttons: JSON.parse(post.buttons || '[]'),
-      photo_url: post.photo_path ? `/uploads/photos/${path.basename(post.photo_path)}` : null
+      photo_url: post.photo_path ? `/uploads/photos/${post.photo_path.split('/').pop()}` : null
     }));
     
     res.json(parsedPosts);
@@ -905,8 +905,8 @@ app.get('/api/webapp/shop/items', (req, res) => {
     
     const itemsWithUrls = items.map(item => ({
       ...item,
-      file_url: `/uploads/photos/${path.basename(item.file_path)}`,
-      preview_url: item.preview_path ? `/uploads/previews/${path.basename(item.preview_path)}` : null
+      file_url: `/uploads/photos/${item.file_path.split('/').pop()}`,
+      preview_url: item.preview_path ? `/uploads/previews/${item.preview_path.split('/').pop()}` : null
     }));
     
     res.json(itemsWithUrls);
@@ -961,15 +961,12 @@ app.post('/api/webapp/shop/purchase', (req, res) => {
                 item_title: item.title
               });
               
-              // Отправляем уведомление в Telegram о покупке
-              sendPurchaseNotification(userId, item);
-              
               res.json({
                 success: true,
                 message: 'Покупка успешно завершена! Товар доступен в вашей библиотеке.',
                 item: {
                   ...item,
-                  file_url: `/uploads/photos/${path.basename(item.file_path)}`
+                  file_url: `/uploads/photos/${item.file_path.split('/').pop()}`
                 },
                 remainingSparks: user.sparks - item.price,
                 purchaseId: this.lastID
@@ -997,8 +994,8 @@ app.get('/api/webapp/shop/purchases/:userId', (req, res) => {
     
     const purchasesWithUrls = purchases.map(purchase => ({
       ...purchase,
-      file_url: `/uploads/photos/${path.basename(purchase.file_path)}`,
-      preview_url: purchase.preview_path ? `/uploads/previews/${path.basename(purchase.preview_path)}` : null
+      file_url: `/uploads/photos/${purchase.file_path.split('/').pop()}`,
+      preview_url: purchase.preview_path ? `/uploads/previews/${purchase.preview_path.split('/').pop()}` : null
     }));
     
     res.json({ purchases: purchasesWithUrls });
@@ -1349,7 +1346,7 @@ app.post('/api/admin/shop/items', upload.single('photo'), requireAdmin, async (r
   
   try {
     const filePath = req.file.path;
-    const previewPath = join(previewsDir, 'preview-' + path.basename(filePath));
+    const previewPath = join(previewsDir, 'preview-' + req.file.filename);
     
     // Создаем превью
     await createPreview(filePath, previewPath);
@@ -1379,8 +1376,8 @@ app.get('/api/admin/shop/items', requireAdmin, (req, res) => {
     
     const itemsWithUrls = items.map(item => ({
       ...item,
-      file_url: `/uploads/photos/${path.basename(item.file_path)}`,
-      preview_url: item.preview_path ? `/uploads/previews/${path.basename(item.preview_path)}` : null
+      file_url: `/uploads/photos/${item.file_path.split('/').pop()}`,
+      preview_url: item.preview_path ? `/uploads/previews/${item.preview_path.split('/').pop()}` : null
     }));
     
     res.json(itemsWithUrls);
@@ -1497,7 +1494,7 @@ app.get('/api/admin/posts', requireAdmin, (req, res) => {
     const parsed = posts.map(post => ({
       ...post,
       buttons: JSON.parse(post.buttons || '[]'),
-      photo_url: post.photo_path ? `/uploads/photos/${path.basename(post.photo_path)}` : null
+      photo_url: post.photo_path ? `/uploads/photos/${post.photo_path.split('/').pop()}` : null
     }));
     
     res.json(parsed);
@@ -1570,8 +1567,8 @@ app.get('/api/admin/photos', requireAdmin, (req, res) => {
     
     const photosWithUrls = photos.map(photo => ({
       ...photo,
-      photo_url: `/uploads/photos/${path.basename(photo.photo_path)}`,
-      preview_url: `/uploads/previews/${path.basename(photo.photo_path).replace('photo-', 'preview-')}`
+      photo_url: `/uploads/photos/${photo.photo_path.split('/').pop()}`,
+      preview_url: `/uploads/previews/${photo.photo_path.split('/').pop().replace('photo-', 'preview-')}`
     }));
     
     res.json(photosWithUrls);
@@ -1613,7 +1610,7 @@ app.post('/api/admin/photos/:id/reject', requireAdmin, (req, res) => {
       fs.unlinkSync(photo.photo_path);
       
       // Удаляем превью если существует
-      const previewPath = join(previewsDir, 'preview-' + path.basename(photo.photo_path));
+      const previewPath = join(previewsDir, 'preview-' + photo.photo_path.split('/').pop());
       if (fs.existsSync(previewPath)) {
         fs.unlinkSync(previewPath);
       }
@@ -1714,14 +1711,16 @@ app.delete('/api/admin/admins/:userId', requireAdmin, (req, res) => {
 
 // ==================== TELEGRAM BOT ФУНКЦИИ ====================
 
-const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
+let bot;
+if (process.env.BOT_TOKEN) {
+  bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
-// Функция отправки уведомления о покупке
-function sendPurchaseNotification(userId, item) {
-  db.get('SELECT * FROM users WHERE user_id = ?', [userId], (err, user) => {
-    if (err || !user) return;
-    
-    const message = `🎉 Поздравляем с покупкой!
+  // Функция отправки уведомления о покупке
+  function sendPurchaseNotification(userId, item) {
+    db.get('SELECT * FROM users WHERE user_id = ?', [userId], (err, user) => {
+      if (err || !user) return;
+      
+      const message = `🎉 Поздравляем с покупкой!
 
 Вы приобрели: *${item.title}*
 
@@ -1731,117 +1730,117 @@ function sendPurchaseNotification(userId, item) {
 Ваш товар доступен в разделе "Мои покупки" в личном кабинете.
 
 Приятного использования! 🎨`;
-    
-    try {
-      bot.sendMessage(userId, message, { parse_mode: 'Markdown' });
-    } catch (error) {
-      console.log('Cannot send purchase notification:', error.message);
-    }
-  });
-}
-
-function getItemTypeName(type) {
-  const types = {
-    'photo': 'Фотография',
-    'ebook': 'Электронная книга',
-    'course': 'Курс',
-    'material': 'Материалы'
-  };
-  return types[type] || type;
-}
-
-// Публикация постов в канал
-async function publishToChannel(post) {
-  try {
-    const channelId = process.env.CHANNEL_USERNAME;
-    if (!channelId) {
-      console.log('❌ CHANNEL_USERNAME not set');
-      return;
-    }
-
-    let caption = `*${post.title}*`;
-    if (post.content) {
-      caption += `\n\n${post.content}`;
-    }
-
-    const buttons = JSON.parse(post.buttons || '[]');
-    const keyboard = {
-      inline_keyboard: []
-    };
-
-    // Добавляем кнопки из поста
-    buttons.forEach(button => {
-      keyboard.inline_keyboard.push([{
-        text: button.text,
-        url: button.url
-      }]);
+      
+      try {
+        bot.sendMessage(userId, message, { parse_mode: 'Markdown' });
+      } catch (error) {
+        console.log('Cannot send purchase notification:', error.message);
+      }
     });
-
-    // Добавляем кнопку "Пройти квиз" если требуется действие
-    if (post.requires_action && post.action_type === 'quiz') {
-      const appUrl = process.env.APP_URL || 'http://localhost:3000';
-      keyboard.inline_keyboard.push([{
-        text: "🎯 Пройти квиз",
-        web_app: { url: `${appUrl}#quizzes` }
-      }]);
-    }
-
-    // Добавляем кнопку "Пригласить друга"
-    keyboard.inline_keyboard.push([{
-      text: "👥 Пригласить друга",
-      web_app: { url: `${process.env.APP_URL || 'http://localhost:3000'}#invite` }
-    }]);
-
-    // Добавляем кнопку "Написать отзыв" если разрешены комментарии
-    if (post.allow_comments) {
-      keyboard.inline_keyboard.push([{
-        text: "💬 Написать отзыв",
-        web_app: { url: `${process.env.APP_URL || 'http://localhost:3000'}#comment?postId=${post.post_id || post.id}` }
-      }]);
-    }
-
-    // Добавляем кнопку "Прикрепить фото" если разрешены фото
-    if (post.allow_photos) {
-      keyboard.inline_keyboard.push([{
-        text: "📸 Прикрепить фото",
-        web_app: { url: `${process.env.APP_URL || 'http://localhost:3000'}#photos?postId=${post.post_id || post.id}` }
-      }]);
-    }
-
-    let message;
-    if (post.photo_path) {
-      const photoPath = join(__dirname, post.photo_path);
-      message = await bot.sendPhoto(channelId, photoPath, {
-        caption: caption,
-        parse_mode: 'Markdown',
-        reply_markup: keyboard
-      });
-    } else {
-      message = await bot.sendMessage(channelId, caption, {
-        parse_mode: 'Markdown',
-        reply_markup: keyboard
-      });
-    }
-
-    // Сохраняем ID поста в канале
-    db.run('UPDATE channel_posts SET post_id = ?, is_published = TRUE WHERE id = ?', 
-      [message.message_id.toString(), post.id]);
-
-    console.log('✅ Post published to channel:', post.title);
-  } catch (error) {
-    console.error('❌ Error publishing to channel:', error);
-    throw error;
   }
-}
 
-// Обработка команды /start с приглашением
-bot.onText(/\/start(?:\s+invite_(\d+))?/, (msg, match) => {
-  const chatId = msg.chat.id;
-  const name = msg.from.first_name || 'Друг';
-  const userId = msg.from.id;
-  const inviteCode = match ? match[1] : null;
-  
-  let welcomeText = `🎨 Привет, ${name}!
+  function getItemTypeName(type) {
+    const types = {
+      'photo': 'Фотография',
+      'ebook': 'Электронная книга',
+      'course': 'Курс',
+      'material': 'Материалы'
+    };
+    return types[type] || type;
+  }
+
+  // Публикация постов в канал
+  async function publishToChannel(post) {
+    try {
+      const channelId = process.env.CHANNEL_USERNAME;
+      if (!channelId) {
+        console.log('❌ CHANNEL_USERNAME not set');
+        return;
+      }
+
+      let caption = `*${post.title}*`;
+      if (post.content) {
+        caption += `\n\n${post.content}`;
+      }
+
+      const buttons = JSON.parse(post.buttons || '[]');
+      const keyboard = {
+        inline_keyboard: []
+      };
+
+      // Добавляем кнопки из поста
+      buttons.forEach(button => {
+        keyboard.inline_keyboard.push([{
+          text: button.text,
+          url: button.url
+        }]);
+      });
+
+      // Добавляем кнопку "Пройти квиз" если требуется действие
+      if (post.requires_action && post.action_type === 'quiz') {
+        const appUrl = process.env.APP_URL || 'http://localhost:3000';
+        keyboard.inline_keyboard.push([{
+          text: "🎯 Пройти квиз",
+          web_app: { url: `${appUrl}#quizzes` }
+        }]);
+      }
+
+      // Добавляем кнопку "Пригласить друга"
+      keyboard.inline_keyboard.push([{
+        text: "👥 Пригласить друга",
+        web_app: { url: `${process.env.APP_URL || 'http://localhost:3000'}#invite` }
+      }]);
+
+      // Добавляем кнопку "Написать отзыв" если разрешены комментарии
+      if (post.allow_comments) {
+        keyboard.inline_keyboard.push([{
+          text: "💬 Написать отзыв",
+          web_app: { url: `${process.env.APP_URL || 'http://localhost:3000'}#comment?postId=${post.post_id || post.id}` }
+        }]);
+      }
+
+      // Добавляем кнопку "Прикрепить фото" если разрешены фото
+      if (post.allow_photos) {
+        keyboard.inline_keyboard.push([{
+          text: "📸 Прикрепить фото",
+          web_app: { url: `${process.env.APP_URL || 'http://localhost:3000'}#photos?postId=${post.post_id || post.id}` }
+        }]);
+      }
+
+      let message;
+      if (post.photo_path) {
+        const photoPath = join(__dirname, post.photo_path);
+        message = await bot.sendPhoto(channelId, photoPath, {
+          caption: caption,
+          parse_mode: 'Markdown',
+          reply_markup: keyboard
+        });
+      } else {
+        message = await bot.sendMessage(channelId, caption, {
+          parse_mode: 'Markdown',
+          reply_markup: keyboard
+        });
+      }
+
+      // Сохраняем ID поста в канале
+      db.run('UPDATE channel_posts SET post_id = ?, is_published = TRUE WHERE id = ?', 
+        [message.message_id.toString(), post.id]);
+
+      console.log('✅ Post published to channel:', post.title);
+    } catch (error) {
+      console.error('❌ Error publishing to channel:', error);
+      throw error;
+    }
+  }
+
+  // Обработка команды /start с приглашением
+  bot.onText(/\/start(?:\s+invite_(\d+))?/, (msg, match) => {
+    const chatId = msg.chat.id;
+    const name = msg.from.first_name || 'Друг';
+    const userId = msg.from.id;
+    const inviteCode = match ? match[1] : null;
+    
+    let welcomeText = `🎨 Привет, ${name}!
 
 Добро пожаловать в **Мастерская Вдохновения**!
 
@@ -1856,58 +1855,61 @@ bot.onText(/\/start(?:\s+invite_(\d+))?/, (msg, match) => {
 • 📸 Прикреплять фото и получать искры
 
 Нажмите кнопку ниже чтобы начать!`;
-  
-  // Обработка приглашения
-  if (inviteCode && inviteCode !== userId.toString()) {
-    db.get('SELECT * FROM users WHERE user_id = ?', [inviteCode], (err, inviter) => {
-      if (!err && inviter) {
-        db.run(`INSERT OR IGNORE INTO invitations (inviter_id, invited_id, invited_username) VALUES (?, ?, ?)`,
-          [inviteCode, userId, msg.from.username],
-          function() {
-            if (this.changes > 0) {
-              awardSparks(inviteCode, 10, 'Приглашение друга', 'invitation', {
-                invited_user_id: userId,
-                invited_username: msg.from.username
-              });
-              db.run(`UPDATE users SET invite_count = invite_count + 1 WHERE user_id = ?`, [inviteCode]);
-              console.log(`✅ User ${userId} invited by ${inviteCode}`);
+    
+    // Обработка приглашения
+    if (inviteCode && inviteCode !== userId.toString()) {
+      db.get('SELECT * FROM users WHERE user_id = ?', [inviteCode], (err, inviter) => {
+        if (!err && inviter) {
+          db.run(`INSERT OR IGNORE INTO invitations (inviter_id, invited_id, invited_username) VALUES (?, ?, ?)`,
+            [inviteCode, userId, msg.from.username],
+            function() {
+              if (this.changes > 0) {
+                awardSparks(inviteCode, 10, 'Приглашение друга', 'invitation', {
+                  invited_user_id: userId,
+                  invited_username: msg.from.username
+                });
+                db.run(`UPDATE users SET invite_count = invite_count + 1 WHERE user_id = ?`, [inviteCode]);
+                console.log(`✅ User ${userId} invited by ${inviteCode}`);
+              }
             }
-          }
-        );
-      }
-    });
-  }
-  
-  const keyboard = {
-    inline_keyboard: [[
-      {
-        text: "📱 Открыть Личный Кабинет",
-        web_app: { url: process.env.APP_URL || `http://localhost:3000` }
-      }
-    ]]
-  };
-
-  bot.sendMessage(chatId, welcomeText, {
-    parse_mode: 'Markdown',
-    reply_markup: keyboard
-  });
-});
-
-// Команда для админов
-bot.onText(/\/admin/, (msg) => {
-  const chatId = msg.chat.id;
-  const userId = msg.from.id;
-  
-  db.get('SELECT * FROM admins WHERE user_id = ?', [userId], (err, admin) => {
-    if (err || !admin) {
-      bot.sendMessage(chatId, '❌ У вас нет прав доступа к админ панели.');
-      return;
+          );
+        }
+      });
     }
     
-    const adminUrl = `${process.env.APP_URL || 'http://localhost:3000'}/admin?userId=${userId}`;
-    bot.sendMessage(chatId, `🔧 Панель администратора\n\nДоступ: ${admin.role}\n\n${adminUrl}`);
+    const keyboard = {
+      inline_keyboard: [[
+        {
+          text: "📱 Открыть Личный Кабинет",
+          web_app: { url: process.env.APP_URL || `http://localhost:3000` }
+        }
+      ]]
+    };
+
+    bot.sendMessage(chatId, welcomeText, {
+      parse_mode: 'Markdown',
+      reply_markup: keyboard
+    });
   });
-});
+
+  // Команда для админов
+  bot.onText(/\/admin/, (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    
+    db.get('SELECT * FROM admins WHERE user_id = ?', [userId], (err, admin) => {
+      if (err || !admin) {
+        bot.sendMessage(chatId, '❌ У вас нет прав доступа к админ панели.');
+        return;
+      }
+      
+      const adminUrl = `${process.env.APP_URL || 'http://localhost:3000'}/admin?userId=${userId}`;
+      bot.sendMessage(chatId, `🔧 Панель администратора\n\nДоступ: ${admin.role}\n\n${adminUrl}`);
+    });
+  });
+} else {
+  console.log('⚠️ BOT_TOKEN not set - Telegram bot disabled');
+}
 
 // ==================== SERVER START ====================
 
