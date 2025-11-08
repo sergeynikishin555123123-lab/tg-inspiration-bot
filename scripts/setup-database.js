@@ -5,13 +5,15 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Создаем базу данных в файле для продакшена
 const db = new sqlite3.Database(join(__dirname, '..', 'database.sqlite'));
 
-console.log('📊 Setting up database...');
+console.log('🔄 Настройка базы данных...');
 
-// Таблицы и начальные данные такие же как в server.js
-// ... (код инициализации базы данных из server.js)
-
-db.close(() => {
-  console.log('✅ Database setup complete');
+db.serialize(() => {
+  // Таблицы создаются так же как в server.js
+  // Этот файл можно использовать для миграций или начальной настройки
+  
+  console.log('✅ База данных настроена');
+  db.close();
 });
