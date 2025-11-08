@@ -10,6 +10,7 @@ import multer from 'multer';
 import fs from 'fs';
 import sharp from 'sharp';
 import net from 'net';
+import os from 'os';
 
 dotenv.config();
 
@@ -19,16 +20,63 @@ const __dirname = dirname(__filename);
 const app = express();
 const db = new sqlite3.Database(':memory:');
 
-// Создаем папки для загрузок
-const uploadsDir = join(__dirname, 'uploads');
-const photosDir = join(uploadsDir, 'photos');
-const previewsDir = join(uploadsDir, 'previews');
+import os from 'os';
 
-[uploadsDir, photosDir, previewsDir].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+// Создаем папки для загрузок в безопасном месте
+let uploadsDir, photosDir, previewsDir;
+
+// Функция для безопасного создания папок
+async function setupDirectories() {
+  const possiblePaths = [
+    join(process.cwd(), 'tmp', 'uploads'),  // Текущая рабочая директория
+    join(os.tmpdir(), 'inspiration-workshop', 'uploads'),  // Системная temp
+    join(__dirname, 'tmp', 'uploads')  // Директория приложения
+  ];
+
+  for (const path of possiblePaths) {
+    try {
+      if (!fs.existsSync(path)) {
+        fs.mkdirSync(path, { recursive: true });
+        console.log(`✅ Создана папка: ${path}`);
+      }
+      
+      // Проверяем что можем писать
+      const testFile = join(path, 'test.txt');
+      fs.writeFileSync(testFile, 'test');
+      fs.unlinkSync(testFile);
+      
+      console.log(`✅ Используем папку: ${path}`);
+      return path;
+    } catch (error) {
+      console.log(`❌ Недоступно: ${path} - ${error.message}`);
+      continue;
+    }
   }
-});
+  
+  throw new Error('Не удалось найти доступную папку для загрузок');
+}
+
+// Настраиваем папки
+try {
+  const basePath = await setupDirectories();
+  uploadsDir = basePath;
+  photosDir = join(uploadsDir, 'photos');
+  previewsDir = join(uploadsDir, 'previews');
+  
+  // Создаем подпапки
+  [photosDir, previewsDir].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`✅ Создана подпапка: ${dir}`);
+    }
+  });
+  
+  console.log('📁 Все папки созданы успешно');
+} catch (error) {
+  console.error('❌ Критическая ошибка создания папок:', error.message);
+  console.log('🚫 Приложение не может работать без папок для загрузок');
+  process.exit(1);
+}
 
 // Настройка multer для загрузки фотографий
 const storage = multer.diskStorage({
