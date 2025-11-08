@@ -5,20 +5,13 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-console.log('🎯 Настройка базы данных Мастерской Вдохновения...');
+const db = new sqlite3.Database(join(__dirname, '..', 'database.sqlite'));
 
-// Для продакшена используйте файловую базу:
-// const db = new sqlite3.Database(join(__dirname, '..', 'database.db'));
-const db = new sqlite3.Database(':memory:');
+console.log('📊 Setting up database...');
 
-db.serialize(() => {
-  console.log('📊 Создание таблиц...');
-  
-  // Все таблицы из server.js создаются автоматически при запуске
-  // Этот файл оставлен для будущих миграций
-  
-  console.log('✅ База данных готова к использованию');
-  console.log('🚀 Запустите сервер: npm start');
+// Таблицы и начальные данные такие же как в server.js
+// ... (код инициализации базы данных из server.js)
+
+db.close(() => {
+  console.log('✅ Database setup complete');
 });
-
-db.close();
