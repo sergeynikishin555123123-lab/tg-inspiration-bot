@@ -1,29 +1,25 @@
 {
-  "name": "tg-inspiration-bot",
-  "version": "5.0.0",
-  "description": "Telegram bot with Mini App for inspiration workshop - Complete Version",
+  "name": "inspiration-workshop",
+  "version": "1.0.0",
   "type": "module",
+  "description": "Telegram Mini App for creative community",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "setup": "node scripts/setup-database.js"
+    "dev": "node --watch server.js",
+    "setup-db": "node scripts/setup-database.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "node-telegram-bot-api": "^0.64.0",
     "cors": "^2.8.5",
-    "sqlite3": "^5.1.6",
+    "body-parser": "^1.20.2",
     "dotenv": "^16.3.1",
-    "body-parser": "^1.20.2"
+    "sqlite3": "^5.1.6",
+    "multer": "^1.4.5-lts.1",
+    "sharp": "^0.32.6"
   },
-  "keywords": [
-    "telegram",
-    "bot",
-    "mini-app",
-    "inspiration",
-    "education"
-  ],
-  "author": "Мастерская Вдохновения",
+  "keywords": ["telegram", "mini-app", "creative", "community"],
+  "author": "Inspiration Workshop",
   "license": "MIT"
 }
