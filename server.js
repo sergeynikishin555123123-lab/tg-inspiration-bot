@@ -9,6 +9,7 @@ import sqlite3 from 'sqlite3';
 import multer from 'multer';
 import fs from 'fs';
 import sharp from 'sharp';
+import net from 'net';
 
 dotenv.config();
 
@@ -66,6 +67,53 @@ app.use('/admin', express.static(join(__dirname, 'admin')));
 app.use('/uploads', express.static(uploadsDir));
 
 console.log('🎨 Мастерская Вдохновения - Запуск сервера...');
+
+// ==================== ФУНКЦИЯ ПОИСКА СВОБОДНОГО ПОРТА ====================
+
+function checkPort(port) {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    
+    server.once('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        resolve(false); // Порт занят
+      } else {
+        reject(err); // Другая ошибка
+      }
+    });
+    
+    server.once('listening', () => {
+      server.close(() => {
+        resolve(true); // Порт свободен
+      });
+    });
+    
+    server.listen(port, '0.0.0.0');
+  });
+}
+
+async function findFreePort(startPort = 3000, maxAttempts = 50) {
+  console.log(`🔍 Поиск свободного порта, начиная с ${startPort}...`);
+  
+  for (let port = startPort; port <= startPort + maxAttempts; port++) {
+    try {
+      const isFree = await checkPort(port);
+      if (isFree) {
+        console.log(`✅ Найден свободный порт: ${port}`);
+        return port;
+      } else {
+        console.log(`⏳ Порт ${port} занят, пробую следующий...`);
+      }
+    } catch (error) {
+      console.log(`⚠️ Ошибка проверки порта ${port}:`, error.message);
+    }
+    
+    // Небольшая пауза между проверками
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  throw new Error(`❌ Не удалось найти свободный порт в диапазоне ${startPort}-${startPort + maxAttempts}`);
+}
 
 // ==================== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ====================
 
@@ -271,7 +319,7 @@ db.serialize(() => {
     UNIQUE(user_id, marathon_id)
   )`);
 
-  // Заполняем классы (роли)
+  // Заполняем классы (ролей)
   const classes = [
     ['🎨 Художники', 'Творцы изобразительного искусства', '🎨'],
     ['👗 Стилисты', 'Мастера создания гармоничных образов', '👗'],
@@ -1722,15 +1770,28 @@ if (process.env.BOT_TOKEN) {
   console.log('⚠️ Telegram Bot Token не указан, бот не запущен');
 }
 
-// ==================== SERVER START ====================
+// ==================== ЗАПУСК СЕРВЕРА ====================
 
-const PORT = process.env.PORT || 3002;
+async function startServer() {
+  try {
+    // Ищем свободный порт
+    const startPort = parseInt(process.env.PORT) || 3000;
+    const PORT = await findFreePort(startPort, 50);
+    
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Сервер запущен на порту ${PORT}`);
+      console.log(`📱 Mini App: ${process.env.APP_URL || `http://localhost:${PORT}`}`);
+      console.log(`🔧 Admin Panel: ${process.env.APP_URL || `http://localhost:${PORT}`}/admin`);
+      console.log('✅ Все системы работают');
+    }).on('error', (err) => {
+      console.error('❌ Server error:', err);
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Сервер запущен на порту ${PORT}`);
-  console.log(`📱 Mini App: ${process.env.APP_URL || `http://localhost:${PORT}`}`);
-  console.log(`🔧 Admin Panel: ${process.env.APP_URL || `http://localhost:${PORT}`}/admin`);
-  console.log('✅ Все системы работают');
-}).on('error', (err) => {
-  console.error('❌ Server error:', err);
-});
+// Запускаем сервер
+startServer();
