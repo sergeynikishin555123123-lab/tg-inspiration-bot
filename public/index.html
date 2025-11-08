@@ -28,6 +28,7 @@
         .btn-warning { background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); }
         .btn-info { background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); }
         .btn-gold { background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%); color: #2d3748; }
+        .btn-photo { background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%); }
         .sparks { 
             font-size: 42px; font-weight: bold; text-align: center; color: #ffd700; 
             text-shadow: 0 2px 4px rgba(255,215,0,0.3); margin: 15px 0; padding: 10px;
@@ -35,11 +36,11 @@
         .screen { display: none; }
         .active { display: block; }
         .back-btn { background: #718096; margin-bottom: 15px; }
-        .character-card, .quiz-card, .activity-item, .shop-item, .post-card, .marathon-card {
+        .character-card, .quiz-card, .activity-item, .shop-item, .post-card, .marathon-card, .photo-card {
             background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 15px;
             margin-bottom: 10px; cursor: pointer; transition: all 0.3s ease;
         }
-        .character-card:hover, .quiz-card:hover, .shop-item:hover, .post-card:hover, .marathon-card:hover { 
+        .character-card:hover, .quiz-card:hover, .shop-item:hover, .post-card:hover, .marathon-card:hover, .photo-card:hover { 
             border-color: #667eea; transform: translateY(-2px); 
         }
         .character-card.selected { border-color: #667eea; background: rgba(102,126,234,0.1); }
@@ -62,6 +63,16 @@
         .tab-btn { flex: 1; padding: 12px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; }
         .tab-btn.active { border-bottom-color: #667eea; color: #667eea; }
         .reward-info { background: rgba(255,215,0,0.1); border: 1px solid #ffd700; border-radius: 8px; padding: 10px; margin: 10px 0; }
+        .photo-preview { width: 100%; max-height: 300px; object-fit: cover; border-radius: 8px; margin: 10px 0; }
+        .photo-upload-area { 
+            border: 2px dashed #667eea; border-radius: 12px; padding: 30px; text-align: center; 
+            background: rgba(102,126,234,0.05); margin: 15px 0; cursor: pointer;
+        }
+        .photo-upload-area:hover { background: rgba(102,126,234,0.1); }
+        .photo-status { padding: 8px; border-radius: 6px; margin: 5px 0; font-size: 14px; }
+        .photo-status.pending { background: #fed7d7; color: #c53030; }
+        .photo-status.approved { background: #c6f6d5; color: #276749; }
+        .user-photo { width: 100%; border-radius: 8px; margin: 10px 0; }
     </style>
 </head>
 <body>
@@ -137,6 +148,10 @@
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                         <span>💬 Комментарий к посту</span>
                         <span style="font-weight: 600; color: #ffd700;">+1✨</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>📸 Фотография</span>
+                        <span style="font-weight: 600; color: #ffd700;">+3✨</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                         <span>👥 Пригласить друга</span>
@@ -288,6 +303,43 @@
             </div>
         </div>
 
+        <!-- Экран загрузки фото -->
+        <div id="photosScreen" class="screen">
+            <div class="card">
+                <button class="btn back-btn" onclick="showScreen('postsScreen')">← Назад</button>
+                <h2 id="photosTitle" style="text-align: center; margin-bottom: 20px;">📸 Прикрепить фото</h2>
+                
+                <div class="photo-upload-area" onclick="document.getElementById('photoInput').click()">
+                    <div style="font-size: 48px; margin-bottom: 10px;">📷</div>
+                    <h3 style="color: #2d3748; margin-bottom: 10px;">Нажмите чтобы выбрать фото</h3>
+                    <p style="color: #718096; font-size: 14px;">
+                        Поддерживаются JPG, PNG, GIF (макс. 10MB)
+                    </p>
+                    <p style="color: #ffd700; font-weight: 600; margin-top: 10px;">
+                        После модерации: +3✨
+                    </p>
+                </div>
+
+                <input type="file" id="photoInput" accept="image/*" style="display: none;" onchange="handlePhotoSelect(event)">
+                
+                <div id="photoPreviewSection" style="display: none;">
+                    <h3 style="margin-bottom: 15px;">📷 Предпросмотр:</h3>
+                    <img id="photoPreview" class="photo-preview">
+                    <textarea class="comment-input" id="photoDescription" placeholder="Добавьте описание к фото (опционально)..."></textarea>
+                    <button class="btn btn-photo" onclick="uploadPhoto()" id="uploadPhotoBtn">
+                        📤 Отправить на модерацию
+                    </button>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <h3 style="margin-bottom: 15px;">📋 Ваши фотографии:</h3>
+                    <div id="userPhotosList" class="loading">
+                        Загрузка фотографий...
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Экран магазина -->
         <div id="shopScreen" class="screen">
             <div class="card">
@@ -357,6 +409,7 @@
         let quizAnswers = [];
         let currentQuestionIndex = 0;
         let currentPostId = null;
+        let selectedPhotoFile = null;
 
         const API_BASE_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000' 
@@ -383,13 +436,20 @@
                 console.log('👤 Using test ID:', currentUserId);
             }
             
-            // Проверяем параметры URL для комментариев
+            // Проверяем параметры URL для комментариев и фото
             const urlParams = new URLSearchParams(window.location.hash.substring(1));
             const commentPostId = urlParams.get('postId');
+            const photosPostId = urlParams.get('postId');
+            
             if (commentPostId && urlParams.get('comment')) {
                 currentPostId = commentPostId;
                 showScreen('postCommentScreen');
                 loadPostComments(commentPostId);
+            } else if (photosPostId && urlParams.get('photos')) {
+                currentPostId = photosPostId;
+                showScreen('photosScreen');
+                loadUserPhotos();
+                document.getElementById('photosTitle').textContent = `📸 Прикрепить фото к посту`;
             }
             
             await loadUserData();
@@ -449,7 +509,8 @@
                 'shop': { text: '🛒 Магазин', screen: 'shopScreen', class: 'btn-gold' },
                 'invite': { text: '👥 Пригласить друга', screen: 'inviteScreen', class: 'btn-info' },
                 'activities': { text: '📊 Мои активности', screen: 'activitiesScreen', class: 'btn' },
-                'marathon': { text: '🏃 Марафоны', screen: 'marathonsScreen', class: 'btn-warning' }
+                'marathon': { text: '🏃 Марафоны', screen: 'marathonsScreen', class: 'btn-warning' },
+                'photos': { text: '📸 Мои фото', screen: 'photosScreen', class: 'btn-photo' }
             };
 
             // Добавляем кнопку постов канала всегда
@@ -486,6 +547,12 @@
             if (screenId === 'shopScreen') loadShopData();
             if (screenId === 'postsScreen') loadPosts();
             if (screenId === 'marathonsScreen') loadMarathons();
+            if (screenId === 'photosScreen') {
+                loadUserPhotos();
+                if (!currentPostId) {
+                    document.getElementById('photosTitle').textContent = '📸 Мои фотографии';
+                }
+            }
         }
 
         // Управление вкладками магазина
@@ -962,15 +1029,30 @@
                     posts.forEach(post => {
                         const postElement = document.createElement('div');
                         postElement.className = 'post-card';
+                        
+                        let photoHtml = '';
+                        if (post.photo_url) {
+                            photoHtml = `<img src="${post.photo_url}" class="user-photo" alt="Пост">`;
+                        }
+                        
+                        let buttonsHtml = '';
+                        if (post.allow_comments) {
+                            buttonsHtml += `<button class="btn btn-secondary" onclick="openPostComment('${post.post_id}', '${post.title}')" style="margin-bottom: 5px;">
+                                💬 Написать отзыв
+                            </button>`;
+                        }
+                        if (post.allow_photos) {
+                            buttonsHtml += `<button class="btn btn-photo" onclick="openPhotoUpload('${post.post_id}', '${post.title}')">
+                                📸 Прикрепить фото
+                            </button>`;
+                        }
+                        
                         postElement.innerHTML = `
+                            ${photoHtml}
                             <div style="font-weight: 600; margin-bottom: 8px;">${post.title}</div>
                             <div style="color: #718096; margin-bottom: 8px;">${post.content || 'Без текста'}</div>
-                            ${post.photo_url ? `<div style="margin-bottom: 8px;">🖼️ <em>Есть фото</em></div>` : ''}
-                            ${post.video_url ? `<div style="margin-bottom: 8px;">🎥 <em>Есть видео</em></div>` : ''}
                             <div style="margin-top: 12px;">
-                                <button class="btn btn-secondary" onclick="openPostComment('${post.post_id}', '${post.title}')">
-                                    💬 Написать отзыв
-                                </button>
+                                ${buttonsHtml}
                             </div>
                         `;
                         postsList.appendChild(postElement);
@@ -989,6 +1071,14 @@
             document.getElementById('postCommentTitle').textContent = `💬 Отзыв к посту: ${postTitle}`;
             showScreen('postCommentScreen');
             loadPostComments(postId);
+        }
+
+        // Открытие загрузки фото к посту
+        function openPhotoUpload(postId, postTitle) {
+            currentPostId = postId;
+            showScreen('photosScreen');
+            document.getElementById('photosTitle').textContent = `📸 Прикрепить фото к посту: ${postTitle}`;
+            loadUserPhotos();
         }
 
         // Загрузка комментариев к посту
@@ -1067,6 +1157,120 @@
             }
         }
 
+        // Обработка выбора фото
+        function handlePhotoSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Проверяем размер файла
+            if (file.size > 10 * 1024 * 1024) {
+                showMessage('Файл слишком большой (макс. 10MB)', 'error');
+                return;
+            }
+            
+            // Проверяем тип файла
+            if (!file.type.startsWith('image/')) {
+                showMessage('Пожалуйста, выберите изображение', 'error');
+                return;
+            }
+            
+            selectedPhotoFile = file;
+            
+            // Показываем превью
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('photoPreview').src = e.target.result;
+                document.getElementById('photoPreviewSection').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Загрузка фото на сервер
+        async function uploadPhoto() {
+            if (!selectedPhotoFile) {
+                showMessage('Пожалуйста, выберите фото', 'error');
+                return;
+            }
+            
+            const description = document.getElementById('photoDescription').value.trim();
+            
+            try {
+                showMessage('⏳ Загружаем фото...', 'loading');
+                
+                const formData = new FormData();
+                formData.append('photo', selectedPhotoFile);
+                formData.append('userId', currentUserId);
+                if (currentPostId) {
+                    formData.append('postId', currentPostId);
+                }
+                if (description) {
+                    formData.append('description', description);
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/api/webapp/photos/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ ' + result.message, 'success');
+                    
+                    // Сбрасываем форму
+                    document.getElementById('photoInput').value = '';
+                    document.getElementById('photoPreviewSection').style.display = 'none';
+                    document.getElementById('photoDescription').value = '';
+                    selectedPhotoFile = null;
+                    
+                    // Обновляем список фото
+                    loadUserPhotos();
+                } else {
+                    showMessage(`❌ ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка при загрузке фото', 'error');
+            }
+        }
+
+        // Загрузка фото пользователя
+        async function loadUserPhotos() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/webapp/photos/${currentUserId}`);
+                const data = await response.json();
+                
+                const photosList = document.getElementById('userPhotosList');
+                photosList.innerHTML = '';
+                
+                if (data.photos && data.photos.length > 0) {
+                    data.photos.forEach(photo => {
+                        const photoElement = document.createElement('div');
+                        photoElement.className = 'photo-card';
+                        
+                        const statusClass = photo.is_approved ? 'approved' : 'pending';
+                        const statusText = photo.is_approved ? '✅ Одобрено (+3✨)' : '⏳ На модерации';
+                        
+                        photoElement.innerHTML = `
+                            <img src="${photo.preview_url}" class="user-photo" alt="Фото пользователя">
+                            <div style="margin-bottom: 8px;">
+                                <span class="photo-status ${statusClass}">${statusText}</span>
+                            </div>
+                            ${photo.description ? `<div style="color: #718096; margin-bottom: 8px;">${photo.description}</div>` : ''}
+                            ${photo.post_title ? `<div style="color: #667eea; font-size: 14px; margin-bottom: 8px;">К посту: ${photo.post_title}</div>` : ''}
+                            <div style="color: #718096; font-size: 12px;">
+                                ${new Date(photo.created_at).toLocaleString('ru-RU')}
+                            </div>
+                        `;
+                        photosList.appendChild(photoElement);
+                    });
+                } else {
+                    photosList.innerHTML = '<div style="color: #718096; text-align: center; padding: 20px;">У вас пока нет загруженных фото</div>';
+                }
+            } catch (error) {
+                document.getElementById('userPhotosList').innerHTML = '<div class="error">Ошибка загрузки фотографий</div>';
+            }
+        }
+
         // Загрузка магазина
         async function loadShopData() {
             await loadShopItems();
@@ -1085,7 +1289,14 @@
                     items.forEach(item => {
                         const itemElement = document.createElement('div');
                         itemElement.className = 'shop-item';
+                        
+                        let imageHtml = '';
+                        if (item.preview_url) {
+                            imageHtml = `<img src="${item.preview_url}" class="user-photo" alt="${item.title}">`;
+                        }
+                        
                         itemElement.innerHTML = `
+                            ${imageHtml}
                             <div style="font-weight: 600; margin-bottom: 8px;">${item.title}</div>
                             <div style="color: #718096; margin-bottom: 8px;">${item.description || 'Описание отсутствует'}</div>
                             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1148,7 +1359,14 @@
                     data.purchases.forEach(purchase => {
                         const purchaseElement = document.createElement('div');
                         purchaseElement.className = 'purchase-item activity-item';
+                        
+                        let imageHtml = '';
+                        if (purchase.preview_url) {
+                            imageHtml = `<img src="${purchase.preview_url}" class="user-photo" alt="${purchase.title}">`;
+                        }
+                        
                         purchaseElement.innerHTML = `
+                            ${imageHtml}
                             <div style="font-weight: 600; margin-bottom: 5px;">${purchase.title}</div>
                             <div style="color: #718096; margin-bottom: 5px;">${purchase.description || 'Без описания'}</div>
                             <div style="color: #718096; font-size: 14px; margin-bottom: 5px;">
@@ -1331,7 +1549,7 @@
 
         function getItemTypeName(type) {
             const types = {
-                'video': 'Видеоурок',
+                'photo': 'Фотография',
                 'ebook': 'Электронная книга',
                 'course': 'Курс',
                 'material': 'Материалы'
