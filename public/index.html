@@ -1251,7 +1251,7 @@
                         const statusText = photo.is_approved ? '✅ Одобрено (+3✨)' : '⏳ На модерации';
                         
                         photoElement.innerHTML = `
-                            <img src="${photo.preview_url}" class="user-photo" alt="Фото пользователя">
+                            <img src="${photo.photo_url}" class="user-photo" alt="Фото пользователя">
                             <div style="margin-bottom: 8px;">
                                 <span class="photo-status ${statusClass}">${statusText}</span>
                             </div>
