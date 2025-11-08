@@ -10,6 +10,20 @@ import multer from 'multer';
 import fs from 'fs';
 import sharp from 'sharp';
 
+// Создаем папки для загрузок если их нет
+import fs from 'fs';
+
+const uploadsDir = join(__dirname, 'uploads');
+const photosDir = join(uploadsDir, 'photos');
+const previewsDir = join(uploadsDir, 'previews');
+
+[uploadsDir, photosDir, previewsDir].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    console.log(`✅ Created directory: ${dir}`);
+  }
+});
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
