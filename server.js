@@ -1685,7 +1685,19 @@ app.delete('/api/admin/admins/:userId', requireAdmin, (req, res) => {
 let bot;
 if (process.env.BOT_TOKEN) {
   try {
-    bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
+    bot = new TelegramBot(process.env.BOT_TOKEN);
+    
+    // Удаляем старый webhook
+    await bot.deleteWebHook();
+    
+    // Запускаем long polling
+    bot.startPolling();
+    
+    console.log('✅ Telegram Bot запущен в режиме polling');
+  } catch (error) {
+    console.log('❌ Ошибка запуска Telegram Bot:', error.message);
+  }
+}
     
     // Обработка команды /start
     bot.onText(/\/start(?:\s+invite_(\d+))?/, (msg, match) => {
