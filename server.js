@@ -6,6 +6,9 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import dotenv from 'dotenv';
 import sqlite3 from 'sqlite3';
+import multer from 'multer';
+import fs from 'fs';
+import sharp from 'sharp';
 
 dotenv.config();
 
@@ -15,13 +18,53 @@ const __dirname = dirname(__filename);
 const app = express();
 const db = new sqlite3.Database(':memory:');
 
+// Создаем папки для загрузок
+const uploadsDir = join(__dirname, 'uploads');
+const photosDir = join(uploadsDir, 'photos');
+const previewsDir = join(uploadsDir, 'previews');
+
+[uploadsDir, photosDir, previewsDir].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+
+// Настройка multer для загрузки фотографий
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, photosDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'photo-' + uniqueSuffix + ext);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Только изображения разрешены'), false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  }
+});
+
 app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(join(__dirname, 'public')));
 app.use('/admin', express.static(join(__dirname, 'admin')));
+app.use('/uploads', express.static(uploadsDir));
 
-console.log('🎨 Мастерская Вдохновения - Запуск интегрированной версии...');
+console.log('🎨 Мастерская Вдохновения - Запуск с системой загрузки фото...');
 
 // ==================== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ====================
 
@@ -55,7 +98,7 @@ db.serialize(() => {
     name TEXT NOT NULL UNIQUE,
     description TEXT,
     icon TEXT,
-    available_buttons TEXT DEFAULT '["quiz","shop","invite","activities","marathon"]',
+    available_buttons TEXT DEFAULT '["quiz","shop","invite","activities","marathon","photos"]',
     is_active BOOLEAN DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
@@ -68,7 +111,7 @@ db.serialize(() => {
     description TEXT,
     bonus_type TEXT NOT NULL,
     bonus_value TEXT NOT NULL,
-    available_buttons TEXT DEFAULT '["quiz","shop","invite","activities","marathon"]',
+    available_buttons TEXT DEFAULT '["quiz","shop","invite","activities","marathon","photos"]',
     is_active BOOLEAN DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (class_id) REFERENCES classes (id)
@@ -127,9 +170,9 @@ db.serialize(() => {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
     description TEXT,
-    type TEXT NOT NULL DEFAULT 'video',
-    file_url TEXT NOT NULL,
-    preview_url TEXT,
+    type TEXT NOT NULL DEFAULT 'photo',
+    file_path TEXT NOT NULL,
+    preview_path TEXT,
     price REAL NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     created_by INTEGER,
@@ -153,8 +196,7 @@ db.serialize(() => {
     post_id TEXT UNIQUE,
     title TEXT NOT NULL,
     content TEXT,
-    photo_url TEXT,
-    video_url TEXT,
+    photo_path TEXT,
     buttons TEXT,
     requires_action BOOLEAN DEFAULT FALSE,
     action_type TEXT,
@@ -162,7 +204,8 @@ db.serialize(() => {
     published_by INTEGER,
     published_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     is_published BOOLEAN DEFAULT FALSE,
-    allow_comments BOOLEAN DEFAULT TRUE
+    allow_comments BOOLEAN DEFAULT TRUE,
+    allow_photos BOOLEAN DEFAULT FALSE
   )`);
 
   // Таблица комментариев (отзывов к постам)
@@ -171,6 +214,19 @@ db.serialize(() => {
     user_id INTEGER NOT NULL,
     post_id TEXT NOT NULL,
     comment_text TEXT NOT NULL,
+    is_approved BOOLEAN DEFAULT FALSE,
+    sparks_awarded BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (user_id)
+  )`);
+
+  // Таблица загруженных фото пользователей
+  db.run(`CREATE TABLE user_photos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    post_id TEXT,
+    photo_path TEXT NOT NULL,
+    description TEXT,
     is_approved BOOLEAN DEFAULT FALSE,
     sparks_awarded BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -282,32 +338,6 @@ db.serialize(() => {
   const quizStmt = db.prepare("INSERT INTO quizzes (title, description, questions, sparks_reward, perfect_reward) VALUES (?, ?, ?, ?, ?)");
   testQuizzes.forEach(quiz => quizStmt.run([quiz.title, quiz.description, quiz.questions, quiz.sparks_reward, quiz.perfect_reward]));
   quizStmt.finalize();
-
-  // Добавляем тестовые товары
-  const shopStmt = db.prepare("INSERT INTO shop_items (title, description, type, file_url, preview_url, price, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
-  shopStmt.run([
-    '🎨 Урок акварели для начинающих',
-    'Полный видеоурок по основам акварельной живописи. Изучите технику мокрым по мокрому, градиенты и создание текстур.',
-    'video',
-    'https://example.com/videos/watercolor-basics.mp4',
-    'https://example.com/previews/watercolor-preview.jpg',
-    25,
-    process.env.ADMIN_ID
-  ]);
-  shopStmt.run([
-    '📚 Электронная книга "Основы композиции"',
-    'Подробное руководство по созданию гармоничных композиций в живописи и фотографии. 150 страниц полезной информации.',
-    'ebook',
-    'https://example.com/ebooks/composition-basics.pdf',
-    'https://example.com/previews/ebook-preview.jpg',
-    15,
-    process.env.ADMIN_ID
-  ]);
-  shopStmt.finalize();
-
-  // Добавляем тестовый марафон
-  db.run(`INSERT INTO marathons (title, description, start_date, end_date, sparks_reward) VALUES (?, ?, ?, ?, ?)`,
-    ['7-дневный челлендж скетчинга', 'Рисуйте по одному скетчу в день в течение недели!', '2024-01-01', '2024-12-31', 7]);
   
   console.log('✅ База данных готова');
 });
@@ -326,6 +356,23 @@ function awardSparks(userId, sparks, description, activityType = 'other', metada
   db.run(`UPDATE users SET sparks = sparks + ?, last_active = CURRENT_TIMESTAMP WHERE user_id = ?`, [sparks, userId]);
   db.run(`INSERT INTO activities (user_id, activity_type, sparks_earned, description, metadata) VALUES (?, ?, ?, ?, ?)`,
     [userId, activityType, sparks, description, JSON.stringify(metadata)]);
+}
+
+// Функция создания превью изображения
+async function createPreview(originalPath, previewPath) {
+  try {
+    await sharp(originalPath)
+      .resize(400, 400, {
+        fit: 'inside',
+        withoutEnlargement: true
+      })
+      .jpeg({ quality: 80 })
+      .toFile(previewPath);
+    return true;
+  } catch (error) {
+    console.error('Error creating preview:', error);
+    return false;
+  }
 }
 
 // ==================== MIDDLEWARE ====================
@@ -352,7 +399,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    version: '5.0.0'
+    version: '6.0.0'
   });
 });
 
@@ -635,6 +682,71 @@ app.post('/api/webapp/quizzes/:quizId/submit', (req, res) => {
   );
 });
 
+// Загрузка фотографии пользователем
+app.post('/api/webapp/photos/upload', upload.single('photo'), async (req, res) => {
+  const { userId, postId, description } = req.body;
+  
+  console.log('📸 Загрузка фотографии пользователем:', { userId, postId });
+  
+  if (!userId || !req.file) {
+    return res.status(400).json({ error: 'User ID and photo are required' });
+  }
+  
+  try {
+    const photoPath = req.file.path;
+    const previewPath = join(previewsDir, 'preview-' + path.basename(photoPath));
+    
+    // Создаем превью
+    await createPreview(photoPath, previewPath);
+    
+    // Сохраняем в базу
+    db.run(`INSERT INTO user_photos (user_id, post_id, photo_path, description) VALUES (?, ?, ?, ?)`,
+      [userId, postId, photoPath, description],
+      function(err) {
+        if (err) {
+          console.error('❌ Error saving photo:', err);
+          return res.status(500).json({ error: 'Error saving photo' });
+        }
+        
+        res.json({
+          success: true,
+          message: 'Фотография загружена и отправлена на модерацию! После одобрения вы получите +3✨',
+          photoId: this.lastID,
+          sparksPotential: 3
+        });
+      }
+    );
+    
+  } catch (error) {
+    console.error('❌ Error processing photo:', error);
+    res.status(500).json({ error: 'Error processing photo' });
+  }
+});
+
+// Получение фотографий пользователя
+app.get('/api/webapp/photos/:userId', (req, res) => {
+  const userId = req.params.userId;
+  
+  db.all(`
+    SELECT up.*, cp.title as post_title 
+    FROM user_photos up 
+    LEFT JOIN channel_posts cp ON up.post_id = cp.post_id 
+    WHERE up.user_id = ? 
+    ORDER BY up.created_at DESC
+  `, [userId], (err, photos) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    
+    // Заменяем пути на URL
+    const photosWithUrls = photos.map(photo => ({
+      ...photo,
+      photo_url: `/uploads/photos/${path.basename(photo.photo_path)}`,
+      preview_url: `/uploads/previews/${path.basename(photo.photo_path).replace('photo-', 'preview-')}`
+    }));
+    
+    res.json({ photos: photosWithUrls });
+  });
+});
+
 // Получение ссылки для приглашения
 app.get('/api/webapp/invite/:userId', (req, res) => {
   const userId = req.params.userId;
@@ -712,7 +824,8 @@ app.get('/api/webapp/posts', (req, res) => {
     
     const parsedPosts = posts.map(post => ({
       ...post,
-      buttons: JSON.parse(post.buttons || '[]')
+      buttons: JSON.parse(post.buttons || '[]'),
+      photo_url: post.photo_path ? `/uploads/photos/${path.basename(post.photo_path)}` : null
     }));
     
     res.json(parsedPosts);
@@ -789,7 +902,14 @@ app.get('/api/webapp/posts/:postId/comments', (req, res) => {
 app.get('/api/webapp/shop/items', (req, res) => {
   db.all("SELECT * FROM shop_items WHERE is_active = TRUE ORDER BY price ASC", (err, items) => {
     if (err) return res.status(500).json({ error: 'Database error' });
-    res.json(items);
+    
+    const itemsWithUrls = items.map(item => ({
+      ...item,
+      file_url: `/uploads/photos/${path.basename(item.file_path)}`,
+      preview_url: item.preview_path ? `/uploads/previews/${path.basename(item.preview_path)}` : null
+    }));
+    
+    res.json(itemsWithUrls);
   });
 });
 
@@ -847,7 +967,10 @@ app.post('/api/webapp/shop/purchase', (req, res) => {
               res.json({
                 success: true,
                 message: 'Покупка успешно завершена! Товар доступен в вашей библиотеке.',
-                item: item,
+                item: {
+                  ...item,
+                  file_url: `/uploads/photos/${path.basename(item.file_path)}`
+                },
                 remainingSparks: user.sparks - item.price,
                 purchaseId: this.lastID
               });
@@ -864,14 +987,21 @@ app.get('/api/webapp/shop/purchases/:userId', (req, res) => {
   const userId = req.params.userId;
   
   db.all(`
-    SELECT p.*, si.title, si.description, si.type, si.file_url, si.preview_url
+    SELECT p.*, si.title, si.description, si.type, si.file_path, si.preview_path
     FROM purchases p 
     JOIN shop_items si ON p.item_id = si.id 
     WHERE p.user_id = ? 
     ORDER BY p.purchased_at DESC
   `, [userId], (err, purchases) => {
     if (err) return res.status(500).json({ error: 'Database error' });
-    res.json({ purchases });
+    
+    const purchasesWithUrls = purchases.map(purchase => ({
+      ...purchase,
+      file_url: `/uploads/photos/${path.basename(purchase.file_path)}`,
+      preview_url: purchase.preview_path ? `/uploads/previews/${path.basename(purchase.preview_path)}` : null
+    }));
+    
+    res.json({ purchases: purchasesWithUrls });
   });
 });
 
@@ -996,13 +1126,16 @@ app.get('/api/admin/stats', requireAdmin, (req, res) => {
     new Promise(resolve => db.get('SELECT COUNT(*) as count FROM shop_items WHERE is_active = TRUE', (err, row) => resolve(row.count))),
     new Promise(resolve => db.get('SELECT SUM(sparks) as total FROM users', (err, row) => resolve(row.total || 0))),
     new Promise(resolve => db.get('SELECT COUNT(*) as count FROM comments WHERE is_approved = FALSE', (err, row) => resolve(row.count))),
+    new Promise(resolve => db.get('SELECT COUNT(*) as count FROM user_photos WHERE is_approved = FALSE', (err, row) => resolve(row.count))),
     new Promise(resolve => db.get('SELECT COUNT(*) as count FROM channel_posts WHERE is_published = TRUE', (err, row) => resolve(row.count)))
-  ]).then(([totalUsers, activeQuizzes, activeCharacters, shopItems, totalSparks, pendingComments, totalPosts]) => {
+  ]).then(([totalUsers, activeQuizzes, activeCharacters, shopItems, totalSparks, pendingComments, pendingPhotos, totalPosts]) => {
     res.json({
       totalUsers,
       activeToday: totalUsers,
       totalPosts,
-      pendingModeration: pendingComments,
+      pendingModeration: pendingComments + pendingPhotos,
+      pendingComments,
+      pendingPhotos,
       totalSparks,
       shopItems,
       activeQuizzes,
@@ -1204,43 +1337,62 @@ app.delete('/api/admin/quizzes/:id', requireAdmin, (req, res) => {
   });
 });
 
-// Управление магазином
-app.get('/api/admin/shop/items', requireAdmin, (req, res) => {
-  db.all("SELECT * FROM shop_items ORDER BY created_at DESC", (err, items) => {
-    if (err) return res.status(500).json({ error: 'Database error' });
-    res.json(items);
-  });
-});
-
-app.post('/api/admin/shop/items', requireAdmin, (req, res) => {
-  const { title, description, type, file_url, preview_url, price } = req.body;
+// Управление магазином - загрузка фото для товаров
+app.post('/api/admin/shop/items', upload.single('photo'), requireAdmin, async (req, res) => {
+  const { title, description, type, price } = req.body;
   
   console.log('🛒 Добавление товара:', title);
   
-  if (!title || !file_url || !price) {
-    return res.status(400).json({ error: 'Title, file URL and price are required' });
+  if (!title || !req.file || !price) {
+    return res.status(400).json({ error: 'Title, photo and price are required' });
   }
   
-  db.run(`INSERT INTO shop_items (title, description, type, file_url, preview_url, price, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [title, description, type, file_url, preview_url, price, req.admin.user_id],
-    function(err) {
-      if (err) return res.status(500).json({ error: 'Error creating item' });
-      
-      res.json({
-        success: true,
-        message: 'Товар успешно добавлен',
-        itemId: this.lastID
-      });
-    }
-  );
+  try {
+    const filePath = req.file.path;
+    const previewPath = join(previewsDir, 'preview-' + path.basename(filePath));
+    
+    // Создаем превью
+    await createPreview(filePath, previewPath);
+    
+    db.run(`INSERT INTO shop_items (title, description, type, file_path, preview_path, price, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [title, description, type || 'photo', filePath, previewPath, price, req.admin.user_id],
+      function(err) {
+        if (err) return res.status(500).json({ error: 'Error creating item' });
+        
+        res.json({
+          success: true,
+          message: 'Товар успешно добавлен',
+          itemId: this.lastID
+        });
+      }
+    );
+    
+  } catch (error) {
+    console.error('❌ Error processing item photo:', error);
+    res.status(500).json({ error: 'Error processing photo' });
+  }
+});
+
+app.get('/api/admin/shop/items', requireAdmin, (req, res) => {
+  db.all("SELECT * FROM shop_items ORDER BY created_at DESC", (err, items) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    
+    const itemsWithUrls = items.map(item => ({
+      ...item,
+      file_url: `/uploads/photos/${path.basename(item.file_path)}`,
+      preview_url: item.preview_path ? `/uploads/previews/${path.basename(item.preview_path)}` : null
+    }));
+    
+    res.json(itemsWithUrls);
+  });
 });
 
 app.put('/api/admin/shop/items/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
-  const { title, description, type, file_url, preview_url, price, is_active } = req.body;
+  const { title, description, type, price, is_active } = req.body;
   
-  db.run(`UPDATE shop_items SET title=?, description=?, type=?, file_url=?, preview_url=?, price=?, is_active=? WHERE id=?`,
-    [title, description, type, file_url, preview_url, price, is_active, id],
+  db.run(`UPDATE shop_items SET title=?, description=?, type=?, price=?, is_active=? WHERE id=?`,
+    [title, description, type, price, is_active, id],
     function(err) {
       if (err) return res.status(500).json({ error: 'Database error' });
       
@@ -1255,32 +1407,33 @@ app.put('/api/admin/shop/items/:id', requireAdmin, (req, res) => {
 app.delete('/api/admin/shop/items/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
   
-  db.run(`DELETE FROM shop_items WHERE id = ?`, [id], function(err) {
+  // Сначала получаем информацию о файле для удаления
+  db.get('SELECT file_path, preview_path FROM shop_items WHERE id = ?', [id], (err, item) => {
     if (err) return res.status(500).json({ error: 'Database error' });
     
-    res.json({
-      success: true,
-      message: 'Товар удален'
+    // Удаляем файлы
+    if (item && item.file_path && fs.existsSync(item.file_path)) {
+      fs.unlinkSync(item.file_path);
+    }
+    if (item && item.preview_path && fs.existsSync(item.preview_path)) {
+      fs.unlinkSync(item.preview_path);
+    }
+    
+    // Удаляем запись из базы
+    db.run(`DELETE FROM shop_items WHERE id = ?`, [id], function(err) {
+      if (err) return res.status(500).json({ error: 'Database error' });
+      
+      res.json({
+        success: true,
+        message: 'Товар удален'
+      });
     });
   });
 });
 
-// Управление постами
-app.get('/api/admin/posts', requireAdmin, (req, res) => {
-  db.all("SELECT * FROM channel_posts ORDER BY created_at DESC", (err, posts) => {
-    if (err) return res.status(500).json({ error: 'Database error' });
-    
-    const parsed = posts.map(post => ({
-      ...post,
-      buttons: JSON.parse(post.buttons || '[]')
-    }));
-    
-    res.json(parsed);
-  });
-});
-
-app.post('/api/admin/posts', requireAdmin, (req, res) => {
-  const { title, content, photo_url, video_url, buttons, requires_action, action_type, action_target, allow_comments } = req.body;
+// Управление постами - загрузка фото для постов
+app.post('/api/admin/posts', upload.single('photo'), requireAdmin, async (req, res) => {
+  const { title, content, buttons, requires_action, action_type, action_target, allow_comments, allow_photos } = req.body;
   
   console.log('📝 Создание поста:', title);
   
@@ -1288,42 +1441,67 @@ app.post('/api/admin/posts', requireAdmin, (req, res) => {
     return res.status(400).json({ error: 'Title is required' });
   }
   
-  const buttonsJson = JSON.stringify(buttons || []);
-  
-  db.run(`INSERT INTO channel_posts (title, content, photo_url, video_url, buttons, requires_action, action_type, action_target, published_by, allow_comments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [title, content, photo_url, video_url, buttonsJson, requires_action, action_type, action_target, req.admin.user_id, allow_comments !== false],
-    function(err) {
-      if (err) return res.status(500).json({ error: 'Error creating post' });
-      
-      const postId = this.lastID;
-      
-      // Публикуем пост в канал
-      db.get('SELECT * FROM channel_posts WHERE id = ?', [postId], (err, post) => {
-        if (!err && post) {
-          publishToChannel(post).then(() => {
+  try {
+    let photoPath = null;
+    if (req.file) {
+      photoPath = req.file.path;
+    }
+    
+    const buttonsJson = JSON.stringify(buttons || []);
+    
+    db.run(`INSERT INTO channel_posts (title, content, photo_path, buttons, requires_action, action_type, action_target, published_by, allow_comments, allow_photos) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [title, content, photoPath, buttonsJson, requires_action, action_type, action_target, req.admin.user_id, allow_comments !== false, allow_photos || false],
+      function(err) {
+        if (err) return res.status(500).json({ error: 'Error creating post' });
+        
+        const postId = this.lastID;
+        
+        // Публикуем пост в канал
+        db.get('SELECT * FROM channel_posts WHERE id = ?', [postId], (err, post) => {
+          if (!err && post) {
+            publishToChannel(post).then(() => {
+              res.json({
+                success: true,
+                message: 'Пост успешно создан и опубликован в канал!',
+                postId: postId
+              });
+            }).catch(error => {
+              res.json({
+                success: true,
+                message: 'Пост создан, но возникла ошибка при публикации в канал',
+                postId: postId,
+                warning: error.message
+              });
+            });
+          } else {
             res.json({
               success: true,
-              message: 'Пост успешно создан и опубликован в канал!',
+              message: 'Пост успешно создан',
               postId: postId
             });
-          }).catch(error => {
-            res.json({
-              success: true,
-              message: 'Пост создан, но возникла ошибка при публикации в канал',
-              postId: postId,
-              warning: error.message
-            });
-          });
-        } else {
-          res.json({
-            success: true,
-            message: 'Пост успешно создан',
-            postId: postId
-          });
-        }
-      });
-    }
-  );
+          }
+        });
+      }
+    );
+    
+  } catch (error) {
+    console.error('❌ Error processing post photo:', error);
+    res.status(500).json({ error: 'Error processing photo' });
+  }
+});
+
+app.get('/api/admin/posts', requireAdmin, (req, res) => {
+  db.all("SELECT * FROM channel_posts ORDER BY created_at DESC", (err, posts) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    
+    const parsed = posts.map(post => ({
+      ...post,
+      buttons: JSON.parse(post.buttons || '[]'),
+      photo_url: post.photo_path ? `/uploads/photos/${path.basename(post.photo_path)}` : null
+    }));
+    
+    res.json(parsed);
+  });
 });
 
 // Модерация комментариев
@@ -1374,6 +1552,81 @@ app.post('/api/admin/comments/:id/reject', requireAdmin, (req, res) => {
     res.json({
       success: true,
       message: 'Комментарий отклонен и удален'
+    });
+  });
+});
+
+// Модерация фотографий пользователей
+app.get('/api/admin/photos', requireAdmin, (req, res) => {
+  db.all(`
+    SELECT up.*, u.tg_first_name, u.tg_username, cp.title as post_title
+    FROM user_photos up 
+    JOIN users u ON up.user_id = u.user_id 
+    LEFT JOIN channel_posts cp ON up.post_id = cp.post_id
+    WHERE up.is_approved = FALSE 
+    ORDER BY up.created_at DESC
+  `, (err, photos) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    
+    const photosWithUrls = photos.map(photo => ({
+      ...photo,
+      photo_url: `/uploads/photos/${path.basename(photo.photo_path)}`,
+      preview_url: `/uploads/previews/${path.basename(photo.photo_path).replace('photo-', 'preview-')}`
+    }));
+    
+    res.json(photosWithUrls);
+  });
+});
+
+app.post('/api/admin/photos/:id/approve', requireAdmin, (req, res) => {
+  const { id } = req.params;
+  
+  db.get('SELECT * FROM user_photos WHERE id = ?', [id], (err, photo) => {
+    if (err || !photo) return res.status(404).json({ error: 'Photo not found' });
+    
+    if (photo.is_approved) {
+      return res.status(400).json({ error: 'Photo already approved' });
+    }
+    
+    // Одобряем фото и начисляем 3 искры
+    db.run(`UPDATE user_photos SET is_approved = TRUE, sparks_awarded = TRUE WHERE id = ?`, [id]);
+    awardSparks(photo.user_id, 3, 'Фотография одобрена', 'photo', {
+      photo_id: id,
+      post_id: photo.post_id
+    });
+    
+    res.json({
+      success: true,
+      message: 'Фотография одобрена, пользователь получил +3✨'
+    });
+  });
+});
+
+app.post('/api/admin/photos/:id/reject', requireAdmin, (req, res) => {
+  const { id } = req.params;
+  
+  db.get('SELECT photo_path FROM user_photos WHERE id = ?', [id], (err, photo) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    
+    // Удаляем файлы
+    if (photo && photo.photo_path && fs.existsSync(photo.photo_path)) {
+      fs.unlinkSync(photo.photo_path);
+      
+      // Удаляем превью если существует
+      const previewPath = join(previewsDir, 'preview-' + path.basename(photo.photo_path));
+      if (fs.existsSync(previewPath)) {
+        fs.unlinkSync(previewPath);
+      }
+    }
+    
+    // Удаляем запись из базы
+    db.run(`DELETE FROM user_photos WHERE id = ?`, [id], function(err) {
+      if (err) return res.status(500).json({ error: 'Database error' });
+      
+      res.json({
+        success: true,
+        message: 'Фотография отклонена и удалена'
+      });
     });
   });
 });
@@ -1489,7 +1742,7 @@ function sendPurchaseNotification(userId, item) {
 
 function getItemTypeName(type) {
   const types = {
-    'video': 'Видеоурок',
+    'photo': 'Фотография',
     'ebook': 'Электронная книга',
     'course': 'Курс',
     'material': 'Материалы'
@@ -1547,15 +1800,18 @@ async function publishToChannel(post) {
       }]);
     }
 
+    // Добавляем кнопку "Прикрепить фото" если разрешены фото
+    if (post.allow_photos) {
+      keyboard.inline_keyboard.push([{
+        text: "📸 Прикрепить фото",
+        web_app: { url: `${process.env.APP_URL || 'http://localhost:3000'}#photos?postId=${post.post_id || post.id}` }
+      }]);
+    }
+
     let message;
-    if (post.photo_url) {
-      message = await bot.sendPhoto(channelId, post.photo_url, {
-        caption: caption,
-        parse_mode: 'Markdown',
-        reply_markup: keyboard
-      });
-    } else if (post.video_url) {
-      message = await bot.sendVideo(channelId, post.video_url, {
+    if (post.photo_path) {
+      const photoPath = join(__dirname, post.photo_path);
+      message = await bot.sendPhoto(channelId, photoPath, {
         caption: caption,
         parse_mode: 'Markdown',
         reply_markup: keyboard
@@ -1597,6 +1853,7 @@ bot.onText(/\/start(?:\s+invite_(\d+))?/, (msg, match) => {
 • 💬 Оставлять отзывы и получать награды
 • 👥 Приглашать друзей и получать бонусы
 • 🏃 Участвовать в марафонах
+• 📸 Прикреплять фото и получать искры
 
 Нажмите кнопку ниже чтобы начать!`;
   
@@ -1661,10 +1918,11 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`📱 Mini App: ${process.env.APP_URL || `http://localhost:${PORT}`}`);
   console.log(`🔧 Admin Panel: ${process.env.APP_URL || `http://localhost:${PORT}`}/admin`);
   console.log('✅ Все системы работают');
-  console.log('📊 Новая система начисления искр:');
+  console.log('📊 Система начисления искр:');
   console.log('   🎯 Квиз (1 правильный ответ): 1 искра');
   console.log('   ⭐ Идеальный квиз: +5 искр');
   console.log('   💬 Комментарий к посту: 1 искра (1 раз в день)');
+  console.log('   📸 Фотография: 3 искры (после модерации)');
   console.log('   👥 Приглашение друга: 10 искр');
   console.log('   🏃 Участие в марафоне: 7 искр');
 }).on('error', (err) => {
