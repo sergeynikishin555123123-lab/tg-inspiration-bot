@@ -41,6 +41,8 @@
         .btn-danger:hover { background: #e53e3e; }
         .btn-warning { background: #ed8936; }
         .btn-warning:hover { background: #dd6b20; }
+        .btn-photo { background: #9f7aea; }
+        .btn-photo:hover { background: #805ad5; }
         .form-group { margin-bottom: 15px; }
         .form-control { 
             width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 5px;
@@ -55,7 +57,7 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         .stat-number { font-size: 2em; font-weight: bold; color: #667eea; margin-bottom: 5px; }
-        .character-card, .quiz-card, .item-card, .post-card, .comment-card {
+        .character-card, .quiz-card, .item-card, .post-card, .comment-card, .photo-card {
             background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px;
             padding: 15px; margin-bottom: 15px;
         }
@@ -75,6 +77,13 @@
             background: #f7fafc;
         }
         .option-item { display: flex; align-items: center; gap: 10px; margin: 5px 0; }
+        .photo-preview { max-width: 300px; max-height: 200px; object-fit: cover; border-radius: 8px; margin: 10px 0; }
+        .photo-upload-area { 
+            border: 2px dashed #667eea; border-radius: 12px; padding: 30px; text-align: center; 
+            background: rgba(102,126,234,0.05); margin: 15px 0; cursor: pointer;
+        }
+        .photo-upload-area:hover { background: rgba(102,126,234,0.1); }
+        .user-photo { max-width: 100%; border-radius: 8px; margin: 10px 0; }
     </style>
 </head>
 <body>
@@ -92,7 +101,8 @@
             <div class="nav-tab" data-tab="quizzes">📝 Квизы</div>
             <div class="nav-tab" data-tab="shop">🛒 Магазин</div>
             <div class="nav-tab" data-tab="posts">📢 Публикации</div>
-            <div class="nav-tab" data-tab="comments">💬 Модерация</div>
+            <div class="nav-tab" data-tab="comments">💬 Модерация отзывов</div>
+            <div class="nav-tab" data-tab="photos">📸 Модерация фото</div>
             <div class="nav-tab" data-tab="marathons">🏃 Марафоны</div>
             <div class="nav-tab" data-tab="admins">🔧 Админы</div>
         </div>
@@ -123,6 +133,10 @@
                 <div class="stat-card">
                     <div class="stat-number" id="pendingComments">0</div>
                     <div class="stat-label">Отзывов на модерации</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="pendingPhotos">0</div>
+                    <div class="stat-label">Фото на модерации</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number" id="totalPosts">0</div>
@@ -165,6 +179,9 @@
                             </label>
                             <label class="checkbox-item">
                                 <input type="checkbox" value="marathon"> 🏃 Марафоны
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" value="photos"> 📸 Фото
                             </label>
                         </div>
                     </div>
@@ -237,6 +254,9 @@
                             <label class="checkbox-item">
                                 <input type="checkbox" value="marathon"> 🏃 Марафоны
                             </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" value="photos"> 📸 Фото
+                            </label>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-success">✅ Создать персонажа</button>
@@ -297,7 +317,7 @@
         <div id="shop" class="tab-content">
             <div class="card">
                 <h3>➕ Добавить товар</h3>
-                <form id="createItemForm">
+                <form id="createItemForm" enctype="multipart/form-data">
                     <div class="form-group">
                         <label>Название товара:</label>
                         <input type="text" id="itemTitle" class="form-control" required>
@@ -309,19 +329,26 @@
                     <div class="form-group">
                         <label>Тип товара:</label>
                         <select id="itemType" class="form-control" required>
-                            <option value="video">Видеоурок</option>
+                            <option value="photo">Фотография</option>
                             <option value="ebook">Электронная книга</option>
                             <option value="course">Курс</option>
                             <option value="material">Материалы</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Ссылка на файл:</label>
-                        <input type="url" id="itemFileUrl" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Ссылка на превью (опционально):</label>
-                        <input type="url" id="itemPreviewUrl" class="form-control">
+                        <label>Фотография товара:</label>
+                        <div class="photo-upload-area" onclick="document.getElementById('itemPhotoInput').click()">
+                            <div style="font-size: 48px; margin-bottom: 10px;">📷</div>
+                            <h3 style="color: #2d3748; margin-bottom: 10px;">Нажмите чтобы выбрать фото</h3>
+                            <p style="color: #718096; font-size: 14px;">
+                                Поддерживаются JPG, PNG, GIF (макс. 10MB)
+                            </p>
+                        </div>
+                        <input type="file" id="itemPhotoInput" accept="image/*" style="display: none;" onchange="handleItemPhotoSelect(event)">
+                        <div id="itemPhotoPreview" style="display: none;">
+                            <h4>Предпросмотр:</h4>
+                            <img id="itemPhotoPreviewImg" class="photo-preview">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Цена (искры):</label>
@@ -343,7 +370,7 @@
         <div id="posts" class="tab-content">
             <div class="card">
                 <h3>📝 Создать публикацию</h3>
-                <form id="createPostForm">
+                <form id="createPostForm" enctype="multipart/form-data">
                     <div class="form-group">
                         <label>Заголовок:</label>
                         <input type="text" id="postTitle" class="form-control" required>
@@ -353,12 +380,19 @@
                         <textarea id="postContent" class="form-control" rows="4"></textarea>
                     </div>
                     <div class="form-group">
-                        <label>Ссылка на фото (опционально):</label>
-                        <input type="url" id="postPhotoUrl" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label>Ссылка на видео (опционально):</label>
-                        <input type="url" id="postVideoUrl" class="form-control">
+                        <label>Фотография для поста:</label>
+                        <div class="photo-upload-area" onclick="document.getElementById('postPhotoInput').click()">
+                            <div style="font-size: 48px; margin-bottom: 10px;">📷</div>
+                            <h3 style="color: #2d3748; margin-bottom: 10px;">Нажмите чтобы выбрать фото</h3>
+                            <p style="color: #718096; font-size: 14px;">
+                                Поддерживаются JPG, PNG, GIF (макс. 10MB)
+                            </p>
+                        </div>
+                        <input type="file" id="postPhotoInput" accept="image/*" style="display: none;" onchange="handlePostPhotoSelect(event)">
+                        <div id="postPhotoPreview" style="display: none;">
+                            <h4>Предпросмотр:</h4>
+                            <img id="postPhotoPreviewImg" class="photo-preview">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Дополнительные кнопки:</label>
@@ -390,6 +424,11 @@
                             <input type="checkbox" id="postAllowComments" checked> Разрешить комментарии (отзывы)
                         </label>
                     </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="postAllowPhotos"> Разрешить прикрепление фото
+                        </label>
+                    </div>
                     <button type="submit" class="btn btn-success">📤 Опубликовать в канал</button>
                 </form>
             </div>
@@ -402,12 +441,22 @@
             </div>
         </div>
 
-        <!-- Модерация -->
+        <!-- Модерация комментариев -->
         <div id="comments" class="tab-content">
             <div class="card">
                 <h3>💬 Отзывы на модерации</h3>
                 <div id="commentsList">
                     <div class="loading">Загрузка комментариев...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модерация фото -->
+        <div id="photos" class="tab-content">
+            <div class="card">
+                <h3>📸 Фото на модерации</h3>
+                <div id="photosList">
+                    <div class="loading">Загрузка фото...</div>
                 </div>
             </div>
         </div>
@@ -492,6 +541,8 @@
 
         let currentQuestions = [];
         let availableQuizzes = [];
+        let selectedItemPhoto = null;
+        let selectedPostPhoto = null;
 
         // Инициализация админ панели
         async function initializeAdmin() {
@@ -549,6 +600,7 @@
                 case 'shop': loadShopItems(); break;
                 case 'posts': loadPosts(); break;
                 case 'comments': loadComments(); break;
+                case 'photos': loadPhotos(); break;
                 case 'marathons': loadMarathons(); break;
                 case 'admins': loadAdmins(); break;
             }
@@ -565,7 +617,8 @@
                 document.getElementById('activeCharacters').textContent = data.activeCharacters;
                 document.getElementById('shopItems').textContent = data.shopItems;
                 document.getElementById('totalSparks').textContent = data.totalSparks;
-                document.getElementById('pendingComments').textContent = data.pendingModeration;
+                document.getElementById('pendingComments').textContent = data.pendingComments;
+                document.getElementById('pendingPhotos').textContent = data.pendingPhotos;
                 document.getElementById('totalPosts').textContent = data.totalPosts;
             } catch (error) {
                 console.error('Error loading dashboard:', error);
@@ -901,7 +954,68 @@
             }
         }
 
-        // Управление магазином
+        // Управление магазином - загрузка фото для товаров
+        function handleItemPhotoSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (file.size > 10 * 1024 * 1024) {
+                showMessage('Файл слишком большой (макс. 10MB)', 'error');
+                return;
+            }
+            
+            if (!file.type.startsWith('image/')) {
+                showMessage('Пожалуйста, выберите изображение', 'error');
+                return;
+            }
+            
+            selectedItemPhoto = file;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('itemPhotoPreviewImg').src = e.target.result;
+                document.getElementById('itemPhotoPreview').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function createItem(e) {
+            e.preventDefault();
+            
+            if (!selectedItemPhoto) {
+                showMessage('❌ Пожалуйста, выберите фото для товара', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('photo', selectedItemPhoto);
+            formData.append('title', document.getElementById('itemTitle').value);
+            formData.append('description', document.getElementById('itemDescription').value);
+            formData.append('type', document.getElementById('itemType').value);
+            formData.append('price', document.getElementById('itemPrice').value);
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/shop/items?userId=${currentAdminId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('✅ Товар успешно добавлен!', 'success');
+                    document.getElementById('createItemForm').reset();
+                    document.getElementById('itemPhotoPreview').style.display = 'none';
+                    selectedItemPhoto = null;
+                    loadShopItems();
+                } else {
+                    showMessage(`❌ Ошибка: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка при добавлении товара', 'error');
+            }
+        }
+
         async function loadShopItems() {
             try {
                 const response = await fetch(`${API_BASE}/api/admin/shop/items?userId=${currentAdminId}`);
@@ -910,6 +1024,7 @@
                 const list = document.getElementById('shopItemsList');
                 list.innerHTML = items.map(item => `
                     <div class="item-card">
+                        <img src="${item.preview_url}" class="user-photo" alt="${item.title}">
                         <h4>${item.title}</h4>
                         <p>${item.description || 'Без описания'}</p>
                         <p><strong>Тип:</strong> ${getItemTypeName(item.type)}</p>
@@ -923,39 +1038,6 @@
                 `).join('');
             } catch (error) {
                 document.getElementById('shopItemsList').innerHTML = '<div class="error">Ошибка загрузки</div>';
-            }
-        }
-
-        async function createItem(e) {
-            e.preventDefault();
-            
-            const itemData = {
-                title: document.getElementById('itemTitle').value,
-                description: document.getElementById('itemDescription').value,
-                type: document.getElementById('itemType').value,
-                file_url: document.getElementById('itemFileUrl').value,
-                preview_url: document.getElementById('itemPreviewUrl').value || null,
-                price: parseFloat(document.getElementById('itemPrice').value)
-            };
-
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/shop/items?userId=${currentAdminId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(itemData)
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showMessage('✅ Товар успешно добавлен!', 'success');
-                    document.getElementById('createItemForm').reset();
-                    loadShopItems();
-                } else {
-                    showMessage(`❌ Ошибка: ${result.error}`, 'error');
-                }
-            } catch (error) {
-                showMessage('Ошибка при добавлении товара', 'error');
             }
         }
 
@@ -981,6 +1063,30 @@
         }
 
         // Управление публикациями
+        function handlePostPhotoSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (file.size > 10 * 1024 * 1024) {
+                showMessage('Файл слишком большой (макс. 10MB)', 'error');
+                return;
+            }
+            
+            if (!file.type.startsWith('image/')) {
+                showMessage('Пожалуйста, выберите изображение', 'error');
+                return;
+            }
+            
+            selectedPostPhoto = file;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('postPhotoPreviewImg').src = e.target.result;
+                document.getElementById('postPhotoPreview').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
         function addPostButton() {
             const container = document.getElementById('postButtonsContainer');
             const buttonDiv = document.createElement('div');
@@ -1010,25 +1116,25 @@
                 }
             });
 
-            const postData = {
-                title: document.getElementById('postTitle').value,
-                content: document.getElementById('postContent').value,
-                photo_url: document.getElementById('postPhotoUrl').value || null,
-                video_url: document.getElementById('postVideoUrl').value || null,
-                buttons: buttons,
-                requires_action: document.getElementById('postRequiresAction').checked,
-                action_type: document.getElementById('postRequiresAction').checked ? 
-                    document.getElementById('postActionType').value : null,
-                action_target: document.getElementById('postRequiresAction').checked ? 
-                    document.getElementById('postActionTarget').value : null,
-                allow_comments: document.getElementById('postAllowComments').checked
-            };
+            const formData = new FormData();
+            if (selectedPostPhoto) {
+                formData.append('photo', selectedPostPhoto);
+            }
+            formData.append('title', document.getElementById('postTitle').value);
+            formData.append('content', document.getElementById('postContent').value);
+            formData.append('buttons', JSON.stringify(buttons));
+            formData.append('requires_action', document.getElementById('postRequiresAction').checked);
+            formData.append('action_type', document.getElementById('postRequiresAction').checked ? 
+                document.getElementById('postActionType').value : '');
+            formData.append('action_target', document.getElementById('postRequiresAction').checked ? 
+                document.getElementById('postActionTarget').value : '');
+            formData.append('allow_comments', document.getElementById('postAllowComments').checked);
+            formData.append('allow_photos', document.getElementById('postAllowPhotos').checked);
 
             try {
                 const response = await fetch(`${API_BASE}/api/admin/posts?userId=${currentAdminId}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(postData)
+                    body: formData
                 });
 
                 const result = await response.json();
@@ -1036,6 +1142,8 @@
                 if (result.success) {
                     showMessage('✅ ' + result.message, 'success');
                     document.getElementById('createPostForm').reset();
+                    document.getElementById('postPhotoPreview').style.display = 'none';
+                    selectedPostPhoto = null;
                     document.getElementById('postButtonsContainer').innerHTML = `
                         <div class="post-button-item" style="margin-bottom: 10px;">
                             <input type="text" class="form-control" placeholder="Текст кнопки" style="margin-bottom: 5px;">
@@ -1059,12 +1167,12 @@
                 const list = document.getElementById('postsList');
                 list.innerHTML = posts.map(post => `
                     <div class="post-card">
+                        ${post.photo_url ? `<img src="${post.photo_url}" class="user-photo" alt="Пост">` : ''}
                         <h4>${post.title}</h4>
                         <p>${post.content || 'Без текста'}</p>
-                        ${post.photo_url ? `<p>🖼️ <em>Есть фото</em></p>` : ''}
-                        ${post.video_url ? `<p>🎥 <em>Есть видео</em></p>` : ''}
                         <p><strong>Опубликован:</strong> ${post.is_published ? 'Да' : 'Нет'}</p>
                         <p><strong>Комментарии:</strong> ${post.allow_comments ? 'Разрешены' : 'Запрещены'}</p>
+                        <p><strong>Фото:</strong> ${post.allow_photos ? 'Разрешены' : 'Запрещены'}</p>
                         ${post.buttons && JSON.parse(post.buttons).length > 0 ? 
                             `<p><strong>Кнопки:</strong> ${JSON.parse(post.buttons).map(btn => 
                                 `<span class="button-preview">${btn.text}</span>`
@@ -1139,6 +1247,72 @@
                 }
             } catch (error) {
                 showMessage('Ошибка при отклонении комментария', 'error');
+            }
+        }
+
+        // Модерация фото
+        async function loadPhotos() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/photos?userId=${currentAdminId}`);
+                const photos = await response.json();
+                
+                const list = document.getElementById('photosList');
+                list.innerHTML = photos.map(photo => `
+                    <div class="photo-card">
+                        <img src="${photo.photo_url}" class="user-photo" alt="Фото пользователя">
+                        <h4>${photo.tg_first_name} (@${photo.tg_username || 'нет'})</h4>
+                        <p><strong>Пост:</strong> ${photo.post_title || 'Не указан'}</p>
+                        ${photo.description ? `<p><strong>Описание:</strong> ${photo.description}</p>` : ''}
+                        <p><strong>Дата:</strong> ${new Date(photo.created_at).toLocaleString('ru-RU')}</p>
+                        <div style="margin-top: 10px;">
+                            <button class="btn btn-success" onclick="approvePhoto(${photo.id})">✅ Одобрить (+3✨)</button>
+                            <button class="btn btn-danger" onclick="rejectPhoto(${photo.id})">❌ Отклонить</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('photosList').innerHTML = '<div class="error">Ошибка загрузки</div>';
+            }
+        }
+
+        async function approvePhoto(photoId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/photos/${photoId}/approve?userId=${currentAdminId}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ ' + result.message, 'success');
+                    loadPhotos();
+                    loadDashboard();
+                } else {
+                    showMessage('❌ Ошибка одобрения', 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка при одобрении фото', 'error');
+            }
+        }
+
+        async function rejectPhoto(photoId) {
+            if (!confirm('Отклонить это фото?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/photos/${photoId}/reject?userId=${currentAdminId}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ Фото отклонено', 'success');
+                    loadPhotos();
+                } else {
+                    showMessage('❌ Ошибка отклонения', 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка при отклонении фото', 'error');
             }
         }
 
@@ -1277,14 +1451,15 @@
                 'shop': '🛒 Магазин',
                 'invite': '👥 Приглашения',
                 'activities': '📊 Активности',
-                'marathon': '🏃 Марафоны'
+                'marathon': '🏃 Марафоны',
+                'photos': '📸 Фото'
             };
             return buttons[btnKey] || btnKey;
         }
 
         function getItemTypeName(type) {
             const types = {
-                'video': 'Видеоурок',
+                'photo': 'Фотография',
                 'ebook': 'Электронная книга',
                 'course': 'Курс',
                 'material': 'Материалы'
