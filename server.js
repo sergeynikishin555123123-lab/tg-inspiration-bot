@@ -10,20 +10,6 @@ import multer from 'multer';
 import fs from 'fs';
 import sharp from 'sharp';
 
-// Создаем папки для загрузок если их нет
-import fs from 'fs';
-
-const uploadsDir = join(__dirname, 'uploads');
-const photosDir = join(uploadsDir, 'photos');
-const previewsDir = join(uploadsDir, 'previews');
-
-[uploadsDir, photosDir, previewsDir].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-    console.log(`✅ Created directory: ${dir}`);
-  }
-});
-
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -71,6 +57,7 @@ const upload = multer({
   }
 });
 
+// Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -78,7 +65,7 @@ app.use(express.static(join(__dirname, 'public')));
 app.use('/admin', express.static(join(__dirname, 'admin')));
 app.use('/uploads', express.static(uploadsDir));
 
-console.log('🎨 Мастерская Вдохновения - Запуск с системой загрузки фото...');
+console.log('🎨 Мастерская Вдохновения - Запуск сервера...');
 
 // ==================== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ====================
 
@@ -413,7 +400,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    version: '6.0.0'
+    version: '1.0.0'
   });
 });
 
@@ -754,7 +741,7 @@ app.get('/api/webapp/photos/:userId', (req, res) => {
     const photosWithUrls = photos.map(photo => ({
       ...photo,
       photo_url: `/uploads/photos/${photo.photo_path.split('/').pop()}`,
-      preview_url: `/uploads/previews/${photo.photo_path.split('/').pop().replace('photo-', 'preview-')}`
+      preview_url: `/uploads/previews/preview-${photo.photo_path.split('/').pop()}`
     }));
     
     res.json({ photos: photosWithUrls });
@@ -1142,16 +1129,13 @@ app.get('/api/admin/stats', requireAdmin, (req, res) => {
   ]).then(([totalUsers, activeQuizzes, activeCharacters, shopItems, totalSparks, pendingComments, pendingPhotos, totalPosts]) => {
     res.json({
       totalUsers,
-      activeToday: totalUsers,
-      totalPosts,
-      pendingModeration: pendingComments + pendingPhotos,
-      pendingComments,
-      pendingPhotos,
-      totalSparks,
-      shopItems,
       activeQuizzes,
       activeCharacters,
-      registeredToday: 0
+      shopItems,
+      totalSparks,
+      pendingComments,
+      pendingPhotos,
+      totalPosts
     });
   });
 });
@@ -1190,25 +1174,6 @@ app.post('/api/admin/classes', requireAdmin, (req, res) => {
         success: true,
         message: 'Класс успешно создан',
         classId: this.lastID
-      });
-    }
-  );
-});
-
-app.put('/api/admin/classes/:id', requireAdmin, (req, res) => {
-  const { id } = req.params;
-  const { name, description, icon, available_buttons, is_active } = req.body;
-  
-  const buttonsJson = JSON.stringify(available_buttons || []);
-  
-  db.run(`UPDATE classes SET name=?, description=?, icon=?, available_buttons=?, is_active=? WHERE id=?`,
-    [name, description, icon, buttonsJson, is_active, id],
-    function(err) {
-      if (err) return res.status(500).json({ error: 'Database error' });
-      
-      res.json({
-        success: true,
-        message: 'Класс успешно обновлен'
       });
     }
   );
@@ -1256,25 +1221,6 @@ app.post('/api/admin/characters', requireAdmin, (req, res) => {
         success: true,
         message: 'Персонаж успешно создан',
         characterId: this.lastID
-      });
-    }
-  );
-});
-
-app.put('/api/admin/characters/:id', requireAdmin, (req, res) => {
-  const { id } = req.params;
-  const { class_id, character_name, description, bonus_type, bonus_value, available_buttons, is_active } = req.body;
-  
-  const buttonsJson = JSON.stringify(available_buttons || []);
-  
-  db.run(`UPDATE characters SET class_id=?, character_name=?, description=?, bonus_type=?, bonus_value=?, available_buttons=?, is_active=? WHERE id=?`,
-    [class_id, character_name, description, bonus_type, bonus_value, buttonsJson, is_active, id],
-    function(err) {
-      if (err) return res.status(500).json({ error: 'Database error' });
-      
-      res.json({
-        success: true,
-        message: 'Персонаж успешно обновлен'
       });
     }
   );
@@ -1398,23 +1344,6 @@ app.get('/api/admin/shop/items', requireAdmin, (req, res) => {
   });
 });
 
-app.put('/api/admin/shop/items/:id', requireAdmin, (req, res) => {
-  const { id } = req.params;
-  const { title, description, type, price, is_active } = req.body;
-  
-  db.run(`UPDATE shop_items SET title=?, description=?, type=?, price=?, is_active=? WHERE id=?`,
-    [title, description, type, price, is_active, id],
-    function(err) {
-      if (err) return res.status(500).json({ error: 'Database error' });
-      
-      res.json({
-        success: true,
-        message: 'Товар успешно обновлен'
-      });
-    }
-  );
-});
-
 app.delete('/api/admin/shop/items/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
   
@@ -1467,30 +1396,10 @@ app.post('/api/admin/posts', upload.single('photo'), requireAdmin, async (req, r
         
         const postId = this.lastID;
         
-        // Публикуем пост в канал
-        db.get('SELECT * FROM channel_posts WHERE id = ?', [postId], (err, post) => {
-          if (!err && post) {
-            publishToChannel(post).then(() => {
-              res.json({
-                success: true,
-                message: 'Пост успешно создан и опубликован в канал!',
-                postId: postId
-              });
-            }).catch(error => {
-              res.json({
-                success: true,
-                message: 'Пост создан, но возникла ошибка при публикации в канал',
-                postId: postId,
-                warning: error.message
-              });
-            });
-          } else {
-            res.json({
-              success: true,
-              message: 'Пост успешно создан',
-              postId: postId
-            });
-          }
+        res.json({
+          success: true,
+          message: 'Пост успешно создан',
+          postId: postId
         });
       }
     );
@@ -1582,7 +1491,7 @@ app.get('/api/admin/photos', requireAdmin, (req, res) => {
     const photosWithUrls = photos.map(photo => ({
       ...photo,
       photo_url: `/uploads/photos/${photo.photo_path.split('/').pop()}`,
-      preview_url: `/uploads/previews/${photo.photo_path.split('/').pop().replace('photo-', 'preview-')}`
+      preview_url: `/uploads/previews/preview-${photo.photo_path.split('/').pop()}`
     }));
     
     res.json(photosWithUrls);
@@ -1723,138 +1632,21 @@ app.delete('/api/admin/admins/:userId', requireAdmin, (req, res) => {
   });
 });
 
-// ==================== TELEGRAM BOT ФУНКЦИИ ====================
+// ==================== TELEGRAM BOT ====================
 
 let bot;
 if (process.env.BOT_TOKEN) {
-  bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
-
-  // Функция отправки уведомления о покупке
-  function sendPurchaseNotification(userId, item) {
-    db.get('SELECT * FROM users WHERE user_id = ?', [userId], (err, user) => {
-      if (err || !user) return;
-      
-      const message = `🎉 Поздравляем с покупкой!
-
-Вы приобрели: *${item.title}*
-
-📁 Тип: ${getItemTypeName(item.type)}
-💰 Стоимость: ${item.price}✨
-
-Ваш товар доступен в разделе "Мои покупки" в личном кабинете.
-
-Приятного использования! 🎨`;
-      
-      try {
-        bot.sendMessage(userId, message, { parse_mode: 'Markdown' });
-      } catch (error) {
-        console.log('Cannot send purchase notification:', error.message);
-      }
-    });
-  }
-
-  function getItemTypeName(type) {
-    const types = {
-      'photo': 'Фотография',
-      'ebook': 'Электронная книга',
-      'course': 'Курс',
-      'material': 'Материалы'
-    };
-    return types[type] || type;
-  }
-
-  // Публикация постов в канал
-  async function publishToChannel(post) {
-    try {
-      const channelId = process.env.CHANNEL_USERNAME;
-      if (!channelId) {
-        console.log('❌ CHANNEL_USERNAME not set');
-        return;
-      }
-
-      let caption = `*${post.title}*`;
-      if (post.content) {
-        caption += `\n\n${post.content}`;
-      }
-
-      const buttons = JSON.parse(post.buttons || '[]');
-      const keyboard = {
-        inline_keyboard: []
-      };
-
-      // Добавляем кнопки из поста
-      buttons.forEach(button => {
-        keyboard.inline_keyboard.push([{
-          text: button.text,
-          url: button.url
-        }]);
-      });
-
-      // Добавляем кнопку "Пройти квиз" если требуется действие
-      if (post.requires_action && post.action_type === 'quiz') {
-        const appUrl = process.env.APP_URL || 'http://localhost:3000';
-        keyboard.inline_keyboard.push([{
-          text: "🎯 Пройти квиз",
-          web_app: { url: `${appUrl}#quizzes` }
-        }]);
-      }
-
-      // Добавляем кнопку "Пригласить друга"
-      keyboard.inline_keyboard.push([{
-        text: "👥 Пригласить друга",
-        web_app: { url: `${process.env.APP_URL || 'http://localhost:3000'}#invite` }
-      }]);
-
-      // Добавляем кнопку "Написать отзыв" если разрешены комментарии
-      if (post.allow_comments) {
-        keyboard.inline_keyboard.push([{
-          text: "💬 Написать отзыв",
-          web_app: { url: `${process.env.APP_URL || 'http://localhost:3000'}#comment?postId=${post.post_id || post.id}` }
-        }]);
-      }
-
-      // Добавляем кнопку "Прикрепить фото" если разрешены фото
-      if (post.allow_photos) {
-        keyboard.inline_keyboard.push([{
-          text: "📸 Прикрепить фото",
-          web_app: { url: `${process.env.APP_URL || 'http://localhost:3000'}#photos?postId=${post.post_id || post.id}` }
-        }]);
-      }
-
-      let message;
-      if (post.photo_path) {
-        const photoPath = join(__dirname, post.photo_path);
-        message = await bot.sendPhoto(channelId, photoPath, {
-          caption: caption,
-          parse_mode: 'Markdown',
-          reply_markup: keyboard
-        });
-      } else {
-        message = await bot.sendMessage(channelId, caption, {
-          parse_mode: 'Markdown',
-          reply_markup: keyboard
-        });
-      }
-
-      // Сохраняем ID поста в канале
-      db.run('UPDATE channel_posts SET post_id = ?, is_published = TRUE WHERE id = ?', 
-        [message.message_id.toString(), post.id]);
-
-      console.log('✅ Post published to channel:', post.title);
-    } catch (error) {
-      console.error('❌ Error publishing to channel:', error);
-      throw error;
-    }
-  }
-
-  // Обработка команды /start с приглашением
-  bot.onText(/\/start(?:\s+invite_(\d+))?/, (msg, match) => {
-    const chatId = msg.chat.id;
-    const name = msg.from.first_name || 'Друг';
-    const userId = msg.from.id;
-    const inviteCode = match ? match[1] : null;
+  try {
+    bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
     
-    let welcomeText = `🎨 Привет, ${name}!
+    // Обработка команды /start
+    bot.onText(/\/start(?:\s+invite_(\d+))?/, (msg, match) => {
+      const chatId = msg.chat.id;
+      const name = msg.from.first_name || 'Друг';
+      const userId = msg.from.id;
+      const inviteCode = match ? match[1] : null;
+      
+      let welcomeText = `🎨 Привет, ${name}!
 
 Добро пожаловать в **Мастерская Вдохновения**!
 
@@ -1869,60 +1661,65 @@ if (process.env.BOT_TOKEN) {
 • 📸 Прикреплять фото и получать искры
 
 Нажмите кнопку ниже чтобы начать!`;
-    
-    // Обработка приглашения
-    if (inviteCode && inviteCode !== userId.toString()) {
-      db.get('SELECT * FROM users WHERE user_id = ?', [inviteCode], (err, inviter) => {
-        if (!err && inviter) {
-          db.run(`INSERT OR IGNORE INTO invitations (inviter_id, invited_id, invited_username) VALUES (?, ?, ?)`,
-            [inviteCode, userId, msg.from.username],
-            function() {
-              if (this.changes > 0) {
-                awardSparks(inviteCode, 10, 'Приглашение друга', 'invitation', {
-                  invited_user_id: userId,
-                  invited_username: msg.from.username
-                });
-                db.run(`UPDATE users SET invite_count = invite_count + 1 WHERE user_id = ?`, [inviteCode]);
-                console.log(`✅ User ${userId} invited by ${inviteCode}`);
+      
+      // Обработка приглашения
+      if (inviteCode && inviteCode !== userId.toString()) {
+        db.get('SELECT * FROM users WHERE user_id = ?', [inviteCode], (err, inviter) => {
+          if (!err && inviter) {
+            db.run(`INSERT OR IGNORE INTO invitations (inviter_id, invited_id, invited_username) VALUES (?, ?, ?)`,
+              [inviteCode, userId, msg.from.username],
+              function() {
+                if (this.changes > 0) {
+                  awardSparks(inviteCode, 10, 'Приглашение друга', 'invitation', {
+                    invited_user_id: userId,
+                    invited_username: msg.from.username
+                  });
+                  db.run(`UPDATE users SET invite_count = invite_count + 1 WHERE user_id = ?`, [inviteCode]);
+                  console.log(`✅ User ${userId} invited by ${inviteCode}`);
+                }
               }
-            }
-          );
-        }
-      });
-    }
-    
-    const keyboard = {
-      inline_keyboard: [[
-        {
-          text: "📱 Открыть Личный Кабинет",
-          web_app: { url: process.env.APP_URL || `http://localhost:3000` }
-        }
-      ]]
-    };
-
-    bot.sendMessage(chatId, welcomeText, {
-      parse_mode: 'Markdown',
-      reply_markup: keyboard
-    });
-  });
-
-  // Команда для админов
-  bot.onText(/\/admin/, (msg) => {
-    const chatId = msg.chat.id;
-    const userId = msg.from.id;
-    
-    db.get('SELECT * FROM admins WHERE user_id = ?', [userId], (err, admin) => {
-      if (err || !admin) {
-        bot.sendMessage(chatId, '❌ У вас нет прав доступа к админ панели.');
-        return;
+            );
+          }
+        });
       }
       
-      const adminUrl = `${process.env.APP_URL || 'http://localhost:3000'}/admin?userId=${userId}`;
-      bot.sendMessage(chatId, `🔧 Панель администратора\n\nДоступ: ${admin.role}\n\n${adminUrl}`);
+      const keyboard = {
+        inline_keyboard: [[
+          {
+            text: "📱 Открыть Личный Кабинет",
+            web_app: { url: process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}` }
+          }
+        ]]
+      };
+
+      bot.sendMessage(chatId, welcomeText, {
+        parse_mode: 'Markdown',
+        reply_markup: keyboard
+      });
     });
-  });
+
+    // Команда для админов
+    bot.onText(/\/admin/, (msg) => {
+      const chatId = msg.chat.id;
+      const userId = msg.from.id;
+      
+      db.get('SELECT * FROM admins WHERE user_id = ?', [userId], (err, admin) => {
+        if (err || !admin) {
+          bot.sendMessage(chatId, '❌ У вас нет прав доступа к админ панели.');
+          return;
+        }
+        
+        const adminUrl = `${process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`}/admin?userId=${userId}`;
+        bot.sendMessage(chatId, `🔧 Панель администратора\n\nДоступ: ${admin.role}\n\n${adminUrl}`);
+      });
+    });
+
+    console.log('✅ Telegram Bot запущен');
+  } catch (error) {
+    console.log('❌ Ошибка запуска Telegram Bot:', error.message);
+  }
 } else {
-  console.log('⚠️ BOT_TOKEN not set - Telegram bot disabled');
+  console.log('⚠️ Telegram Bot Token не указан, бот не запущен');
 }
 
 // ==================== SERVER START ====================
@@ -1934,13 +1731,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`📱 Mini App: ${process.env.APP_URL || `http://localhost:${PORT}`}`);
   console.log(`🔧 Admin Panel: ${process.env.APP_URL || `http://localhost:${PORT}`}/admin`);
   console.log('✅ Все системы работают');
-  console.log('📊 Система начисления искр:');
-  console.log('   🎯 Квиз (1 правильный ответ): 1 искра');
-  console.log('   ⭐ Идеальный квиз: +5 искр');
-  console.log('   💬 Комментарий к посту: 1 искра (1 раз в день)');
-  console.log('   📸 Фотография: 3 искры (после модерации)');
-  console.log('   👥 Приглашение друга: 10 искр');
-  console.log('   🏃 Участие в марафоне: 7 искр');
 }).on('error', (err) => {
   console.error('❌ Server error:', err);
 });
