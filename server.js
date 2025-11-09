@@ -17,7 +17,7 @@ const __dirname = dirname(__filename);
 const app = express();
 const db = new sqlite3.Database(':memory:');
 
-// ==================== НАСТРОЙКА ЗАГРУЗКИ ФАЙЛОВ ====================
+// Настройка загрузки файлов
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = join(__dirname, 'uploads');
@@ -49,6 +49,7 @@ app.use('/uploads', express.static(join(__dirname, 'uploads')));
 console.log('🎨 Мастерская Вдохновения - Запуск улучшенной версии...');
 
 // ==================== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ====================
+
 db.serialize(() => {
   console.log('📊 Инициализация базы данных...');
   
@@ -842,13 +843,10 @@ app.post('/api/webapp/shop/purchase', (req, res) => {
                              `💰 Стоимость: ${item.price}✨\n\n`;
                 
                 if (item.file_url) {
-                  const fullFileUrl = `${process.env.APP_URL}${item.file_url}`;
                   if (item.type === 'video') {
-                    message += `🎥 Видео доступно по ссылке: ${fullFileUrl}\n\n`;
+                    message += `🎥 Видео доступно по ссылке: ${process.env.APP_URL}${item.file_url}\n\n`;
                   } else if (item.type === 'ebook') {
-                    message += `📚 Файл доступен по ссылке: ${fullFileUrl}\n\n`;
-                  } else if (item.type === 'audio') {
-                    message += `🎧 Аудио доступно по ссылке: ${fullFileUrl}\n\n`;
+                    message += `📚 Файл доступен по ссылке: ${process.env.APP_URL}${item.file_url}\n\n`;
                   }
                 }
                 
@@ -1184,9 +1182,7 @@ app.delete('/api/admin/quizzes/:id', requireAdmin, (req, res) => {
   });
 });
 
-// ==================== ADMIN API - МАГАЗИН ====================
-
-// Управление магазином - получение товаров
+// Управление магазином
 app.get('/api/admin/shop/items', requireAdmin, (req, res) => {
   db.all("SELECT * FROM shop_items ORDER BY created_at DESC", (err, items) => {
     if (err) return res.status(500).json({ error: 'Database error' });
@@ -1194,25 +1190,19 @@ app.get('/api/admin/shop/items', requireAdmin, (req, res) => {
   });
 });
 
-// Создание товара с загрузкой файлов
-app.post('/api/admin/shop/items', upload.fields([
-  { name: 'file', maxCount: 1 },
-  { name: 'preview', maxCount: 1 }
-]), requireAdmin, (req, res) => {
+app.post('/api/admin/shop/items', upload.fields([{ name: 'file' }, { name: 'preview' }]), requireAdmin, (req, res) => {
   const { title, description, type, price } = req.body;
   const files = req.files;
   
   console.log('🛒 Добавление товара:', title);
-  console.log('📁 Загруженные файлы:', files);
   
   if (!title || !price) {
     return res.status(400).json({ error: 'Title and price are required' });
   }
-
-  // Получаем пути к загруженным файлам
-  const fileUrl = files['file'] ? `/uploads/${files['file'][0].filename}` : null;
-  const previewUrl = files['preview'] ? `/uploads/${files['preview'][0].filename}` : null;
-
+  
+  const fileUrl = files['file'] ? `/uploads/shop/${files['file'][0].filename}` : null;
+  const previewUrl = files['preview'] ? `/uploads/previews/${files['preview'][0].filename}` : null;
+  
   db.run(`INSERT INTO shop_items (title, description, type, file_url, preview_url, price) VALUES (?, ?, ?, ?, ?, ?)`,
     [title, description, type || 'video', fileUrl, previewUrl, parseFloat(price)],
     function(err) {
@@ -1224,15 +1214,12 @@ app.post('/api/admin/shop/items', upload.fields([
       res.json({
         success: true,
         message: 'Товар успешно добавлен',
-        itemId: this.lastID,
-        fileUrl: fileUrl,
-        previewUrl: previewUrl
+        itemId: this.lastID
       });
     }
   );
 });
 
-// Обновление товара
 app.put('/api/admin/shop/items/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
   const { title, description, type, price, is_active } = req.body;
@@ -1250,7 +1237,6 @@ app.put('/api/admin/shop/items/:id', requireAdmin, (req, res) => {
   );
 });
 
-// Удаление товара
 app.delete('/api/admin/shop/items/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
   
@@ -1264,9 +1250,7 @@ app.delete('/api/admin/shop/items/:id', requireAdmin, (req, res) => {
   });
 });
 
-// ==================== ADMIN API - ПУБЛИКАЦИИ ====================
-
-// Получение постов
+// Управление постами
 app.get('/api/admin/posts', requireAdmin, (req, res) => {
   db.all("SELECT * FROM channel_posts ORDER BY created_at DESC", (err, posts) => {
     if (err) return res.status(500).json({ error: 'Database error' });
@@ -1280,34 +1264,21 @@ app.get('/api/admin/posts', requireAdmin, (req, res) => {
   });
 });
 
-// Создание поста с загрузкой медиа
-app.post('/api/admin/posts', upload.fields([
-  { name: 'photo', maxCount: 1 },
-  { name: 'video', maxCount: 1 }
-]), requireAdmin, (req, res) => {
-  const { title, content, buttons, requires_comment } = req.body;
-  const files = req.files;
+app.post('/api/admin/posts', requireAdmin, (req, res) => {
+  const { title, content, photo_url, video_url, buttons, requires_comment } = req.body;
   
   console.log('📝 Создание поста:', title);
-  console.log('📁 Загруженные файлы:', files);
-
+  
   if (!title) {
     return res.status(400).json({ error: 'Title is required' });
   }
-
-  // Получаем пути к загруженным файлам
-  const photoUrl = files['photo'] ? `/uploads/${files['photo'][0].filename}` : null;
-  const videoUrl = files['video'] ? `/uploads/${files['video'][0].filename}` : null;
   
   const buttonsJson = JSON.stringify(buttons || []);
-
+  
   db.run(`INSERT INTO channel_posts (title, content, photo_url, video_url, buttons, requires_comment, published_by) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [title, content, photoUrl, videoUrl, buttonsJson, requires_comment, req.admin.user_id],
+    [title, content, photo_url, video_url, buttonsJson, requires_comment, req.admin.user_id],
     function(err) {
-      if (err) {
-        console.error('❌ Error creating post:', err);
-        return res.status(500).json({ error: 'Error creating post' });
-      }
+      if (err) return res.status(500).json({ error: 'Error creating post' });
       
       const postId = this.lastID;
       
@@ -1321,9 +1292,7 @@ app.post('/api/admin/posts', upload.fields([
       res.json({
         success: true,
         message: 'Пост успешно создан и опубликован в канал',
-        postId: postId,
-        photoUrl: photoUrl,
-        videoUrl: videoUrl
+        postId: postId
       });
     }
   );
@@ -1432,29 +1401,14 @@ app.delete('/api/admin/admins/:userId', requireAdmin, (req, res) => {
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
-// Установка команд бота
-bot.setMyCommands([
-  {
-    command: 'start',
-    description: 'Открыть личный кабинет'
-  },
-  {
-    command: 'admin',
-    description: 'Панель администратора'
-  },
-  {
-    command: 'help',
-    description: 'Помощь'
-  }
-]);
-
-// Обработка команды /start
-bot.onText(/\/start/, (msg) => {
+// Обработка команды /start с приглашением
+bot.onText(/\/start(?:\s+invite_(\d+))?/, (msg, match) => {
   const chatId = msg.chat.id;
   const name = msg.from.first_name || 'Друг';
   const userId = msg.from.id;
+  const inviteCode = match ? match[1] : null;
   
-  const welcomeText = `🎨 Привет, ${name}!
+  let welcomeText = `🎨 Привет, ${name}!
 
 Добро пожаловать в **Мастерская Вдохновения**!
 
@@ -1465,42 +1419,6 @@ bot.onText(/\/start/, (msg) => {
 • 📊 Отслеживать свой прогресс
 • 💬 Оставлять отзывы и получать награды
 • 👥 Приглашать друзей и получать бонусы
-
-Нажмите кнопку ниже чтобы начать!`;
-
-  const keyboard = {
-    reply_markup: {
-      inline_keyboard: [[
-        {
-          text: "📱 Открыть Личный Кабинет",
-          web_app: { url: process.env.APP_URL || `http://localhost:3000` }
-        }
-      ]]
-    }
-  };
-
-  bot.sendMessage(chatId, welcomeText, {
-    parse_mode: 'Markdown',
-    ...keyboard
-  });
-});
-
-// Обработка команды /start с приглашением
-bot.onText(/\/start invite_(\d+)/, (msg, match) => {
-  const chatId = msg.chat.id;
-  const name = msg.from.first_name || 'Друг';
-  const userId = msg.from.id;
-  const inviteCode = match[1];
-  
-  let welcomeText = `🎨 Привет, ${name}!
-
-Добро пожаловать в **Мастерская Вдохновения**!
-
-✨ Вы были приглашены другом! Откройте личный кабинет чтобы:
-• 🎯 Проходить квизы и получать искры
-• 👥 Выбрать своего персонажа  
-• 🛒 Покупать обучающие материалы
-• 📊 Отслеживать свой прогресс
 
 Нажмите кнопку ниже чтобы начать!`;
   
@@ -1514,9 +1432,6 @@ bot.onText(/\/start invite_(\d+)/, (msg, match) => {
             if (this.changes > 0) {
               awardSparks(inviteCode, 10, 'invitation', 'Приглашение друга');
               console.log(`✅ User ${userId} invited by ${inviteCode}`);
-              
-              // Уведомляем пригласившего
-              bot.sendMessage(inviteCode, `🎉 Ваш друг ${name} присоединился по вашей ссылке! Вы получили +10✨`).catch(console.error);
             }
           }
         );
@@ -1525,19 +1440,17 @@ bot.onText(/\/start invite_(\d+)/, (msg, match) => {
   }
   
   const keyboard = {
-    reply_markup: {
-      inline_keyboard: [[
-        {
-          text: "📱 Открыть Личный Кабинет",
-          web_app: { url: process.env.APP_URL || `http://localhost:3000` }
-        }
-      ]]
-    }
+    inline_keyboard: [[
+      {
+        text: "📱 Открыть Личный Кабинет",
+        web_app: { url: process.env.APP_URL || `http://localhost:3000` }
+      }
+    ]]
   };
 
   bot.sendMessage(chatId, welcomeText, {
     parse_mode: 'Markdown',
-    ...keyboard
+    reply_markup: keyboard
   });
 });
 
@@ -1553,53 +1466,11 @@ bot.onText(/\/admin/, (msg) => {
     }
     
     const adminUrl = `${process.env.APP_URL || 'http://localhost:3000'}/admin?userId=${userId}`;
-    
-    const keyboard = {
-      reply_markup: {
-        inline_keyboard: [[
-          {
-            text: "🔧 Открыть Админ Панель",
-            web_app: { url: adminUrl }
-          }
-        ]]
-      }
-    };
-    
-    bot.sendMessage(chatId, `🔧 Панель администратора\n\nДоступ: ${admin.role}\n\nНажмите кнопку ниже чтобы открыть панель управления:`, keyboard);
+    bot.sendMessage(chatId, `🔧 Панель администратора\n\nДоступ: ${admin.role}\n\n${adminUrl}`);
   });
 });
 
-// Команда помощи
-bot.onText(/\/help/, (msg) => {
-  const chatId = msg.chat.id;
-  
-  const helpText = `🤖 **Помощь по боту "Мастерская Вдохновения"**
-
-**Основные команды:**
-/start - Открыть личный кабинет
-/admin - Панель администратора (только для админов)
-/help - Эта справка
-
-**Что можно делать:**
-🎯 Проходить квизы и получать искры
-👥 Выбирать персонажей и классы
-🛒 Покупать обучающие материалы
-💬 Оставлять отзывы к постам
-👥 Приглашать друзей
-📊 Отслеживать свой прогресс
-
-**Награды:**
-✅ Квизы: 1 искра за правильный ответ + 5 за идеальный результат
-✅ Комментарии: +1 искра после модерации
-✅ Приглашения: +10 искр за каждого друга
-✅ Марафоны: +7 искр за участие
-
-Для начала работы нажмите /start`;
-
-  bot.sendMessage(chatId, helpText, { parse_mode: 'Markdown' });
-});
-
-// Публикация постов в канал с медиа
+// Публикация постов в канал
 async function publishToChannel(post) {
   try {
     const channelId = process.env.CHANNEL_USERNAME;
@@ -1615,14 +1486,12 @@ async function publishToChannel(post) {
 
     const buttons = JSON.parse(post.buttons || '[]');
     const keyboard = {
-      reply_markup: {
-        inline_keyboard: []
-      }
+      inline_keyboard: []
     };
 
     // Добавляем кнопки из поста
     buttons.forEach(button => {
-      keyboard.reply_markup.inline_keyboard.push([{
+      keyboard.inline_keyboard.push([{
         text: button.text,
         url: button.url
       }]);
@@ -1631,42 +1500,35 @@ async function publishToChannel(post) {
     // Добавляем кнопку "Написать отзыв" если требуется
     if (post.requires_comment) {
       const appUrl = process.env.APP_URL || 'http://localhost:3000';
-      keyboard.reply_markup.inline_keyboard.push([{
+      keyboard.inline_keyboard.push([{
         text: "💬 Написать отзыв (+1✨)",
         web_app: { url: `${appUrl}#comments` }
       }]);
     }
 
     // Добавляем кнопку "Пригласить друга"
-    keyboard.reply_markup.inline_keyboard.push([{
+    keyboard.inline_keyboard.push([{
       text: "👥 Пригласить друга (+10✨)",
       web_app: { url: `${process.env.APP_URL || 'http://localhost:3000'}#invite` }
     }]);
 
     let message;
-    const appUrl = process.env.APP_URL || 'http://localhost:3000';
-    
     if (post.photo_url) {
-      // Если фото загружено на наш сервер
-      const fullPhotoUrl = `${appUrl}${post.photo_url}`;
-      message = await bot.sendPhoto(channelId, fullPhotoUrl, {
+      message = await bot.sendPhoto(channelId, post.photo_url, {
         caption: caption,
         parse_mode: 'Markdown',
-        ...keyboard
+        reply_markup: keyboard
       });
     } else if (post.video_url) {
-      // Если видео загружено на наш сервер
-      const fullVideoUrl = `${appUrl}${post.video_url}`;
-      message = await bot.sendVideo(channelId, fullVideoUrl, {
+      message = await bot.sendVideo(channelId, post.video_url, {
         caption: caption,
         parse_mode: 'Markdown',
-        ...keyboard
+        reply_markup: keyboard
       });
     } else {
-      // Текстовый пост
       message = await bot.sendMessage(channelId, caption, {
         parse_mode: 'Markdown',
-        ...keyboard
+        reply_markup: keyboard
       });
     }
 
@@ -1677,44 +1539,44 @@ async function publishToChannel(post) {
     console.log('✅ Post published to channel:', post.title);
   } catch (error) {
     console.error('❌ Error publishing to channel:', error);
-    
-    // Если ошибка доступа, проверьте настройки бота
-    if (error.response && error.response.statusCode === 403) {
-      console.log('❌ Bot doesnt have permission to post in channel. Check bot admin rights.');
-    }
   }
 }
 
-// Проверка прав бота в канале
-async function checkBotRights() {
+// Обработка опросов
+bot.on('poll', (poll) => {
+  console.log('Poll received:', poll);
+});
+
+bot.on('poll_answer', async (answer) => {
   try {
-    const channel = process.env.CHANNEL_USERNAME;
-    if (!channel) {
-      console.log('⚠️ CHANNEL_USERNAME not set in .env');
-      return;
-    }
-
-    // Пробуем отправить тестовое сообщение
-    const testMessage = await bot.sendMessage(channel, 
-      '🤖 Бот успешно подключен к каналу! Этот тестовое сообщение можно удалить.',
-      { disable_notification: true }
-    );
+    const userId = answer.user.id;
+    const pollId = answer.poll_id;
+    const selectedOption = answer.option_ids[0];
     
-    // Удаляем тестовое сообщение
-    await bot.deleteMessage(channel, testMessage.message_id);
-    
-    console.log('✅ Бот имеет права на публикацию в канале!');
+    // Находим опрос в базе
+    db.get('SELECT * FROM polls WHERE post_id = ?', [pollId], (err, poll) => {
+      if (!err && poll) {
+        // Проверяем, не участвовал ли уже
+        db.get('SELECT * FROM poll_participations WHERE user_id = ? AND poll_id = ?', [userId, poll.id], (err, existing) => {
+          if (!err && !existing) {
+            // Записываем участие и начисляем искры
+            db.run('INSERT INTO poll_participations (user_id, poll_id, selected_option, sparks_earned) VALUES (?, ?, ?, ?)',
+              [userId, poll.id, selectedOption, poll.sparks_reward]);
+            
+            awardSparks(userId, poll.sparks_reward, 'poll', `Участие в опросе`);
+            
+            // Отправляем сообщение пользователю
+            bot.sendMessage(userId, `✅ Спасибо за участие в опросе! Вы получили ${poll.sparks_reward}✨`).catch(err => {
+              console.log('Не удалось отправить сообщение о награде за опрос');
+            });
+          }
+        });
+      }
+    });
   } catch (error) {
-    console.log('❌ Ошибка доступа бота к каналу:', error.message);
-    console.log('🔧 Проверьте:');
-    console.log('   - Добавлен ли бот как администратор канала');
-    console.log('   - Есть ли у бота права на публикацию сообщений');
-    console.log('   - Правильный ли CHANNEL_USERNAME в .env файле');
+    console.error('Error processing poll answer:', error);
   }
-}
-
-// Вызываем проверку при запуске
-setTimeout(checkBotRights, 3000);
+});
 
 // ==================== SERVER START ====================
 
