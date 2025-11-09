@@ -42,8 +42,6 @@
         .btn-warning:hover { background: #dd6b20; }
         .btn-danger { background: #f56565; }
         .btn-danger:hover { background: #e53e3e; }
-        .btn-gold { background: #ffd700; color: #2d3748; }
-        .btn-gold:hover { background: #f6ad55; }
         .form-group { margin-bottom: 15px; }
         .form-control { 
             width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 5px;
@@ -58,7 +56,7 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         .stat-number { font-size: 2em; font-weight: bold; color: #667eea; margin-bottom: 5px; }
-        .character-card, .quiz-card, .comment-item, .shop-item {
+        .character-card, .quiz-card, .comment-item {
             background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px;
             padding: 15px; margin-bottom: 15px;
         }
@@ -74,13 +72,6 @@
         .tab-subnav-btn.active { border-bottom-color: #667eea; color: #667eea; font-weight: 600; }
         .button-item { background: #edf2f7; padding: 8px 12px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
         .button-remove { background: #f56565; color: white; border: none; border-radius: 3px; padding: 2px 6px; cursor: pointer; margin-left: 10px; }
-        .file-upload { 
-            border: 2px dashed #e2e8f0; border-radius: 8px; padding: 20px; text-align: center; 
-            margin: 10px 0; cursor: pointer; transition: all 0.3s ease;
-        }
-        .file-upload:hover { border-color: #667eea; background: #f7fafc; }
-        .file-preview { max-width: 200px; max-height: 150px; margin: 10px 0; border-radius: 5px; }
-        .price-tag { background: #ffd700; color: #2d3748; padding: 5px 10px; border-radius: 15px; font-weight: bold; display: inline-block; }
     </style>
 </head>
 <body>
@@ -96,7 +87,6 @@
             <div class="nav-tab" data-tab="classes">🎯 Классы</div>
             <div class="nav-tab" data-tab="characters">👥 Персонажи</div>
             <div class="nav-tab" data-tab="quizzes">📝 Квизы</div>
-            <div class="nav-tab" data-tab="shop">🛒 Магазин</div>
             <div class="nav-tab" data-tab="posts">📢 Публикации</div>
             <div class="nav-tab" data-tab="moderation">🛡️ Модерация</div>
             <div class="nav-tab" data-tab="admins">🔧 Админы</div>
@@ -118,20 +108,12 @@
                     <div class="stat-label">Активных персонажей</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="shopItems">0</div>
-                    <div class="stat-label">Товаров в магазине</div>
-                </div>
-                <div class="stat-card">
                     <div class="stat-number" id="totalSparks">0</div>
                     <div class="stat-label">Всего искр</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number" id="pendingModeration">0</div>
                     <div class="stat-label">На модерации</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="totalPosts">0</div>
-                    <div class="stat-label">Публикаций</div>
                 </div>
             </div>
         </div>
@@ -173,12 +155,6 @@
                                 <label for="classBtnActivities">📊 Активности</label>
                             </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="classCharactersEnabled" checked>
-                            Включить выбор персонажей для этого класса
-                        </label>
                     </div>
                     <button type="submit" class="btn btn-success">✅ Создать класс</button>
                 </form>
@@ -278,6 +254,10 @@
                         <textarea id="quizDescription" class="form-control" rows="3"></textarea>
                     </div>
                     <div class="form-group">
+                        <label>Награда (искры):</label>
+                        <input type="number" id="quizSparks" class="form-control" value="2" min="0" step="0.5" required>
+                    </div>
+                    <div class="form-group">
                         <label>Время перепрохождения (часы):</label>
                         <input type="number" id="quizCooldown" class="form-control" value="24" min="1" required>
                     </div>
@@ -298,69 +278,6 @@
                 <h3>📝 Список квизов</h3>
                 <div id="quizzesList">
                     <div class="loading">Загрузка квизов...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Магазин -->
-        <div id="shop" class="tab-content">
-            <div class="card">
-                <h3>➕ Добавить товар</h3>
-                <form id="createShopItemForm" enctype="multipart/form-data">
-                    <div class="form-group">
-                        <label>Название товара:</label>
-                        <input type="text" id="shopItemTitle" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Описание:</label>
-                        <textarea id="shopItemDescription" class="form-control" rows="3"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Тип товара:</label>
-                        <select id="shopItemType" class="form-control" required>
-                            <option value="video">🎥 Видео</option>
-                            <option value="ebook">📚 Электронная книга</option>
-                            <option value="audio">🎧 Аудио</option>
-                            <option value="course">📖 Курс</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Цена (искры):</label>
-                        <input type="number" id="shopItemPrice" class="form-control" min="1" step="1" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Файл товара:</label>
-                        <div class="file-upload" onclick="document.getElementById('shopItemFile').click()">
-                            <input type="file" id="shopItemFile" name="file" style="display: none;" accept=".mp4,.avi,.mov,.pdf,.doc,.docx,.mp3,.wav">
-                            <div>📁 Нажмите для загрузки файла</div>
-                            <div style="font-size: 12px; color: #718096; margin-top: 5px;">
-                                Поддерживаемые форматы: MP4, AVI, MOV, PDF, DOC, MP3, WAV
-                            </div>
-                        </div>
-                        <div id="shopFilePreview"></div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Превью (изображение):</label>
-                        <div class="file-upload" onclick="document.getElementById('shopItemPreview').click()">
-                            <input type="file" id="shopItemPreview" name="preview" style="display: none;" accept="image/*">
-                            <div>🖼️ Нажмите для загрузки превью</div>
-                            <div style="font-size: 12px; color: #718096; margin-top: 5px;">
-                                Рекомендуемый размер: 400x300px
-                            </div>
-                        </div>
-                        <div id="shopPreviewPreview"></div>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-gold">🛒 Добавить товар</button>
-                </form>
-            </div>
-
-            <div class="card">
-                <h3>📦 Список товаров</h3>
-                <div id="shopItemsList">
-                    <div class="loading">Загрузка товаров...</div>
                 </div>
             </div>
         </div>
@@ -399,9 +316,16 @@
                     
                     <div class="form-group">
                         <label>
-                            <input type="checkbox" id="requiresComment">
-                            Разрешить оставлять отзывы к этому посту (+1✨ за отзыв)
+                            <input type="checkbox" id="requiresAction" onchange="toggleActionType()">
+                            Добавить кнопку "Пройти квиз"
                         </label>
+                    </div>
+                    
+                    <div class="form-group" id="actionTypeGroup" style="display: none;">
+                        <label>Выберите квиз:</label>
+                        <select id="actionTarget" class="form-control">
+                            <option value="">Выберите квиз</option>
+                        </select>
                     </div>
                     
                     <button type="submit" class="btn btn-success">📤 Опубликовать в канал</button>
@@ -499,16 +423,12 @@
                 document.getElementById('createClassForm').addEventListener('submit', createClass);
                 document.getElementById('createCharacterForm').addEventListener('submit', createCharacter);
                 document.getElementById('createQuizForm').addEventListener('submit', createQuiz);
-                document.getElementById('createShopItemForm').addEventListener('submit', createShopItem);
                 document.getElementById('createPostForm').addEventListener('submit', createPost);
                 document.getElementById('addAdminForm').addEventListener('submit', addAdmin);
 
-                // Обработчики загрузки файлов
-                document.getElementById('shopItemFile').addEventListener('change', handleFileUpload);
-                document.getElementById('shopItemPreview').addEventListener('change', handlePreviewUpload);
-
                 // Загрузка данных для форм
                 await loadClassesForSelect();
+                await loadQuizzesForSelect();
 
             } catch (error) {
                 showMessage('❌ Ошибка доступа к админ панели', 'error');
@@ -521,7 +441,6 @@
                 case 'classes': loadClasses(); break;
                 case 'characters': loadCharacters(); break;
                 case 'quizzes': loadQuizzes(); break;
-                case 'shop': loadShopItems(); break;
                 case 'posts': loadPosts(); break;
                 case 'moderation': loadModeration(); break;
                 case 'admins': loadAdmins(); break;
@@ -537,10 +456,8 @@
                 document.getElementById('totalUsers').textContent = data.totalUsers;
                 document.getElementById('activeQuizzes').textContent = data.activeQuizzes;
                 document.getElementById('activeCharacters').textContent = data.activeCharacters;
-                document.getElementById('shopItems').textContent = data.shopItems;
                 document.getElementById('totalSparks').textContent = data.totalSparks;
                 document.getElementById('pendingModeration').textContent = data.pendingModeration;
-                document.getElementById('totalPosts').textContent = data.totalPosts;
             } catch (error) {
                 console.error('Error loading dashboard:', error);
             }
@@ -558,7 +475,6 @@
                         <h4>${cls.name} ${cls.icon}</h4>
                         <p>${cls.description}</p>
                         <p><strong>Кнопки:</strong> ${JSON.parse(cls.available_buttons).join(', ')}</p>
-                        <p><strong>Персонажи:</strong> ${cls.characters_enabled ? 'Включены' : 'Отключены'}</p>
                         <p><strong>Статус:</strong> ${cls.is_active ? 'Активен' : 'Неактивен'}</p>
                         <div style="margin-top: 10px;">
                             <button class="btn btn-warning" onclick="editClass(${cls.id})">✏️ Редактировать</button>
@@ -584,8 +500,7 @@
                 name: document.getElementById('className').value,
                 description: document.getElementById('classDescription').value,
                 icon: document.getElementById('classIcon').value,
-                available_buttons: available_buttons,
-                characters_enabled: document.getElementById('classCharactersEnabled').checked
+                available_buttons: available_buttons
             };
 
             try {
@@ -766,6 +681,7 @@
                 title: document.getElementById('quizTitle').value,
                 description: document.getElementById('quizDescription').value,
                 questions: currentQuestions,
+                sparks_reward: parseFloat(document.getElementById('quizSparks').value),
                 cooldown_hours: parseInt(document.getElementById('quizCooldown').value)
             };
 
@@ -784,6 +700,7 @@
                     currentQuestions = [];
                     renderQuestions();
                     loadQuizzes();
+                    loadQuizzesForSelect();
                 } else {
                     showMessage(`❌ Ошибка: ${result.error}`, 'error');
                 }
@@ -803,6 +720,7 @@
                         <h4>${quiz.title}</h4>
                         <p>${quiz.description || 'Без описания'}</p>
                         <p><strong>Вопросов:</strong> ${quiz.questions.length}</p>
+                        <p><strong>Награда:</strong> ${quiz.sparks_reward}✨</p>
                         <p><strong>Перепрохождение:</strong> каждые ${quiz.cooldown_hours} часов</p>
                         <p><strong>Статус:</strong> ${quiz.is_active ? 'Активен' : 'Неактивен'}</p>
                         <button class="btn btn-danger" onclick="deleteQuiz(${quiz.id})">🗑️ Удалить</button>
@@ -826,140 +744,12 @@
                 if (result.success) {
                     showMessage('✅ Квиз удален', 'success');
                     loadQuizzes();
+                    loadQuizzesForSelect();
                 } else {
                     showMessage('❌ Ошибка удаления', 'error');
                 }
             } catch (error) {
                 showMessage('Ошибка при удалении квиза', 'error');
-            }
-        }
-
-        // Управление магазином
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                document.getElementById('shopFilePreview').innerHTML = `
-                    <div style="color: #48bb78; margin-top: 5px;">
-                        ✅ Файл выбран: ${file.name}
-                    </div>
-                `;
-            }
-        }
-
-        function handlePreviewUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('shopPreviewPreview').innerHTML = `
-                        <div style="color: #48bb78; margin-top: 5px;">
-                            ✅ Превью выбрано: ${file.name}
-                        </div>
-                        <img src="${e.target.result}" class="file-preview" alt="Preview">
-                    `;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        async function createShopItem(e) {
-            e.preventDefault();
-            
-            const formData = new FormData();
-            formData.append('title', document.getElementById('shopItemTitle').value);
-            formData.append('description', document.getElementById('shopItemDescription').value);
-            formData.append('type', document.getElementById('shopItemType').value);
-            formData.append('price', document.getElementById('shopItemPrice').value);
-            
-            const fileInput = document.getElementById('shopItemFile');
-            if (fileInput.files[0]) {
-                formData.append('file', fileInput.files[0]);
-            }
-            
-            const previewInput = document.getElementById('shopItemPreview');
-            if (previewInput.files[0]) {
-                formData.append('preview', previewInput.files[0]);
-            }
-
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/shop/items?userId=${currentAdminId}`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showMessage('✅ Товар успешно добавлен!', 'success');
-                    document.getElementById('createShopItemForm').reset();
-                    document.getElementById('shopFilePreview').innerHTML = '';
-                    document.getElementById('shopPreviewPreview').innerHTML = '';
-                    loadShopItems();
-                } else {
-                    showMessage(`❌ Ошибка: ${result.error}`, 'error');
-                }
-            } catch (error) {
-                showMessage('Ошибка при добавлении товара', 'error');
-            }
-        }
-
-        async function loadShopItems() {
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/shop/items?userId=${currentAdminId}`);
-                const items = await response.json();
-                
-                const list = document.getElementById('shopItemsList');
-                list.innerHTML = items.map(item => `
-                    <div class="shop-item">
-                        <div style="display: flex; justify-content: space-between; align-items: start;">
-                            <div>
-                                <h4>${item.title}</h4>
-                                <p>${item.description || 'Без описания'}</p>
-                            </div>
-                            <span class="price-tag">${item.price}✨</span>
-                        </div>
-                        <p><strong>Тип:</strong> ${getItemTypeLabel(item.type)}</p>
-                        ${item.file_url ? `<p><strong>Файл:</strong> ${item.file_url}</p>` : ''}
-                        <p><strong>Статус:</strong> ${item.is_active ? 'Активен' : 'Неактивен'}</p>
-                        <div style="margin-top: 10px;">
-                            <button class="btn btn-warning" onclick="editShopItem(${item.id})">✏️ Редактировать</button>
-                            <button class="btn btn-danger" onclick="deleteShopItem(${item.id})">🗑️ Удалить</button>
-                        </div>
-                    </div>
-                `).join('');
-            } catch (error) {
-                document.getElementById('shopItemsList').innerHTML = '<div class="error">Ошибка загрузки</div>';
-            }
-        }
-
-        function getItemTypeLabel(type) {
-            const types = {
-                'video': '🎥 Видео',
-                'ebook': '📚 Электронная книга',
-                'audio': '🎧 Аудио',
-                'course': '📖 Курс'
-            };
-            return types[type] || type;
-        }
-
-        async function deleteShopItem(itemId) {
-            if (!confirm('Удалить этот товар?')) return;
-            
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/shop/items/${itemId}?userId=${currentAdminId}`, {
-                    method: 'DELETE'
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage('✅ Товар удален', 'success');
-                    loadShopItems();
-                } else {
-                    showMessage('❌ Ошибка удаления', 'error');
-                }
-            } catch (error) {
-                showMessage('Ошибка при удалении товара', 'error');
             }
         }
 
@@ -997,6 +787,11 @@
             `).join('');
         }
 
+        function toggleActionType() {
+            const actionGroup = document.getElementById('actionTypeGroup');
+            actionGroup.style.display = document.getElementById('requiresAction').checked ? 'block' : 'none';
+        }
+
         async function createPost(e) {
             e.preventDefault();
             
@@ -1006,7 +801,9 @@
                 photo_url: document.getElementById('postPhoto').value,
                 video_url: document.getElementById('postVideo').value,
                 buttons: currentButtons,
-                requires_comment: document.getElementById('requiresComment').checked
+                requires_action: document.getElementById('requiresAction').checked,
+                action_type: document.getElementById('requiresAction').checked ? 'quiz' : null,
+                action_target: document.getElementById('actionTarget').value
             };
 
             try {
@@ -1023,7 +820,8 @@
                     document.getElementById('createPostForm').reset();
                     currentButtons = [];
                     renderButtons();
-                    document.getElementById('requiresComment').checked = false;
+                    document.getElementById('requiresAction').checked = false;
+                    toggleActionType();
                 } else {
                     showMessage(`❌ Ошибка: ${result.error}`, 'error');
                 }
@@ -1044,7 +842,7 @@
                         <p>${post.content || 'Без текста'}</p>
                         ${post.photo_url ? `<p>🖼️ Фото: ${post.photo_url}</p>` : ''}
                         ${post.video_url ? `<p>🎥 Видео: ${post.video_url}</p>` : ''}
-                        ${post.requires_comment ? `<p>💬 Отзывы: разрешены (+1✨)</p>` : '<p>💬 Отзывы: закрыты</p>'}
+                        ${post.requires_action ? `<p>🎯 Действие: ${post.action_type}</p>` : ''}
                         <p><small>Опубликован: ${new Date(post.published_at).toLocaleString('ru-RU')}</small></p>
                     </div>
                 `).join('');
@@ -1063,7 +861,6 @@
                 list.innerHTML = comments.map(comment => `
                     <div class="comment-item">
                         <p><strong>Пользователь:</strong> ${comment.tg_first_name} (@${comment.tg_username || 'нет'})</p>
-                        <p><strong>Пост:</strong> ${comment.post_title}</p>
                         <p><strong>Комментарий:</strong> ${comment.comment_text}</p>
                         <p><small>${new Date(comment.created_at).toLocaleString('ru-RU')}</small></p>
                         <div style="margin-top: 10px;">
@@ -1201,6 +998,20 @@
                     classes.map(cls => `<option value="${cls.id}">${cls.name}</option>`).join('');
             } catch (error) {
                 console.error('Error loading classes for select:', error);
+            }
+        }
+
+        async function loadQuizzesForSelect() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/quizzes?userId=${currentAdminId}`);
+                const quizzes = await response.json();
+                
+                availableQuizzes = quizzes;
+                const select = document.getElementById('actionTarget');
+                select.innerHTML = '<option value="">Выберите квиз</option>' +
+                    quizzes.map(quiz => `<option value="${quiz.id}">${quiz.title}</option>`).join('');
+            } catch (error) {
+                console.error('Error loading quizzes for select:', error);
             }
         }
 
