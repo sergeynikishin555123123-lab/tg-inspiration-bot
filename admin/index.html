@@ -332,10 +332,11 @@
                     <div class="form-group">
                         <label>Файл товара:</label>
                         <div class="file-upload" onclick="document.getElementById('shopItemFile').click()">
-                            <input type="file" id="shopItemFile" name="file" style="display: none;" accept=".mp4,.avi,.mov,.pdf,.doc,.docx,.mp3,.wav">
+                            <input type="file" id="shopItemFile" name="file" style="display: none;" 
+                                   accept=".mp4,.avi,.mov,.pdf,.doc,.docx,.mp3,.wav,.zip,.rar">
                             <div>📁 Нажмите для загрузки файла</div>
                             <div style="font-size: 12px; color: #718096; margin-top: 5px;">
-                                Поддерживаемые форматы: MP4, AVI, MOV, PDF, DOC, MP3, WAV
+                                Поддерживаемые форматы: MP4, AVI, MOV, PDF, DOC, MP3, WAV, ZIP
                             </div>
                         </div>
                         <div id="shopFilePreview"></div>
@@ -369,7 +370,7 @@
         <div id="posts" class="tab-content">
             <div class="card">
                 <h3>📢 Создать публикацию</h3>
-                <form id="createPostForm">
+                <form id="createPostForm" enctype="multipart/form-data">
                     <div class="form-group">
                         <label>Заголовок поста:</label>
                         <input type="text" id="postTitle" class="form-control" required>
@@ -378,13 +379,30 @@
                         <label>Текст поста:</label>
                         <textarea id="postContent" class="form-control" rows="4"></textarea>
                     </div>
+                    
                     <div class="form-group">
-                        <label>Ссылка на фото:</label>
-                        <input type="url" id="postPhoto" class="form-control" placeholder="https://example.com/photo.jpg">
+                        <label>Фото для поста:</label>
+                        <div class="file-upload" onclick="document.getElementById('postPhoto').click()">
+                            <input type="file" id="postPhoto" name="photo" style="display: none;" accept="image/*">
+                            <div>🖼️ Нажмите для загрузки фото</div>
+                            <div style="font-size: 12px; color: #718096; margin-top: 5px;">
+                                Рекомендуемый размер: 1280x720px
+                            </div>
+                        </div>
+                        <div id="postPhotoPreview"></div>
                     </div>
+                    
                     <div class="form-group">
-                        <label>Ссылка на видео:</label>
-                        <input type="url" id="postVideo" class="form-control" placeholder="https://youtube.com/watch?v=...">
+                        <label>Видео для поста:</label>
+                        <div class="file-upload" onclick="document.getElementById('postVideo').click()">
+                            <input type="file" id="postVideo" name="video" style="display: none;" 
+                                   accept="video/*,.mp4,.avi,.mov">
+                            <div>🎥 Нажмите для загрузки видео</div>
+                            <div style="font-size: 12px; color: #718096; margin-top: 5px;">
+                                Максимальный размер: 50MB
+                            </div>
+                        </div>
+                        <div id="postVideoPreview"></div>
                     </div>
                     
                     <div class="form-group">
@@ -504,8 +522,10 @@
                 document.getElementById('addAdminForm').addEventListener('submit', addAdmin);
 
                 // Обработчики загрузки файлов
-                document.getElementById('shopItemFile').addEventListener('change', handleFileUpload);
-                document.getElementById('shopItemPreview').addEventListener('change', handlePreviewUpload);
+                document.getElementById('shopItemFile').addEventListener('change', handleShopFileUpload);
+                document.getElementById('shopItemPreview').addEventListener('change', handleShopPreviewUpload);
+                document.getElementById('postPhoto').addEventListener('change', handlePostPhotoUpload);
+                document.getElementById('postVideo').addEventListener('change', handlePostVideoUpload);
 
                 // Загрузка данных для форм
                 await loadClassesForSelect();
@@ -835,18 +855,18 @@
         }
 
         // Управление магазином
-        function handleFileUpload(event) {
+        function handleShopFileUpload(event) {
             const file = event.target.files[0];
             if (file) {
                 document.getElementById('shopFilePreview').innerHTML = `
                     <div style="color: #48bb78; margin-top: 5px;">
-                        ✅ Файл выбран: ${file.name}
+                        ✅ Файл выбран: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)
                     </div>
                 `;
             }
         }
 
-        function handlePreviewUpload(event) {
+        function handleShopPreviewUpload(event) {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
@@ -920,6 +940,7 @@
                         </div>
                         <p><strong>Тип:</strong> ${getItemTypeLabel(item.type)}</p>
                         ${item.file_url ? `<p><strong>Файл:</strong> ${item.file_url}</p>` : ''}
+                        ${item.preview_url ? `<p><strong>Превью:</strong> ${item.preview_url}</p>` : ''}
                         <p><strong>Статус:</strong> ${item.is_active ? 'Активен' : 'Неактивен'}</p>
                         <div style="margin-top: 10px;">
                             <button class="btn btn-warning" onclick="editShopItem(${item.id})">✏️ Редактировать</button>
@@ -964,6 +985,37 @@
         }
 
         // Управление публикациями
+        function handlePostPhotoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('postPhotoPreview').innerHTML = `
+                        <div style="color: #48bb78; margin-top: 5px;">
+                            ✅ Фото выбрано: ${file.name}
+                        </div>
+                        <img src="${e.target.result}" class="file-preview" alt="Photo Preview">
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handlePostVideoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                document.getElementById('postVideoPreview').innerHTML = `
+                    <div style="color: #48bb78; margin-top: 5px;">
+                        ✅ Видео выбрано: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)
+                    </div>
+                    <video controls class="file-preview">
+                        <source src="${URL.createObjectURL(file)}" type="video/mp4">
+                        Ваш браузер не поддерживает видео.
+                    </video>
+                `;
+            }
+        }
+
         function addButton() {
             const buttonId = Date.now();
             currentButtons.push({ id: buttonId, text: '', url: '' });
@@ -1000,20 +1052,26 @@
         async function createPost(e) {
             e.preventDefault();
             
-            const postData = {
-                title: document.getElementById('postTitle').value,
-                content: document.getElementById('postContent').value,
-                photo_url: document.getElementById('postPhoto').value,
-                video_url: document.getElementById('postVideo').value,
-                buttons: currentButtons,
-                requires_comment: document.getElementById('requiresComment').checked
-            };
+            const formData = new FormData();
+            formData.append('title', document.getElementById('postTitle').value);
+            formData.append('content', document.getElementById('postContent').value);
+            formData.append('buttons', JSON.stringify(currentButtons));
+            formData.append('requires_comment', document.getElementById('requiresComment').checked);
+            
+            const photoInput = document.getElementById('postPhoto');
+            if (photoInput.files[0]) {
+                formData.append('photo', photoInput.files[0]);
+            }
+            
+            const videoInput = document.getElementById('postVideo');
+            if (videoInput.files[0]) {
+                formData.append('video', videoInput.files[0]);
+            }
 
             try {
                 const response = await fetch(`${API_BASE}/api/admin/posts?userId=${currentAdminId}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(postData)
+                    body: formData
                 });
 
                 const result = await response.json();
@@ -1024,6 +1082,9 @@
                     currentButtons = [];
                     renderButtons();
                     document.getElementById('requiresComment').checked = false;
+                    document.getElementById('postPhotoPreview').innerHTML = '';
+                    document.getElementById('postVideoPreview').innerHTML = '';
+                    loadPosts();
                 } else {
                     showMessage(`❌ Ошибка: ${result.error}`, 'error');
                 }
@@ -1218,4 +1279,4 @@
         document.addEventListener('DOMContentLoaded', initializeAdmin);
     </script>
 </body>
-</html>
+    </html>
