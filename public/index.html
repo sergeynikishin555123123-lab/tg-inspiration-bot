@@ -22,12 +22,8 @@
             color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600;
             cursor: pointer; margin-top: 10px; transition: all 0.3s ease;
         }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(102,126,234,0.4); }
-        .btn:active { transform: translateY(0); }
+        .btn:hover { transform: translateY(-2px); }
         .btn-secondary { background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); }
-        .btn-warning { background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); }
-        .btn-info { background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); }
-        .btn-gold { background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%); color: #2d3748; }
         .sparks { 
             font-size: 42px; font-weight: bold; text-align: center; color: #ffd700; 
             text-shadow: 0 2px 4px rgba(255,215,0,0.3); margin: 15px 0; padding: 10px;
@@ -35,24 +31,19 @@
         .screen { display: none; }
         .active { display: block; }
         .back-btn { background: #718096; margin-bottom: 15px; }
-        .character-card, .quiz-card, .activity-item {
+        .character-card {
             background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 15px;
             margin-bottom: 10px; cursor: pointer; transition: all 0.3s ease;
         }
-        .character-card:hover, .quiz-card:hover { border-color: #667eea; transform: translateY(-2px); }
+        .character-card:hover { border-color: #667eea; }
         .character-card.selected { border-color: #667eea; background: rgba(102,126,234,0.1); }
+        .quiz-card {
+            background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 15px;
+            margin-bottom: 10px;
+        }
         .loading { text-align: center; color: #718096; padding: 20px; }
         .error { background: #fed7d7; color: #c53030; padding: 10px; border-radius: 8px; margin: 10px 0; text-align: center; }
         .success { background: #c6f6d5; color: #276749; padding: 10px; border-radius: 8px; margin: 10px 0; text-align: center; }
-        .invite-section { background: rgba(102,126,234,0.1); padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px solid #667eea; }
-        .invite-link { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin: 10px 0; font-family: monospace; word-break: break-all; }
-        .quiz-option { background: #f7fafc; border: 2px solid #e2e8f0; border-radius: 8px; padding: 12px; margin: 8px 0; cursor: pointer; transition: all 0.3s ease; }
-        .quiz-option:hover { border-color: #667eea; background: rgba(102,126,234,0.05); }
-        .quiz-option.selected { border-color: #667eea; background: rgba(102,126,234,0.1); }
-        .comment-section { margin: 20px 0; }
-        .comment-input { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px; min-height: 80px; margin-bottom: 10px; }
-        .cooldown-info { background: #fed7d7; color: #c53030; padding: 8px; border-radius: 6px; margin: 8px 0; font-size: 14px; text-align: center; }
-        .completed-badge { background: #48bb78; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 10px; }
     </style>
 </head>
 <body>
@@ -102,24 +93,6 @@
                 </div>
                 <button class="btn" onclick="showScreen('changeCharacterScreen')">👥 Сменить персонажа</button>
                 <button class="btn" onclick="refreshData()">🔄 Обновить данные</button>
-            </div>
-
-            <!-- Секция приглашений -->
-            <div class="invite-section" id="inviteBonusSection" style="display: none;">
-                <h4 style="color: #2d3748; margin-bottom: 10px;">👥 Пригласите друзей!</h4>
-                <p style="color: #718096; font-size: 14px; margin-bottom: 10px;">
-                    За каждого приглашенного друга вы получаете <strong>+5✨</strong>
-                </p>
-                <button class="btn btn-info" onclick="showScreen('inviteScreen')">📤 Пригласить друга</button>
-            </div>
-
-            <!-- Секция комментариев -->
-            <div class="card" id="commentSection" style="display: none;">
-                <h3 style="margin-bottom: 15px;">💬 Оставить отзыв</h3>
-                <p style="color: #718096; font-size: 14px; margin-bottom: 10px;">
-                    Поделитесь впечатлениями и получите <strong>+1✨</strong> после модерации
-                </p>
-                <button class="btn btn-secondary" onclick="showScreen('commentScreen')">📝 Написать отзыв</button>
             </div>
         </div>
 
@@ -178,79 +151,6 @@
             </div>
         </div>
 
-        <!-- Экран прохождения квиза -->
-        <div id="quizScreen" class="screen">
-            <div class="card">
-                <button class="btn back-btn" onclick="showScreen('quizzesScreen')">← Назад</button>
-                <h2 id="quizTitle">Квиз</h2>
-                <div id="quizProgress" style="margin-bottom: 15px; color: #718096;"></div>
-                <div id="quizContent">
-                    <!-- Вопросы загружаются здесь -->
-                </div>
-                <button class="btn" onclick="submitQuiz()" id="submitQuizBtn" style="display: none;">✅ Отправить ответы</button>
-            </div>
-        </div>
-
-        <!-- Экран приглашений -->
-        <div id="inviteScreen" class="screen">
-            <div class="card">
-                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
-                <h2 style="text-align: center; margin-bottom: 20px;">👥 Пригласить друга</h2>
-                
-                <div class="invite-section">
-                    <h3 style="color: #2d3748; margin-bottom: 15px;">🎁 Получите +5✨ за каждого друга!</h3>
-                    
-                    <p style="color: #718096; margin-bottom: 15px;">
-                        Поделитесь этой ссылкой с друзьями. Когда они присоединятся к нашему каналу по вашей ссылке, вы получите бонус!
-                    </p>
-                    
-                    <div class="invite-link" id="inviteLink">
-                        Загрузка ссылки...
-                    </div>
-                    
-                    <button class="btn btn-info" onclick="copyInviteLink()">
-                        📋 Скопировать ссылку
-                    </button>
-                    
-                    <div style="margin-top: 20px; padding: 15px; background: rgba(102,126,234,0.05); border-radius: 8px;">
-                        <h4 style="color: #2d3748; margin-bottom: 10px;">📊 Ваша статистика:</h4>
-                        <p style="color: #718096; margin: 5px 0;">
-                            Приглашено друзей: <strong id="inviteCount">0</strong>
-                        </p>
-                        <p style="color: #718096; margin: 5px 0;">
-                            Получено искр: <strong id="inviteSparks">0✨</strong>
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Экран комментариев -->
-        <div id="commentScreen" class="screen">
-            <div class="card">
-                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
-                <h2 style="text-align: center; margin-bottom: 20px;">💬 Написать отзыв</h2>
-                
-                <div class="comment-section">
-                    <p style="color: #718096; text-align: center; margin-bottom: 15px;">
-                        Поделитесь своими впечатлениями о проекте и получите <strong>+1✨</strong> после модерации
-                    </p>
-                    
-                    <textarea class="comment-input" id="commentText" placeholder="Напишите ваш отзыв здесь..."></textarea>
-                    
-                    <button class="btn btn-secondary" onclick="submitComment()" id="submitCommentBtn">
-                        📤 Отправить на модерацию
-                    </button>
-                    
-                    <div style="margin-top: 15px; padding: 10px; background: rgba(102,126,234,0.05); border-radius: 8px;">
-                        <p style="color: #718096; font-size: 14px; margin: 0;">
-                            💡 <strong>Подсказка:</strong> Пишите развернутые отзывы о том, что вам понравилось, какие квизы были интересными, какие улучшения вы бы предложили.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Экран активностей -->
         <div id="activitiesScreen" class="screen">
             <div class="card">
@@ -273,9 +173,6 @@
         let selectedClass = null;
         let selectedCharacter = null;
         let charactersData = null;
-        let currentQuiz = null;
-        let quizAnswers = [];
-        let currentQuestionIndex = 0;
 
         const API_BASE_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000' 
@@ -321,13 +218,9 @@
                 
                 if (currentUser.is_registered) {
                     document.getElementById('welcomeBlock').style.display = 'none';
-                    document.getElementById('inviteBonusSection').style.display = 'block';
-                    document.getElementById('commentSection').style.display = 'block';
                     loadActionButtons(currentUser.available_buttons);
                 } else {
                     document.getElementById('welcomeBlock').style.display = 'block';
-                    document.getElementById('inviteBonusSection').style.display = 'none';
-                    document.getElementById('commentSection').style.display = 'none';
                 }
                 
                 hideLoading('userData');
@@ -346,8 +239,6 @@
             document.getElementById('sparksCount').textContent = `✨ ${user.sparks}`;
             document.getElementById('userClass').textContent = user.class || 'Не выбран';
             document.getElementById('userCharacter').textContent = user.character_name || 'Не выбран';
-            document.getElementById('inviteCount').textContent = user.invite_count || 0;
-            document.getElementById('inviteSparks').textContent = `${(user.invite_count || 0) * 5}✨`;
         }
 
         // Загрузка кнопок действий
@@ -357,8 +248,6 @@
 
             const buttons = {
                 'quiz': { text: '📝 Пройти квиз', screen: 'quizzesScreen', class: 'btn-secondary' },
-                'shop': { text: '🛒 Магазин', screen: 'shopScreen', class: 'btn-gold' },
-                'invite': { text: '👥 Пригласить друга', screen: 'inviteScreen', class: 'btn-info' },
                 'activities': { text: '📊 Мои активности', screen: 'activitiesScreen', class: 'btn' }
             };
 
@@ -385,7 +274,6 @@
             if (screenId === 'activitiesScreen') loadActivities();
             if (screenId === 'registrationScreen') loadRegistration();
             if (screenId === 'changeCharacterScreen') loadChangeCharacter();
-            if (screenId === 'inviteScreen') loadInviteData();
         }
 
         // Загрузка регистрации
@@ -428,7 +316,7 @@
                 const charactersList = document.getElementById('charactersList');
                 charactersList.innerHTML = '';
                 
-                const classCharacters = charactersData[cls.name] || [];
+                const classCharacters = charactersData[cls.id] || [];
                 
                 classCharacters.forEach(character => {
                     const card = document.createElement('div');
@@ -437,7 +325,7 @@
                     card.innerHTML = `
                         <div style="font-weight: 600; margin-bottom: 5px;">${character.character_name}</div>
                         <div style="color: #718096; font-size: 14px; margin-bottom: 5px;">${character.description}</div>
-                        <div style="color: #667eea; font-size: 12px;">Бонус: ${getBonusDescription(character.bonus_type, character.bonus_value)}</div>
+                        <div style="color: #667eea; font-size: 12px;">Бонус: ${character.bonus_type}</div>
                     `;
                     charactersList.appendChild(card);
                 });
@@ -476,7 +364,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         userId: currentUserId,
-                        userClass: selectedClass.name,
+                        userClass: selectedClass.id,
                         characterId: selectedCharacter.id,
                         tgUsername: tg?.initDataUnsafe?.user?.username || '',
                         tgFirstName: tg?.initDataUnsafe?.user?.first_name || 'Пользователь'
@@ -537,7 +425,7 @@
                 const charactersList = document.getElementById('changeCharactersList');
                 charactersList.innerHTML = '';
                 
-                const classCharacters = charactersData[cls.name] || [];
+                const classCharacters = charactersData[cls.id] || [];
                 
                 classCharacters.forEach(character => {
                     const isCurrent = currentUser.character_id === character.id;
@@ -551,7 +439,7 @@
                             ${character.character_name} ${isCurrent ? ' (Текущий)' : ''}
                         </div>
                         <div style="color: #718096; font-size: 14px; margin-bottom: 5px;">${character.description}</div>
-                        <div style="color: #667eea; font-size: 12px;">Бонус: ${getBonusDescription(character.bonus_type, character.bonus_value)}</div>
+                        <div style="color: #667eea; font-size: 12px;">Бонус: ${character.bonus_type}</div>
                     `;
                     charactersList.appendChild(card);
                 });
@@ -595,7 +483,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         userId: currentUserId,
-                        userClass: selectedClass.name,
+                        userClass: selectedClass.id,
                         characterId: selectedCharacter.id,
                         tgUsername: tg?.initDataUnsafe?.user?.username || '',
                         tgFirstName: tg?.initDataUnsafe?.user?.first_name || 'Пользователь'
@@ -628,28 +516,14 @@
                 if (quizzes.length > 0) {
                     quizzes.forEach(quiz => {
                         const quizElement = document.createElement('div');
-                        let additionalInfo = '';
-                        
-                        if (quiz.completed) {
-                            if (quiz.can_retake) {
-                                additionalInfo = `<span class="completed-badge">Пройден</span> Можно пройти снова`;
-                            } else {
-                                additionalInfo = `<div class="cooldown-info">Пройден. Следующая попытка: ${new Date(quiz.next_available).toLocaleString('ru-RU')}</div>`;
-                            }
-                        }
-                        
                         quizElement.className = 'quiz-card';
                         quizElement.innerHTML = `
-                            <div style="font-weight: 600; margin-bottom: 8px;">${quiz.title} ${quiz.completed && quiz.can_retake ? '<span class="completed-badge">Пройден</span>' : ''}</div>
+                            <div style="font-weight: 600; margin-bottom: 8px;">${quiz.title}</div>
                             <div style="color: #718096; margin-bottom: 8px;">${quiz.description || 'Описание отсутствует'}</div>
-                            <div style="color: #48bb78; margin-bottom: 8px;">Награда: ${quiz.sparks_reward}✨ (${quiz.questions.length} вопросов)</div>
-                            ${additionalInfo}
-                            <div style="margin-top: 12px;">
-                                <button class="btn" onclick="startQuiz(${quiz.id})" 
-                                    ${!quiz.can_retake && quiz.completed ? 'disabled style="background: #a0aec0;"' : ''}>
-                                    ${quiz.completed ? 'Пройти снова' : 'Начать квиз'}
-                                </button>
-                            </div>
+                            <div style="color: #48bb78; margin-bottom: 12px;">Награда: ${quiz.sparks_reward}✨</div>
+                            <button class="btn" onclick="startQuiz(${quiz.id})">
+                                ${quiz.completed ? 'Пройти снова' : 'Начать квиз'}
+                            </button>
                         `;
                         quizzesList.appendChild(quizElement);
                     });
@@ -658,204 +532,6 @@
                 }
             } catch (error) {
                 document.getElementById('quizzesList').innerHTML = '<div class="error">Ошибка загрузки квизов</div>';
-            }
-        }
-
-        // Начало квиза
-        async function startQuiz(quizId) {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/webapp/quizzes?userId=${currentUserId}`);
-                const quizzes = await response.json();
-                currentQuiz = quizzes.find(q => q.id === quizId);
-                
-                if (!currentQuiz) {
-                    showMessage('Квиз не найден', 'error');
-                    return;
-                }
-                
-                quizAnswers = [];
-                currentQuestionIndex = 0;
-                
-                showScreen('quizScreen');
-                showQuestion();
-                
-            } catch (error) {
-                showMessage('Ошибка загрузки квиза', 'error');
-            }
-        }
-
-        // Показ вопроса
-        function showQuestion() {
-            if (!currentQuiz || !currentQuiz.questions) return;
-            
-            const question = currentQuiz.questions[currentQuestionIndex];
-            const quizContent = document.getElementById('quizContent');
-            
-            document.getElementById('quizTitle').textContent = currentQuiz.title;
-            document.getElementById('quizProgress').textContent = `Вопрос ${currentQuestionIndex + 1} из ${currentQuiz.questions.length}`;
-            
-            quizContent.innerHTML = `
-                <div style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
-                    <h3 style="margin-bottom: 15px;">${question.question}</h3>
-                    <div id="optionsContainer">
-                        ${question.options.map((option, index) => `
-                            <div class="quiz-option" onclick="selectAnswer(${index})">
-                                ${option}
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    ${currentQuestionIndex > 0 ? '<button class="btn back-btn" onclick="previousQuestion()">← Назад</button>' : '<div></div>'}
-                    ${currentQuestionIndex < currentQuiz.questions.length - 1 ? 
-                        '<button class="btn" onclick="nextQuestion()">Далее →</button>' : 
-                        '<button class="btn" onclick="showSubmitButton()">Завершить</button>'
-                    }
-                </div>
-            `;
-            
-            document.getElementById('submitQuizBtn').style.display = 'none';
-        }
-
-        // Выбор ответа
-        function selectAnswer(answerIndex) {
-            quizAnswers[currentQuestionIndex] = answerIndex;
-            
-            // Сбрасываем выделение
-            document.querySelectorAll('.quiz-option').forEach(option => {
-                option.classList.remove('selected');
-            });
-            
-            // Выделяем выбранный вариант
-            event.currentTarget.classList.add('selected');
-        }
-
-        // Следующий вопрос
-        function nextQuestion() {
-            if (quizAnswers[currentQuestionIndex] === undefined) {
-                showMessage('Пожалуйста, выберите ответ', 'error');
-                return;
-            }
-            
-            currentQuestionIndex++;
-            showQuestion();
-        }
-
-        // Предыдущий вопрос
-        function previousQuestion() {
-            currentQuestionIndex--;
-            showQuestion();
-        }
-
-        // Показ кнопки отправки
-        function showSubmitButton() {
-            if (quizAnswers[currentQuestionIndex] === undefined) {
-                showMessage('Пожалуйста, выберите ответ', 'error');
-                return;
-            }
-            
-            document.getElementById('submitQuizBtn').style.display = 'block';
-        }
-
-        // Отправка квиза
-        async function submitQuiz() {
-            try {
-                showMessage('⏳ Проверяем ответы...', 'loading');
-                
-                const response = await fetch(`${API_BASE_URL}/api/webapp/quizzes/${currentQuiz.id}/submit`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: currentUserId,
-                        answers: quizAnswers
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage(`✅ ${result.message}`, 'success');
-                    showScreen('quizzesScreen');
-                    setTimeout(() => loadQuizzes(), 1000);
-                    setTimeout(() => loadUserData(), 1500);
-                } else {
-                    showMessage(`❌ ${result.error}`, 'error');
-                }
-            } catch (error) {
-                showMessage('Ошибка при отправке квиза', 'error');
-            }
-        }
-
-        // Загрузка данных приглашения
-        async function loadInviteData() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/webapp/invite/${currentUserId}`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    document.getElementById('inviteLink').textContent = data.invite_link;
-                }
-            } catch (error) {
-                document.getElementById('inviteLink').textContent = 'Ошибка загрузки ссылки';
-            }
-        }
-
-        // Копирование ссылки приглашения
-        async function copyInviteLink() {
-            const link = document.getElementById('inviteLink').textContent;
-            
-            try {
-                await navigator.clipboard.writeText(link);
-                showMessage('✅ Ссылка скопирована в буфер обмена!', 'success');
-            } catch (error) {
-                // Fallback для старых браузеров
-                const textArea = document.createElement('textarea');
-                textArea.value = link;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                showMessage('✅ Ссылка скопирована!', 'success');
-            }
-        }
-
-        // Отправка комментария
-        async function submitComment() {
-            const commentText = document.getElementById('commentText').value.trim();
-            
-            if (!commentText) {
-                showMessage('Пожалуйста, напишите отзыв', 'error');
-                return;
-            }
-            
-            if (commentText.length < 10) {
-                showMessage('Отзыв должен содержать хотя бы 10 символов', 'error');
-                return;
-            }
-            
-            try {
-                showMessage('⏳ Отправляем отзыв...', 'loading');
-                
-                const response = await fetch(`${API_BASE_URL}/api/webapp/comments`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: currentUserId,
-                        commentText: commentText
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage('✅ ' + result.message, 'success');
-                    document.getElementById('commentText').value = '';
-                    showScreen('mainScreen');
-                } else {
-                    showMessage(`❌ ${result.error}`, 'error');
-                }
-            } catch (error) {
-                showMessage('Ошибка при отправке отзыва', 'error');
             }
         }
 
@@ -871,13 +547,13 @@
                 if (data.activities && data.activities.length > 0) {
                     data.activities.forEach(activity => {
                         const activityElement = document.createElement('div');
-                        activityElement.className = 'activity-item';
+                        activityElement.className = 'character-card';
                         activityElement.innerHTML = `
                             <div style="font-weight: 600; margin-bottom: 5px;">${activity.description}</div>
                             <div style="color: #718096; font-size: 14px; margin-bottom: 5px;">
                                 ${new Date(activity.created_at).toLocaleString('ru-RU')}
                             </div>
-                            <div style="color: ${activity.sparks_earned >= 0 ? '#48bb78' : '#f56565'}; font-weight: 600;">
+                            <div style="color: ${activity.sparks_earned >= 0 ? '#48bb78' : '#f56565'};">
                                 ${activity.sparks_earned >= 0 ? '+' : ''}${activity.sparks_earned}✨
                             </div>
                         `;
@@ -892,23 +568,6 @@
         }
 
         // Вспомогательные функции
-        function getBonusDescription(bonusType, bonusValue) {
-            const bonuses = {
-                'percent_bonus': `+${bonusValue}% к искрам`,
-                'forgiveness': 'Право на ошибку',
-                'random_gift': 'Случайный подарок',
-                'secret_advice': 'Секретные советы',
-                'series_bonus': 'Бонус за серии',
-                'photo_bonus': 'Бонус за фото',
-                'weekly_surprise': 'Еженедельный сюрприз',
-                'mini_quest': 'Мини-квесты',
-                'quiz_hint': 'Подсказки в квизах',
-                'fact_star': 'Факт-искры',
-                'streak_multiplier': 'Множитель за серию'
-            };
-            return bonuses[bonusType] || 'Особый бонус';
-        }
-
         function showLoading(containerId) {
             const container = document.getElementById(containerId);
             const loading = container.querySelector('.loading');
