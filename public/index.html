@@ -28,7 +28,6 @@
         .btn-warning { background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); }
         .btn-info { background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); }
         .btn-gold { background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%); color: #2d3748; }
-        .btn-purple { background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%); }
         .sparks { 
             font-size: 42px; font-weight: bold; text-align: center; color: #ffd700; 
             text-shadow: 0 2px 4px rgba(255,215,0,0.3); margin: 15px 0; padding: 10px;
@@ -36,18 +35,15 @@
         .screen { display: none; }
         .active { display: block; }
         .back-btn { background: #718096; margin-bottom: 15px; }
-        .character-card, .quiz-card, .activity-item, .shop-item, .post-card {
+        .character-card, .quiz-card, .activity-item {
             background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 15px;
             margin-bottom: 10px; cursor: pointer; transition: all 0.3s ease;
         }
-        .character-card:hover, .quiz-card:hover, .shop-item:hover, .post-card:hover { 
-            border-color: #667eea; transform: translateY(-2px); 
-        }
+        .character-card:hover, .quiz-card:hover { border-color: #667eea; transform: translateY(-2px); }
         .character-card.selected { border-color: #667eea; background: rgba(102,126,234,0.1); }
         .loading { text-align: center; color: #718096; padding: 20px; }
         .error { background: #fed7d7; color: #c53030; padding: 10px; border-radius: 8px; margin: 10px 0; text-align: center; }
         .success { background: #c6f6d5; color: #276749; padding: 10px; border-radius: 8px; margin: 10px 0; text-align: center; }
-        .info { background: #bee3f8; color: #2c5aa0; padding: 10px; border-radius: 8px; margin: 10px 0; text-align: center; }
         .invite-section { background: rgba(102,126,234,0.1); padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px solid #667eea; }
         .invite-link { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin: 10px 0; font-family: monospace; word-break: break-all; }
         .quiz-option { background: #f7fafc; border: 2px solid #e2e8f0; border-radius: 8px; padding: 12px; margin: 8px 0; cursor: pointer; transition: all 0.3s ease; }
@@ -57,10 +53,6 @@
         .comment-input { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px; min-height: 80px; margin-bottom: 10px; }
         .cooldown-info { background: #fed7d7; color: #c53030; padding: 8px; border-radius: 6px; margin: 8px 0; font-size: 14px; text-align: center; }
         .completed-badge { background: #48bb78; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 10px; }
-        .price-tag { background: #ffd700; color: #2d3748; padding: 5px 10px; border-radius: 15px; font-weight: bold; font-size: 14px; }
-        .shop-item-image { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; background: #f7fafc; display: flex; align-items: center; justify-content: center; color: #a0aec0; }
-        .purchased-badge { background: #48bb78; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-        .marathon-card { background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%); color: #2d3748; padding: 15px; border-radius: 12px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -116,27 +108,18 @@
             <div class="invite-section" id="inviteBonusSection" style="display: none;">
                 <h4 style="color: #2d3748; margin-bottom: 10px;">👥 Пригласите друзей!</h4>
                 <p style="color: #718096; font-size: 14px; margin-bottom: 10px;">
-                    За каждого приглашенного друга вы получаете <strong>+10✨</strong>
+                    За каждого приглашенного друга вы получаете <strong>+5✨</strong>
                 </p>
                 <button class="btn btn-info" onclick="showScreen('inviteScreen')">📤 Пригласить друга</button>
             </div>
 
-            <!-- Секция постов канала -->
-            <div class="card" id="postsSection" style="display: none;">
-                <h3 style="margin-bottom: 15px;">📢 Последние публикации</h3>
+            <!-- Секция комментариев -->
+            <div class="card" id="commentSection" style="display: none;">
+                <h3 style="margin-bottom: 15px;">💬 Оставить отзыв</h3>
                 <p style="color: #718096; font-size: 14px; margin-bottom: 10px;">
-                    Оставляйте отзывы к постам и получайте <strong>+1✨</strong> после модерации
+                    Поделитесь впечатлениями и получите <strong>+1✨</strong> после модерации
                 </p>
-                <button class="btn btn-secondary" onclick="showScreen('postsScreen')">📝 Смотреть посты</button>
-            </div>
-
-            <!-- Секция марафонов -->
-            <div class="card" id="marathonsSection" style="display: none;">
-                <h3 style="margin-bottom: 15px;">🏃‍♂️ Активные марафоны</h3>
-                <p style="color: #718096; font-size: 14px; margin-bottom: 10px;">
-                    Участвуйте в марафонах и получайте <strong>+7✨</strong>
-                </p>
-                <button class="btn btn-warning" onclick="showScreen('marathonsScreen')">🎯 Участвовать</button>
+                <button class="btn btn-secondary" onclick="showScreen('commentScreen')">📝 Написать отзыв</button>
             </div>
         </div>
 
@@ -208,37 +191,6 @@
             </div>
         </div>
 
-        <!-- Экран магазина -->
-        <div id="shopScreen" class="screen">
-            <div class="card">
-                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
-                <h2 style="text-align: center; margin-bottom: 20px;">🛒 Магазин</h2>
-                
-                <div class="info">
-                    <strong>Ваш баланс:</strong> <span id="shopBalance">0</span>✨
-                </div>
-                
-                <div id="shopItemsList" class="loading">
-                    Загрузка товаров...
-                </div>
-                
-                <button class="btn btn-purple" onclick="showScreen('purchasesScreen')">
-                    📦 Мои покупки
-                </button>
-            </div>
-        </div>
-
-        <!-- Экран покупок -->
-        <div id="purchasesScreen" class="screen">
-            <div class="card">
-                <button class="btn back-btn" onclick="showScreen('shopScreen')">← Назад</button>
-                <h2 style="text-align: center; margin-bottom: 20px;">📦 Мои покупки</h2>
-                <div id="purchasesList" class="loading">
-                    Загрузка покупок...
-                </div>
-            </div>
-        </div>
-
         <!-- Экран приглашений -->
         <div id="inviteScreen" class="screen">
             <div class="card">
@@ -246,7 +198,7 @@
                 <h2 style="text-align: center; margin-bottom: 20px;">👥 Пригласить друга</h2>
                 
                 <div class="invite-section">
-                    <h3 style="color: #2d3748; margin-bottom: 15px;">🎁 Получите +10✨ за каждого друга!</h3>
+                    <h3 style="color: #2d3748; margin-bottom: 15px;">🎁 Получите +5✨ за каждого друга!</h3>
                     
                     <p style="color: #718096; margin-bottom: 15px;">
                         Поделитесь этой ссылкой с друзьями. Когда они присоединятся к нашему каналу по вашей ссылке, вы получите бонус!
@@ -273,29 +225,15 @@
             </div>
         </div>
 
-        <!-- Экран постов -->
-        <div id="postsScreen" class="screen">
+        <!-- Экран комментариев -->
+        <div id="commentScreen" class="screen">
             <div class="card">
                 <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
-                <h2 style="text-align: center; margin-bottom: 20px;">📢 Публикации канала</h2>
-                <div id="postsList" class="loading">
-                    Загрузка публикаций...
-                </div>
-            </div>
-        </div>
-
-        <!-- Экран комментариев к посту -->
-        <div id="postCommentScreen" class="screen">
-            <div class="card">
-                <button class="btn back-btn" onclick="showScreen('postsScreen')">← Назад</button>
-                <h2 id="postTitle">Пост</h2>
-                <div id="postContent" style="margin-bottom: 20px;"></div>
+                <h2 style="text-align: center; margin-bottom: 20px;">💬 Написать отзыв</h2>
                 
                 <div class="comment-section">
-                    <h3 style="margin-bottom: 15px;">💬 Написать отзыв</h3>
-                    
                     <p style="color: #718096; text-align: center; margin-bottom: 15px;">
-                        Поделитесь своими впечатлениями о посте и получите <strong>+1✨</strong> после модерации
+                        Поделитесь своими впечатлениями о проекте и получите <strong>+1✨</strong> после модерации
                     </p>
                     
                     <textarea class="comment-input" id="commentText" placeholder="Напишите ваш отзыв здесь..."></textarea>
@@ -303,17 +241,12 @@
                     <button class="btn btn-secondary" onclick="submitComment()" id="submitCommentBtn">
                         📤 Отправить на модерацию
                     </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Экран марафонов -->
-        <div id="marathonsScreen" class="screen">
-            <div class="card">
-                <button class="btn back-btn" onclick="showScreen('mainScreen')">← Назад</button>
-                <h2 style="text-align: center; margin-bottom: 20px;">🏃‍♂️ Активные марафоны</h2>
-                <div id="marathonsList" class="loading">
-                    Загрузка марафонов...
+                    
+                    <div style="margin-top: 15px; padding: 10px; background: rgba(102,126,234,0.05); border-radius: 8px;">
+                        <p style="color: #718096; font-size: 14px; margin: 0;">
+                            💡 <strong>Подсказка:</strong> Пишите развернутые отзывы о том, что вам понравилось, какие квизы были интересными, какие улучшения вы бы предложили.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -343,7 +276,6 @@
         let currentQuiz = null;
         let quizAnswers = [];
         let currentQuestionIndex = 0;
-        let currentPost = null;
 
         const API_BASE_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000' 
@@ -390,14 +322,12 @@
                 if (currentUser.is_registered) {
                     document.getElementById('welcomeBlock').style.display = 'none';
                     document.getElementById('inviteBonusSection').style.display = 'block';
-                    document.getElementById('postsSection').style.display = 'block';
-                    document.getElementById('marathonsSection').style.display = 'block';
+                    document.getElementById('commentSection').style.display = 'block';
                     loadActionButtons(currentUser.available_buttons);
                 } else {
                     document.getElementById('welcomeBlock').style.display = 'block';
                     document.getElementById('inviteBonusSection').style.display = 'none';
-                    document.getElementById('postsSection').style.display = 'none';
-                    document.getElementById('marathonsSection').style.display = 'none';
+                    document.getElementById('commentSection').style.display = 'none';
                 }
                 
                 hideLoading('userData');
@@ -417,8 +347,7 @@
             document.getElementById('userClass').textContent = user.class || 'Не выбран';
             document.getElementById('userCharacter').textContent = user.character_name || 'Не выбран';
             document.getElementById('inviteCount').textContent = user.invite_count || 0;
-            document.getElementById('inviteSparks').textContent = `${(user.invite_count || 0) * 10}✨`;
-            document.getElementById('shopBalance').textContent = user.sparks || 0;
+            document.getElementById('inviteSparks').textContent = `${(user.invite_count || 0) * 5}✨`;
         }
 
         // Загрузка кнопок действий
@@ -453,14 +382,10 @@
             document.getElementById(screenId).classList.add('active');
             
             if (screenId === 'quizzesScreen') loadQuizzes();
-            if (screenId === 'shopScreen') loadShopItems();
-            if (screenId === 'purchasesScreen') loadPurchases();
             if (screenId === 'activitiesScreen') loadActivities();
             if (screenId === 'registrationScreen') loadRegistration();
             if (screenId === 'changeCharacterScreen') loadChangeCharacter();
             if (screenId === 'inviteScreen') loadInviteData();
-            if (screenId === 'postsScreen') loadPosts();
-            if (screenId === 'marathonsScreen') loadMarathons();
         }
 
         // Загрузка регистрации
@@ -480,7 +405,6 @@
                         <div style="font-size: 24px; margin-bottom: 5px;">${cls.icon}</div>
                         <div style="font-weight: 600;">${cls.name}</div>
                         <div style="font-size: 14px; color: #718096; margin-top: 5px;">${cls.description}</div>
-                        ${!cls.characters_enabled ? '<div style="color: #ed8936; font-size: 12px; margin-top: 5px;">⚠️ Персонажи отключены</div>' : ''}
                     `;
                     classBtn.onclick = () => selectClass(cls);
                     classesList.appendChild(classBtn);
@@ -497,12 +421,6 @@
             selectedCharacter = null;
             document.getElementById('completeBtn').disabled = true;
             
-            // Если персонажи отключены, сразу завершаем регистрацию
-            if (!cls.characters_enabled) {
-                await completeRegistration();
-                return;
-            }
-            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/webapp/characters`);
                 charactersData = await response.json();
@@ -511,11 +429,6 @@
                 charactersList.innerHTML = '';
                 
                 const classCharacters = charactersData[cls.name] || [];
-                
-                if (classCharacters.length === 0) {
-                    charactersList.innerHTML = '<div class="error">Персонажи для этого класса не найдены</div>';
-                    return;
-                }
                 
                 classCharacters.forEach(character => {
                     const card = document.createElement('div');
@@ -550,8 +463,8 @@
 
         // Завершение регистрации
         async function completeRegistration() {
-            if (!selectedClass) {
-                showMessage('Пожалуйста, выберите класс', 'error');
+            if (!selectedClass || !selectedCharacter) {
+                showMessage('Пожалуйста, выберите класс и персонажа', 'error');
                 return;
             }
 
@@ -564,7 +477,7 @@
                     body: JSON.stringify({
                         userId: currentUserId,
                         userClass: selectedClass.name,
-                        characterId: selectedCharacter ? selectedCharacter.id : null,
+                        characterId: selectedCharacter.id,
                         tgUsername: tg?.initDataUnsafe?.user?.username || '',
                         tgFirstName: tg?.initDataUnsafe?.user?.first_name || 'Пользователь'
                     })
@@ -601,7 +514,6 @@
                         <div style="font-size: 24px; margin-bottom: 5px;">${cls.icon}</div>
                         <div style="font-weight: 600;">${cls.name}</div>
                         <div style="font-size: 14px; color: #718096; margin-top: 5px;">${cls.description}</div>
-                        ${!cls.characters_enabled ? '<div style="color: #ed8936; font-size: 12px; margin-top: 5px;">⚠️ Персонажи отключены</div>' : ''}
                     `;
                     classBtn.onclick = () => selectChangeClass(cls);
                     classesList.appendChild(classBtn);
@@ -617,12 +529,6 @@
             selectedClass = cls;
             selectedCharacter = null;
             document.getElementById('changeCharacterBtn').disabled = true;
-            
-            // Если персонажи отключены, сразу завершаем смену
-            if (!cls.characters_enabled) {
-                await changeCharacter();
-                return;
-            }
             
             try {
                 const response = await fetch(`${API_BASE_URL}/api/webapp/characters`);
@@ -676,8 +582,8 @@
 
         // Смена персонажа
         async function changeCharacter() {
-            if (!selectedClass) {
-                showMessage('Пожалуйста, выберите класс', 'error');
+            if (!selectedClass || !selectedCharacter) {
+                showMessage('Пожалуйста, выберите класс и персонажа', 'error');
                 return;
             }
 
@@ -690,7 +596,7 @@
                     body: JSON.stringify({
                         userId: currentUserId,
                         userClass: selectedClass.name,
-                        characterId: selectedCharacter ? selectedCharacter.id : null,
+                        characterId: selectedCharacter.id,
                         tgUsername: tg?.initDataUnsafe?.user?.username || '',
                         tgFirstName: tg?.initDataUnsafe?.user?.first_name || 'Пользователь'
                     })
@@ -736,7 +642,7 @@
                         quizElement.innerHTML = `
                             <div style="font-weight: 600; margin-bottom: 8px;">${quiz.title} ${quiz.completed && quiz.can_retake ? '<span class="completed-badge">Пройден</span>' : ''}</div>
                             <div style="color: #718096; margin-bottom: 8px;">${quiz.description || 'Описание отсутствует'}</div>
-                            <div style="color: #48bb78; margin-bottom: 8px;">Награда: до ${quiz.sparks_reward + quiz.questions.length}✨ (${quiz.questions.length} вопросов)</div>
+                            <div style="color: #48bb78; margin-bottom: 8px;">Награда: ${quiz.sparks_reward}✨ (${quiz.questions.length} вопросов)</div>
                             ${additionalInfo}
                             <div style="margin-top: 12px;">
                                 <button class="btn" onclick="startQuiz(${quiz.id})" 
@@ -880,115 +786,6 @@
             }
         }
 
-        // Загрузка товаров магазина
-        async function loadShopItems() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/webapp/shop/items`);
-                const items = await response.json();
-                
-                const itemsList = document.getElementById('shopItemsList');
-                itemsList.innerHTML = '';
-                
-                if (items.length > 0) {
-                    items.forEach(item => {
-                        const itemElement = document.createElement('div');
-                        itemElement.className = 'shop-item';
-                        itemElement.innerHTML = `
-                            <div class="shop-item-image">
-                                ${item.preview_url ? 
-                                    `<img src="${API_BASE_URL}${item.preview_url}" alt="${item.title}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">` : 
-                                    `🛒 ${item.type === 'video' ? '🎥' : '📚'}`
-                                }
-                            </div>
-                            <div style="font-weight: 600; margin-bottom: 8px;">${item.title}</div>
-                            <div style="color: #718096; margin-bottom: 8px;">${item.description || 'Описание отсутствует'}</div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span class="price-tag">${item.price}✨</span>
-                                <button class="btn" onclick="purchaseItem(${item.id})" 
-                                    ${currentUser.sparks < item.price ? 'disabled style="background: #a0aec0;"' : ''}>
-                                    Купить
-                                </button>
-                            </div>
-                        `;
-                        itemsList.appendChild(itemElement);
-                    });
-                } else {
-                    itemsList.innerHTML = '<div class="error">Товары пока не доступны</div>';
-                }
-            } catch (error) {
-                document.getElementById('shopItemsList').innerHTML = '<div class="error">Ошибка загрузки товаров</div>';
-            }
-        }
-
-        // Покупка товара
-        async function purchaseItem(itemId) {
-            try {
-                showMessage('⏳ Оформляем покупку...', 'loading');
-                
-                const response = await fetch(`${API_BASE_URL}/api/webapp/shop/purchase`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: currentUserId,
-                        itemId: itemId
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage('✅ ' + result.message, 'success');
-                    setTimeout(() => loadUserData(), 1000);
-                    setTimeout(() => loadShopItems(), 1500);
-                } else {
-                    showMessage(`❌ ${result.error}`, 'error');
-                }
-            } catch (error) {
-                showMessage('Ошибка при покупке товара', 'error');
-            }
-        }
-
-        // Загрузка покупок
-        async function loadPurchases() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/webapp/shop/purchases/${currentUserId}`);
-                const data = await response.json();
-                
-                const purchasesList = document.getElementById('purchasesList');
-                purchasesList.innerHTML = '';
-                
-                if (data.purchases && data.purchases.length > 0) {
-                    data.purchases.forEach(purchase => {
-                        const item = typeof purchase.item_data === 'string' ? JSON.parse(purchase.item_data) : purchase;
-                        const purchaseElement = document.createElement('div');
-                        purchaseElement.className = 'shop-item';
-                        purchaseElement.innerHTML = `
-                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
-                                <div style="font-weight: 600;">${item.title}</div>
-                                <span class="purchased-badge">Куплено</span>
-                            </div>
-                            <div style="color: #718096; margin-bottom: 8px;">${item.description || 'Описание отсутствует'}</div>
-                            <div style="color: #718096; font-size: 14px;">
-                                Куплено: ${new Date(purchase.purchased_at).toLocaleString('ru-RU')}
-                            </div>
-                            ${item.file_url ? `
-                                <div style="margin-top: 10px;">
-                                    <a href="${API_BASE_URL}${item.file_url}" target="_blank" class="btn" style="text-decoration: none;">
-                                        ${item.type === 'video' ? '🎥 Смотреть видео' : '📚 Открыть файл'}
-                                    </a>
-                                </div>
-                            ` : ''}
-                        `;
-                        purchasesList.appendChild(purchaseElement);
-                    });
-                } else {
-                    purchasesList.innerHTML = '<div class="error">У вас пока нет покупок</div>';
-                }
-            } catch (error) {
-                document.getElementById('purchasesList').innerHTML = '<div class="error">Ошибка загрузки покупок</div>';
-            }
-        }
-
         // Загрузка данных приглашения
         async function loadInviteData() {
             try {
@@ -1022,76 +819,8 @@
             }
         }
 
-        // Загрузка постов
-        async function loadPosts() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/webapp/posts?userId=${currentUserId}`);
-                const posts = await response.json();
-                
-                const postsList = document.getElementById('postsList');
-                postsList.innerHTML = '';
-                
-                if (posts.length > 0) {
-                    posts.forEach(post => {
-                        const postElement = document.createElement('div');
-                        postElement.className = 'post-card';
-                        postElement.innerHTML = `
-                            <div style="font-weight: 600; margin-bottom: 8px;">${post.title}</div>
-                            <div style="color: #718096; margin-bottom: 8px;">${post.content || 'Без текста'}</div>
-                            <div style="color: #718096; font-size: 14px; margin-bottom: 10px;">
-                                Опубликован: ${new Date(post.published_at).toLocaleString('ru-RU')}
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                ${post.requires_comment ? 
-                                    `<span style="color: #48bb78;">💬 Отзывы открыты (+1✨)</span>` : 
-                                    '<span style="color: #718096;">💬 Отзывы закрыты</span>'
-                                }
-                                <button class="btn" onclick="viewPost(${post.id})" 
-                                    ${!post.requires_comment || post.user_commented ? 'disabled style="background: #a0aec0;"' : ''}>
-                                    ${post.user_commented ? 'Отзыв оставлен' : 'Оставить отзыв'}
-                                </button>
-                            </div>
-                        `;
-                        postsList.appendChild(postElement);
-                    });
-                } else {
-                    postsList.innerHTML = '<div class="error">Публикации пока не доступны</div>';
-                }
-            } catch (error) {
-                document.getElementById('postsList').innerHTML = '<div class="error">Ошибка загрузки публикаций</div>';
-            }
-        }
-
-        // Просмотр поста
-        async function viewPost(postId) {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/webapp/posts?userId=${currentUserId}`);
-                const posts = await response.json();
-                currentPost = posts.find(p => p.id === postId);
-                
-                if (!currentPost) {
-                    showMessage('Пост не найден', 'error');
-                    return;
-                }
-                
-                document.getElementById('postTitle').textContent = currentPost.title;
-                document.getElementById('postContent').textContent = currentPost.content || 'Текст отсутствует';
-                document.getElementById('commentText').value = '';
-                
-                showScreen('postCommentScreen');
-                
-            } catch (error) {
-                showMessage('Ошибка загрузки поста', 'error');
-            }
-        }
-
         // Отправка комментария
         async function submitComment() {
-            if (!currentPost) {
-                showMessage('Пост не выбран', 'error');
-                return;
-            }
-            
             const commentText = document.getElementById('commentText').value.trim();
             
             if (!commentText) {
@@ -1112,7 +841,6 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         userId: currentUserId,
-                        postId: currentPost.id,
                         commentText: commentText
                     })
                 });
@@ -1122,77 +850,12 @@
                 if (result.success) {
                     showMessage('✅ ' + result.message, 'success');
                     document.getElementById('commentText').value = '';
-                    showScreen('postsScreen');
-                    setTimeout(() => loadPosts(), 1000);
+                    showScreen('mainScreen');
                 } else {
                     showMessage(`❌ ${result.error}`, 'error');
                 }
             } catch (error) {
                 showMessage('Ошибка при отправке отзыва', 'error');
-            }
-        }
-
-        // Загрузка марафонов
-        async function loadMarathons() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/webapp/marathons?userId=${currentUserId}`);
-                const marathons = await response.json();
-                
-                const marathonsList = document.getElementById('marathonsList');
-                marathonsList.innerHTML = '';
-                
-                if (marathons.length > 0) {
-                    marathons.forEach(marathon => {
-                        const marathonElement = document.createElement('div');
-                        marathonElement.className = 'marathon-card';
-                        marathonElement.innerHTML = `
-                            <div style="font-weight: 600; margin-bottom: 8px;">${marathon.title}</div>
-                            <div style="margin-bottom: 8px;">${marathon.description || 'Описание отсутствует'}</div>
-                            <div style="font-size: 14px; margin-bottom: 10px;">
-                                📅 ${new Date(marathon.start_date).toLocaleDateString('ru-RU')} - ${new Date(marathon.end_date).toLocaleDateString('ru-RU')}
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 600;">Награда: ${marathon.sparks_reward}✨</span>
-                                <button class="btn" onclick="participateInMarathon(${marathon.id})" 
-                                    ${marathon.user_participated || !marathon.is_active ? 'disabled style="background: #a0aec0;"' : ''}>
-                                    ${marathon.user_participated ? 'Участвуете' : 'Участвовать'}
-                                </button>
-                            </div>
-                        `;
-                        marathonsList.appendChild(marathonElement);
-                    });
-                } else {
-                    marathonsList.innerHTML = '<div class="error">Активные марафоны пока не доступны</div>';
-                }
-            } catch (error) {
-                document.getElementById('marathonsList').innerHTML = '<div class="error">Ошибка загрузки марафонов</div>';
-            }
-        }
-
-        // Участие в марафоне
-        async function participateInMarathon(marathonId) {
-            try {
-                showMessage('⏳ Записываем на марафон...', 'loading');
-                
-                const response = await fetch(`${API_BASE_URL}/api/webapp/marathons/${marathonId}/participate`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: currentUserId
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage('✅ ' + result.message, 'success');
-                    setTimeout(() => loadUserData(), 1000);
-                    setTimeout(() => loadMarathons(), 1500);
-                } else {
-                    showMessage(`❌ ${result.error}`, 'error');
-                }
-            } catch (error) {
-                showMessage('Ошибка при записи на марафон', 'error');
             }
         }
 
@@ -1266,7 +929,7 @@
         function showMessage(message, type = 'info') {
             const messageArea = document.getElementById('messageArea');
             const messageDiv = document.createElement('div');
-            messageDiv.className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            messageDiv.className = type === 'error' ? 'error' : 'success';
             messageDiv.textContent = message;
             messageArea.appendChild(messageDiv);
             
