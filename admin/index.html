@@ -33,10 +33,13 @@
         .btn {
             background: #667eea; color: white; border: none; padding: 10px 20px;
             border-radius: 5px; cursor: pointer; margin-right: 10px; margin-bottom: 10px;
+            transition: all 0.3s ease;
         }
         .btn:hover { background: #5a67d8; }
         .btn-success { background: #48bb78; }
         .btn-success:hover { background: #38a169; }
+        .btn-warning { background: #ed8936; }
+        .btn-warning:hover { background: #dd6b20; }
         .btn-danger { background: #f56565; }
         .btn-danger:hover { background: #e53e3e; }
         .form-group { margin-bottom: 15px; }
@@ -53,7 +56,7 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         .stat-number { font-size: 2em; font-weight: bold; color: #667eea; margin-bottom: 5px; }
-        .character-card {
+        .character-card, .quiz-card, .comment-item {
             background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px;
             padding: 15px; margin-bottom: 15px;
         }
@@ -62,6 +65,13 @@
         }
         .message.success { background: #c6f6d5; color: #276749; border: 1px solid #9ae6b4; }
         .message.error { background: #fed7d7; color: #c53030; border: 1px solid #feb2b2; }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+        .checkbox-item { display: flex; align-items: center; gap: 5px; }
+        .tab-subnav { display: flex; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; flex-wrap: wrap; }
+        .tab-subnav-btn { padding: 10px 20px; background: none; border: none; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
+        .tab-subnav-btn.active { border-bottom-color: #667eea; color: #667eea; font-weight: 600; }
+        .button-item { background: #edf2f7; padding: 8px 12px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .button-remove { background: #f56565; color: white; border: none; border-radius: 3px; padding: 2px 6px; cursor: pointer; margin-left: 10px; }
     </style>
 </head>
 <body>
@@ -74,8 +84,11 @@
 
         <div class="nav-tabs">
             <div class="nav-tab active" data-tab="dashboard">📊 Дашборд</div>
+            <div class="nav-tab" data-tab="classes">🎯 Классы</div>
             <div class="nav-tab" data-tab="characters">👥 Персонажи</div>
-            <div class="nav-tab" data-tab="quizzes">🎯 Квизы</div>
+            <div class="nav-tab" data-tab="quizzes">📝 Квизы</div>
+            <div class="nav-tab" data-tab="posts">📢 Публикации</div>
+            <div class="nav-tab" data-tab="moderation">🛡️ Модерация</div>
             <div class="nav-tab" data-tab="admins">🔧 Админы</div>
         </div>
 
@@ -98,6 +111,60 @@
                     <div class="stat-number" id="totalSparks">0</div>
                     <div class="stat-label">Всего искр</div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="pendingModeration">0</div>
+                    <div class="stat-label">На модерации</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Классы -->
+        <div id="classes" class="tab-content">
+            <div class="card">
+                <h3>➕ Создать класс</h3>
+                <form id="createClassForm">
+                    <div class="form-group">
+                        <label>Название класса:</label>
+                        <input type="text" id="className" class="form-control" required placeholder="🎨 Художники">
+                    </div>
+                    <div class="form-group">
+                        <label>Описание:</label>
+                        <textarea id="classDescription" class="form-control" rows="3" placeholder="Описание класса"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Иконка:</label>
+                        <input type="text" id="classIcon" class="form-control" required placeholder="🎨">
+                    </div>
+                    <div class="form-group">
+                        <label>Доступные кнопки:</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="classBtnQuiz" value="quiz" checked>
+                                <label for="classBtnQuiz">📝 Квизы</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="classBtnShop" value="shop" checked>
+                                <label for="classBtnShop">🛒 Магазин</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="classBtnInvite" value="invite" checked>
+                                <label for="classBtnInvite">👥 Пригласить друга</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="classBtnActivities" value="activities" checked>
+                                <label for="classBtnActivities">📊 Активности</label>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success">✅ Создать класс</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>📋 Список классов</h3>
+                <div id="classesList">
+                    <div class="loading">Загрузка классов...</div>
+                </div>
             </div>
         </div>
 
@@ -109,10 +176,7 @@
                     <div class="form-group">
                         <label>Класс:</label>
                         <select id="characterClass" class="form-control" required>
-                            <option value="Художники">🎨 Художники</option>
-                            <option value="Стилисты">👗 Стилисты</option>
-                            <option value="Мастера">🧵 Мастера</option>
-                            <option value="Историки">🏛️ Историки</option>
+                            <option value="">Выберите класс</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -129,11 +193,40 @@
                             <option value="percent_bonus">Процентный бонус</option>
                             <option value="forgiveness">Право на ошибку</option>
                             <option value="random_gift">Случайный подарок</option>
+                            <option value="secret_advice">Секретные советы</option>
+                            <option value="series_bonus">Бонус за серии</option>
+                            <option value="photo_bonus">Бонус за фото</option>
+                            <option value="weekly_surprise">Еженедельный сюрприз</option>
+                            <option value="mini_quest">Мини-квесты</option>
+                            <option value="quiz_hint">Подсказки в квизах</option>
+                            <option value="fact_star">Факт-искры</option>
+                            <option value="streak_multiplier">Множитель за серию</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Значение бонуса:</label>
-                        <input type="text" id="characterBonusValue" class="form-control" required>
+                        <input type="text" id="characterBonusValue" class="form-control" required placeholder="10, 1-3, 2weeks и т.д.">
+                    </div>
+                    <div class="form-group">
+                        <label>Доступные кнопки:</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="charBtnQuiz" value="quiz" checked>
+                                <label for="charBtnQuiz">📝 Квизы</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="charBtnShop" value="shop" checked>
+                                <label for="charBtnShop">🛒 Магазин</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="charBtnInvite" value="invite" checked>
+                                <label for="charBtnInvite">👥 Пригласить друга</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="charBtnActivities" value="activities" checked>
+                                <label for="charBtnActivities">📊 Активности</label>
+                            </div>
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-success">✅ Создать персонажа</button>
                 </form>
@@ -164,11 +257,20 @@
                         <label>Награда (искры):</label>
                         <input type="number" id="quizSparks" class="form-control" value="2" min="0" step="0.5" required>
                     </div>
+                    <div class="form-group">
+                        <label>Время перепрохождения (часы):</label>
+                        <input type="number" id="quizCooldown" class="form-control" value="24" min="1" required>
+                    </div>
+                    
+                    <h4>Вопросы</h4>
                     <div id="questionsContainer">
                         <!-- Вопросы добавляются здесь -->
                     </div>
                     <button type="button" class="btn" onclick="addQuestion()">➕ Добавить вопрос</button>
-                    <button type="submit" class="btn btn-success" style="margin-top: 20px;">✅ Создать квиз</button>
+                    
+                    <div style="margin-top: 20px;">
+                        <button type="submit" class="btn btn-success">✅ Создать квиз</button>
+                    </div>
                 </form>
             </div>
 
@@ -176,6 +278,74 @@
                 <h3>📝 Список квизов</h3>
                 <div id="quizzesList">
                     <div class="loading">Загрузка квизов...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Публикации -->
+        <div id="posts" class="tab-content">
+            <div class="card">
+                <h3>📢 Создать публикацию</h3>
+                <form id="createPostForm">
+                    <div class="form-group">
+                        <label>Заголовок поста:</label>
+                        <input type="text" id="postTitle" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Текст поста:</label>
+                        <textarea id="postContent" class="form-control" rows="4"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Ссылка на фото:</label>
+                        <input type="url" id="postPhoto" class="form-control" placeholder="https://example.com/photo.jpg">
+                    </div>
+                    <div class="form-group">
+                        <label>Ссылка на видео:</label>
+                        <input type="url" id="postVideo" class="form-control" placeholder="https://youtube.com/watch?v=...">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Кнопки действия:</label>
+                        <div id="buttonsContainer">
+                            <!-- Кнопки добавляются здесь -->
+                        </div>
+                        <button type="button" class="btn" onclick="addButton()" style="margin-top: 10px;">
+                            ➕ Добавить кнопку
+                        </button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="requiresAction" onchange="toggleActionType()">
+                            Добавить кнопку "Пройти квиз"
+                        </label>
+                    </div>
+                    
+                    <div class="form-group" id="actionTypeGroup" style="display: none;">
+                        <label>Выберите квиз:</label>
+                        <select id="actionTarget" class="form-control">
+                            <option value="">Выберите квиз</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">📤 Опубликовать в канал</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>📋 Список публикаций</h3>
+                <div id="postsList">
+                    <div class="loading">Загрузка публикаций...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модерация -->
+        <div id="moderation" class="tab-content">
+            <div class="card">
+                <h3>💬 Комментарии на модерации</h3>
+                <div id="commentsList">
+                    <div class="loading">Загрузка комментариев...</div>
                 </div>
             </div>
         </div>
@@ -222,6 +392,8 @@
         const currentAdminId = urlParams.get('userId');
 
         let currentQuestions = [];
+        let currentButtons = [];
+        let availableQuizzes = [];
 
         // Инициализация админ панели
         async function initializeAdmin() {
@@ -248,9 +420,15 @@
                 });
 
                 // Формы
+                document.getElementById('createClassForm').addEventListener('submit', createClass);
                 document.getElementById('createCharacterForm').addEventListener('submit', createCharacter);
                 document.getElementById('createQuizForm').addEventListener('submit', createQuiz);
+                document.getElementById('createPostForm').addEventListener('submit', createPost);
                 document.getElementById('addAdminForm').addEventListener('submit', addAdmin);
+
+                // Загрузка данных для форм
+                await loadClassesForSelect();
+                await loadQuizzesForSelect();
 
             } catch (error) {
                 showMessage('❌ Ошибка доступа к админ панели', 'error');
@@ -260,8 +438,11 @@
         // Загрузка данных вкладки
         function loadTabData(tabName) {
             switch(tabName) {
+                case 'classes': loadClasses(); break;
                 case 'characters': loadCharacters(); break;
                 case 'quizzes': loadQuizzes(); break;
+                case 'posts': loadPosts(); break;
+                case 'moderation': loadModeration(); break;
                 case 'admins': loadAdmins(); break;
             }
         }
@@ -276,8 +457,71 @@
                 document.getElementById('activeQuizzes').textContent = data.activeQuizzes;
                 document.getElementById('activeCharacters').textContent = data.activeCharacters;
                 document.getElementById('totalSparks').textContent = data.totalSparks;
+                document.getElementById('pendingModeration').textContent = data.pendingModeration;
             } catch (error) {
                 console.error('Error loading dashboard:', error);
+            }
+        }
+
+        // Управление классами
+        async function loadClasses() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/classes?userId=${currentAdminId}`);
+                const classes = await response.json();
+                
+                const list = document.getElementById('classesList');
+                list.innerHTML = classes.map(cls => `
+                    <div class="character-card">
+                        <h4>${cls.name} ${cls.icon}</h4>
+                        <p>${cls.description}</p>
+                        <p><strong>Кнопки:</strong> ${JSON.parse(cls.available_buttons).join(', ')}</p>
+                        <p><strong>Статус:</strong> ${cls.is_active ? 'Активен' : 'Неактивен'}</p>
+                        <div style="margin-top: 10px;">
+                            <button class="btn btn-warning" onclick="editClass(${cls.id})">✏️ Редактировать</button>
+                            <button class="btn btn-danger" onclick="deleteClass(${cls.id})">🗑️ Удалить</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('classesList').innerHTML = '<div class="error">Ошибка загрузки</div>';
+            }
+        }
+
+        async function createClass(e) {
+            e.preventDefault();
+            
+            const available_buttons = [];
+            if (document.getElementById('classBtnQuiz').checked) available_buttons.push('quiz');
+            if (document.getElementById('classBtnShop').checked) available_buttons.push('shop');
+            if (document.getElementById('classBtnInvite').checked) available_buttons.push('invite');
+            if (document.getElementById('classBtnActivities').checked) available_buttons.push('activities');
+
+            const formData = {
+                name: document.getElementById('className').value,
+                description: document.getElementById('classDescription').value,
+                icon: document.getElementById('classIcon').value,
+                available_buttons: available_buttons
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/classes?userId=${currentAdminId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('✅ Класс успешно создан!', 'success');
+                    document.getElementById('createClassForm').reset();
+                    loadClasses();
+                    loadClassesForSelect();
+                } else {
+                    showMessage(`❌ Ошибка: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка при создании класса', 'error');
             }
         }
 
@@ -290,12 +534,13 @@
                 const list = document.getElementById('charactersList');
                 list.innerHTML = characters.map(char => `
                     <div class="character-card">
-                        <h4>${char.character_name} (${char.class})</h4>
+                        <h4>${char.character_name} (${char.class_name})</h4>
                         <p>${char.description}</p>
                         <p><strong>Бонус:</strong> ${char.bonus_type} - ${char.bonus_value}</p>
+                        <p><strong>Кнопки:</strong> ${JSON.parse(char.available_buttons).join(', ')}</p>
                         <p><strong>Статус:</strong> ${char.is_active ? 'Активен' : 'Неактивен'}</p>
                         <div style="margin-top: 10px;">
-                            <button class="btn" onclick="editCharacter(${char.id})">✏️ Редактировать</button>
+                            <button class="btn btn-warning" onclick="editCharacter(${char.id})">✏️ Редактировать</button>
                             <button class="btn btn-danger" onclick="deleteCharacter(${char.id})">🗑️ Удалить</button>
                         </div>
                     </div>
@@ -308,13 +553,19 @@
         async function createCharacter(e) {
             e.preventDefault();
             
+            const available_buttons = [];
+            if (document.getElementById('charBtnQuiz').checked) available_buttons.push('quiz');
+            if (document.getElementById('charBtnShop').checked) available_buttons.push('shop');
+            if (document.getElementById('charBtnInvite').checked) available_buttons.push('invite');
+            if (document.getElementById('charBtnActivities').checked) available_buttons.push('activities');
+
             const formData = {
-                class: document.getElementById('characterClass').value,
+                class_id: document.getElementById('characterClass').value,
                 character_name: document.getElementById('characterName').value,
                 description: document.getElementById('characterDescription').value,
                 bonus_type: document.getElementById('characterBonusType').value,
                 bonus_value: document.getElementById('characterBonusValue').value,
-                available_buttons: ['quiz', 'activities']
+                available_buttons: available_buttons
             };
 
             try {
@@ -430,7 +681,8 @@
                 title: document.getElementById('quizTitle').value,
                 description: document.getElementById('quizDescription').value,
                 questions: currentQuestions,
-                sparks_reward: parseFloat(document.getElementById('quizSparks').value)
+                sparks_reward: parseFloat(document.getElementById('quizSparks').value),
+                cooldown_hours: parseInt(document.getElementById('quizCooldown').value)
             };
 
             try {
@@ -448,6 +700,7 @@
                     currentQuestions = [];
                     renderQuestions();
                     loadQuizzes();
+                    loadQuizzesForSelect();
                 } else {
                     showMessage(`❌ Ошибка: ${result.error}`, 'error');
                 }
@@ -463,11 +716,12 @@
                 
                 const list = document.getElementById('quizzesList');
                 list.innerHTML = quizzes.map(quiz => `
-                    <div class="character-card">
+                    <div class="quiz-card">
                         <h4>${quiz.title}</h4>
                         <p>${quiz.description || 'Без описания'}</p>
                         <p><strong>Вопросов:</strong> ${quiz.questions.length}</p>
                         <p><strong>Награда:</strong> ${quiz.sparks_reward}✨</p>
+                        <p><strong>Перепрохождение:</strong> каждые ${quiz.cooldown_hours} часов</p>
                         <p><strong>Статус:</strong> ${quiz.is_active ? 'Активен' : 'Неактивен'}</p>
                         <button class="btn btn-danger" onclick="deleteQuiz(${quiz.id})">🗑️ Удалить</button>
                     </div>
@@ -490,11 +744,171 @@
                 if (result.success) {
                     showMessage('✅ Квиз удален', 'success');
                     loadQuizzes();
+                    loadQuizzesForSelect();
                 } else {
                     showMessage('❌ Ошибка удаления', 'error');
                 }
             } catch (error) {
                 showMessage('Ошибка при удалении квиза', 'error');
+            }
+        }
+
+        // Управление публикациями
+        function addButton() {
+            const buttonId = Date.now();
+            currentButtons.push({ id: buttonId, text: '', url: '' });
+            renderButtons();
+        }
+
+        function removeButton(buttonId) {
+            currentButtons = currentButtons.filter(btn => btn.id !== buttonId);
+            renderButtons();
+        }
+
+        function updateButton(buttonId, field, value) {
+            const button = currentButtons.find(btn => btn.id === buttonId);
+            if (button) button[field] = value;
+        }
+
+        function renderButtons() {
+            const container = document.getElementById('buttonsContainer');
+            container.innerHTML = currentButtons.map(button => `
+                <div class="button-item">
+                    <div style="flex: 1;">
+                        <input type="text" placeholder="Текст кнопки" value="${button.text}"
+                               onchange="updateButton(${button.id}, 'text', this.value)"
+                               style="width: 100%; padding: 5px; margin-bottom: 5px; border: 1px solid #e2e8f0; border-radius: 4px;">
+                        <input type="url" placeholder="URL ссылки" value="${button.url}"
+                               onchange="updateButton(${button.id}, 'url', this.value)"
+                               style="width: 100%; padding: 5px; border: 1px solid #e2e8f0; border-radius: 4px;">
+                    </div>
+                    <button type="button" class="button-remove" onclick="removeButton(${button.id})">×</button>
+                </div>
+            `).join('');
+        }
+
+        function toggleActionType() {
+            const actionGroup = document.getElementById('actionTypeGroup');
+            actionGroup.style.display = document.getElementById('requiresAction').checked ? 'block' : 'none';
+        }
+
+        async function createPost(e) {
+            e.preventDefault();
+            
+            const postData = {
+                title: document.getElementById('postTitle').value,
+                content: document.getElementById('postContent').value,
+                photo_url: document.getElementById('postPhoto').value,
+                video_url: document.getElementById('postVideo').value,
+                buttons: currentButtons,
+                requires_action: document.getElementById('requiresAction').checked,
+                action_type: document.getElementById('requiresAction').checked ? 'quiz' : null,
+                action_target: document.getElementById('actionTarget').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/posts?userId=${currentAdminId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(postData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('✅ Пост успешно создан и опубликован в канал!', 'success');
+                    document.getElementById('createPostForm').reset();
+                    currentButtons = [];
+                    renderButtons();
+                    document.getElementById('requiresAction').checked = false;
+                    toggleActionType();
+                } else {
+                    showMessage(`❌ Ошибка: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка при создании поста', 'error');
+            }
+        }
+
+        async function loadPosts() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/posts?userId=${currentAdminId}`);
+                const posts = await response.json();
+                
+                const list = document.getElementById('postsList');
+                list.innerHTML = posts.map(post => `
+                    <div class="character-card">
+                        <h4>${post.title}</h4>
+                        <p>${post.content || 'Без текста'}</p>
+                        ${post.photo_url ? `<p>🖼️ Фото: ${post.photo_url}</p>` : ''}
+                        ${post.video_url ? `<p>🎥 Видео: ${post.video_url}</p>` : ''}
+                        ${post.requires_action ? `<p>🎯 Действие: ${post.action_type}</p>` : ''}
+                        <p><small>Опубликован: ${new Date(post.published_at).toLocaleString('ru-RU')}</small></p>
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('postsList').innerHTML = '<div class="error">Ошибка загрузки</div>';
+            }
+        }
+
+        // Модерация комментариев
+        async function loadModeration() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/comments?userId=${currentAdminId}`);
+                const comments = await response.json();
+                
+                const list = document.getElementById('commentsList');
+                list.innerHTML = comments.map(comment => `
+                    <div class="comment-item">
+                        <p><strong>Пользователь:</strong> ${comment.tg_first_name} (@${comment.tg_username || 'нет'})</p>
+                        <p><strong>Комментарий:</strong> ${comment.comment_text}</p>
+                        <p><small>${new Date(comment.created_at).toLocaleString('ru-RU')}</small></p>
+                        <div style="margin-top: 10px;">
+                            <button class="btn btn-success" onclick="approveComment(${comment.id})">✅ Одобрить (+1✨)</button>
+                            <button class="btn btn-danger" onclick="rejectComment(${comment.id})">❌ Отклонить</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('commentsList').innerHTML = '<div class="error">Ошибка загрузки</div>';
+            }
+        }
+
+        async function approveComment(commentId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/comments/${commentId}/approve?userId=${currentAdminId}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ Комментарий одобрен! Пользователь получил +1✨', 'success');
+                    loadModeration();
+                } else {
+                    showMessage('❌ Ошибка одобрения', 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка при одобрении комментария', 'error');
+            }
+        }
+
+        async function rejectComment(commentId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/comments/${commentId}/reject?userId=${currentAdminId}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ Комментарий отклонен', 'success');
+                    loadModeration();
+                } else {
+                    showMessage('❌ Ошибка отклонения', 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка при отклонении комментария', 'error');
             }
         }
 
@@ -510,6 +924,7 @@
                         <p><strong>User ID:</strong> ${admin.user_id}</p>
                         <p><strong>Username:</strong> @${admin.username || 'нет'}</p>
                         <p><strong>Роль:</strong> ${admin.role}</p>
+                        <p><small>Добавлен: ${new Date(admin.created_at).toLocaleString('ru-RU')}</small></p>
                         ${admin.user_id != currentAdminId ? 
                             `<button class="btn btn-danger" onclick="removeAdmin(${admin.user_id})">🗑️ Удалить</button>` : 
                             '<em>Текущий пользователь</em>'
@@ -573,6 +988,33 @@
         }
 
         // Вспомогательные функции
+        async function loadClassesForSelect() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/classes?userId=${currentAdminId}`);
+                const classes = await response.json();
+                
+                const select = document.getElementById('characterClass');
+                select.innerHTML = '<option value="">Выберите класс</option>' +
+                    classes.map(cls => `<option value="${cls.id}">${cls.name}</option>`).join('');
+            } catch (error) {
+                console.error('Error loading classes for select:', error);
+            }
+        }
+
+        async function loadQuizzesForSelect() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/quizzes?userId=${currentAdminId}`);
+                const quizzes = await response.json();
+                
+                availableQuizzes = quizzes;
+                const select = document.getElementById('actionTarget');
+                select.innerHTML = '<option value="">Выберите квиз</option>' +
+                    quizzes.map(quiz => `<option value="${quiz.id}">${quiz.title}</option>`).join('');
+            } catch (error) {
+                console.error('Error loading quizzes for select:', error);
+            }
+        }
+
         function showMessage(message, type) {
             const messageArea = document.getElementById('messageArea');
             const messageDiv = document.createElement('div');
