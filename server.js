@@ -652,8 +652,28 @@ app.delete('/api/admin/admins/:userId', requireAdmin, (req, res) => {
 
 // ==================== TELEGRAM BOT ====================
 
-const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
+let bot;
+try {
+  bot = new TelegramBot(process.env.BOT_TOKEN, { 
+    polling: true,
+    request: {
+      agentOptions: {
+        keepAlive: true,
+        family: 4 // Используем только IPv4
+      }
+    }
+  });
+  console.log('✅ Telegram Bot инициализирован');
+} catch (error) {
+  console.error('❌ Ошибка инициализации бота:', error.message);
+  // Создаем заглушку для бота чтобы сервер продолжал работать
+  bot = {
+    onText: () => {},
+    sendMessage: () => console.log('Bot not available')
+  };
+}
 
+// Обработчик команды /start
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   const name = msg.from.first_name || 'Друг';
@@ -682,22 +702,37 @@ bot.onText(/\/start/, (msg) => {
   bot.sendMessage(chatId, welcomeText, {
     parse_mode: 'Markdown',
     reply_markup: keyboard
+  }).catch(err => {
+    console.error('❌ Ошибка отправки сообщения:', err.message);
   });
 });
 
+// Обработчик команды /admin
 bot.onText(/\/admin/, (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
   
   db.get('SELECT * FROM admins WHERE user_id = ?', [userId], (err, admin) => {
     if (err || !admin) {
-      bot.sendMessage(chatId, '❌ У вас нет прав доступа к админ панели.');
+      bot.sendMessage(chatId, '❌ У вас нет прав доступа к админ панели.').catch(console.error);
       return;
     }
     
     const adminUrl = `${process.env.APP_URL || 'http://localhost:3000'}/admin?userId=${userId}`;
-    bot.sendMessage(chatId, `🔧 Панель администратора\n\nДоступ: ${admin.role}\n\n${adminUrl}`);
+    bot.sendMessage(chatId, 
+      `🔧 Панель администратора\n\nДоступ: ${admin.role}\n\n${adminUrl}`
+    ).catch(console.error);
   });
+});
+
+// Обработчик ошибок бота
+bot.on('polling_error', (error) => {
+  console.error('❌ Polling error:', error.message);
+  // Не прерываем выполнение сервера при ошибках polling
+});
+
+bot.on('webhook_error', (error) => {
+  console.error('❌ Webhook error:', error.message);
 });
 
 // ==================== SERVER START ====================
