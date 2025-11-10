@@ -1,12 +1,13 @@
 {
   "name": "tg-inspiration-bot",
-  "version": "2.0.0",
-  "description": "Telegram bot with Mini App for inspiration workshop",
+  "version": "3.0.0",
+  "description": "Telegram bot with Mini App for inspiration workshop - Fixed Version",
   "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "setup": "node scripts/setup-database.js"
   },
   "dependencies": {
     "express": "^4.18.2",
